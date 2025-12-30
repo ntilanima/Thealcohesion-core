@@ -1,6 +1,7 @@
 /**
  * Thealcohesion Sovereign VFS (Virtual File System)
  * Part of the Sovereign Core MVP [cite: 110]
+ * AES-GCM Encryption Engine
  */
 const vfs = {
     // 1. Baseline Allocation: 5 GB for every verified member [cite: 67]
@@ -50,5 +51,44 @@ const vfs = {
         return `Sovereign Utility upgraded to ${newTier}`;
     }
     throw new Error("Invalid Sustainability Tier");
-},
+    },
+
+    async secureWrite(memberId, fileName, data, encryptionKey) {
+        const encoder = new TextEncoder();
+        const iv = crypto.getRandomValues(new Uint8Array(12)); // Initialization Vector
+        
+        const encryptedContent = await crypto.subtle.encrypt(
+            { name: "AES-GCM", iv: iv },
+            encryptionKey,
+            encoder.encode(data)
+        );
+
+        // Store IV + Ciphertext as a single package
+        const storagePackage = {
+            iv: Array.from(iv),
+            content: Array.from(new Uint8Array(encryptedContent))
+        };
+
+        localStorage.setItem(`vpu_file_${memberId}_${fileName}`, JSON.stringify(storagePackage));
+        kernel.logAction(`ENCRYPTED WRITE: ${fileName}`);
+        },
+
+    async secureRead(memberId, fileName, encryptionKey) {
+        const rawData = localStorage.getItem(`vpu_file_${memberId}_${fileName}`);
+        if (!rawData) return null;
+
+        const { iv, content } = JSON.parse(rawData);
+        const decoder = new TextDecoder();
+
+        try {
+            const decryptedContent = await crypto.subtle.decrypt(
+                { name: "AES-GCM", iv: new Uint8Array(iv) },
+                encryptionKey,
+                new Uint8Array(content)
+            );
+            return decoder.decode(decryptedContent);
+        } catch (e) {
+            throw new Error("Decryption failed: Integrity compromised or incorrect key.");
+        }
+    }
 };

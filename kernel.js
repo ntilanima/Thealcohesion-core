@@ -5,6 +5,7 @@
 const kernel = {
     member: null,
     systemState: "ACTIVE", // States: ACTIVE, LOCKED
+    sessionKey: null, //volatile memory only!
     logs: [],
 
     // 1. The Kill-Switch: Can only be triggered by Guardians
@@ -99,6 +100,34 @@ const kernel = {
             alert(error.message);
             this.logAction(`FAILED ACCESS ATTEMPT: ${userField}`);
         }
+    },
+
+    async login() {
+        const userField = document.getElementById('username').value;
+        const passField = document.getElementById('password').value;
+
+        try {
+            const verifiedMember = await identityGate.verify(userField, passField);
+            
+            // Generate the session-specific encryption key
+            this.sessionKey = await identityGate.deriveKey(passField, userField);
+
+            this.member = {
+                username: userField,
+                role: verifiedMember.role,
+                tier: verifiedMember.tier
+            };
+
+            this.logAction("IDENTITY VERIFIED & KEY DERIVED");
+            this.bootShell();
+        } catch (error) {
+            alert(error.message);
+        }
+    },
+
+    async saveFile(name, content) {
+        if (!this.isSystemReady()) return;
+        await vfs.secureWrite(this.member.username, name, content, this.sessionKey);
     },
 
     bootShell() {
