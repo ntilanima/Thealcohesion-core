@@ -91,11 +91,18 @@ const thealTimeApp = {
         const d = date.getDate();
         const m = date.getMonth() + 1; 
         const year = date.getFullYear();
+        const isLeap = (year % 4 === 0 && year % 100 !== 0) || (year % 400 === 0);
 
+        // 1. HOLIDAY: END YEAR (20th November)
         if (d === 20 && m === 11) return { label: "HOLIDAY: END YEAR", type: "holiday", color: "#e95420" };
+        
+        // 2. HOLIDAY: SPECIAL DAY (29th February)
+        // This day is "Time Outside of Cycles"
         if (d === 29 && m === 2) return { label: "HOLIDAY: SPECIAL DAY", type: "holiday", color: "#d586ff" };
+
         if (d === 26 && m === 12) return { label: "Genesis Allotment", type: "milestone", color: "#FFD700" };
 
+        // 3. CYCLE CALCULATION
         for (let i = 0; i < this.cycles.length; i++) {
             const cycle = this.cycles[i];
             const [startD, startM] = cycle.start.split('/').map(Number);
@@ -109,7 +116,21 @@ const thealTimeApp = {
             if (endDate < startDate) endDate.setFullYear(endDate.getFullYear() + 1);
 
             if (date >= startDate && date <= endDate) {
-                const diff = Math.floor((date - startDate) / 86400000) + 1;
+                // Calculate raw difference
+                let diff = Math.floor((date - startDate) / 86400000) + 1;
+                
+                // LEAP YEAR FIX: 
+                // If we are in or after March of a leap year, and this cycle started before Feb 29 
+                // but ends after it (or we are simply past it), we subtract the special day 
+                // so the cycle doesn't stretch to 29 days.
+                if (isLeap && date > new Date(year, 1, 29)) {
+                    // Only subtract if the leap day actually fell within this specific cycle's range
+                    const leapDay = new Date(year, 1, 29);
+                    if (leapDay >= startDate && leapDay <= date) {
+                        diff--;
+                    }
+                }
+
                 return { label: `${cycle.name}, Day ${diff}`, type: "cycle" };
             }
         }
@@ -155,9 +176,10 @@ const thealTimeApp = {
         const eventList = document.getElementById('vpu-event-list');
         if (!eventList) return;
 
+        // Ensure the remark reflects that these days don't count towards cycle duration
         const charterHolidays = [
-            { name: "Special Day", date: "29/02", remark: "Reflection" },
-            { name: "End Year Day", date: "20/11", remark: "Closure" },
+            { name: "Special Day", date: "29/02", remark: "Non-Cycle Day" },
+            { name: "End Year Day", date: "20/11", remark: "Year Closure" },
             { name: "Allotment Day", date: "26/12", remark: "Genesis" }
         ];
 
@@ -167,7 +189,7 @@ const thealTimeApp = {
                 <div style="font-size: 10px; color: #e95420;">${h.date} — ${h.remark}</div>
             </div>
         `).join('') + '<hr style="border:0; border-top:1px solid #444; margin: 10px 0;">';
-    },
+    }
 
     startClock() {
         if (this.timer) clearInterval(this.timer);
