@@ -27,5 +27,19 @@ const kernel = {
         document.getElementById('login-gate').style.display = 'none';
         document.getElementById('session-status').innerText = "Member: Verified (" + this.member.role + ")";
         console.log("Entering Private Operational Environment...");
+    },
+
+    // Add this inside the kernel object in kernel.js
+    logs: [],
+
+    logAction(action) {
+    const entry = {
+        timestamp: new Date().toISOString(),
+        member: this.member ? this.member.username : "System",
+        action: action
+    };
+    this.logs.push(entry);
+    // In Phase 3, these will be sent to a dedicated Audit Vault
+    console.log("Audit Log Recorded:", entry);
     }
 };

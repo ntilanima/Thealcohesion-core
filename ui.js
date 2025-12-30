@@ -62,15 +62,24 @@ const vpuUI = {
         `).join('');
     },
 
-    // 4. Windowed Internal Apps [cite: 159-160]
+    // 4. Windowed Internal Apps
     launchApp(appId) {
     const workspace = document.getElementById('workspace');
     const window = document.createElement('div');
     window.className = 'app-window';
     
-    let content = '<p>Loading Sovereign Module...</p>';
+    let content = '';
     if (appId === 'governance') {
-        content = governanceApp.render(); // Calls the notice app
+        content = governanceApp.render();
+    } else if (appId === 'marketplace') {
+        // Renders the App Center View
+        const apps = vpuRegistry.getAppsForMember(kernel.member.role);
+        content = `
+            <div class="marketplace-grid">
+                <h3>App Center (Registry)</h3>
+                ${apps.map(a => `<div class="app-card">${a.name} <button onclick="vpuRegistry.activateModule('${a.id}')">Activate</button></div>`).join('')}
+            </div>
+        `;
     }
 
     window.innerHTML = `
@@ -81,7 +90,7 @@ const vpuUI = {
         <div class="window-content">${content}</div>
     `;
     workspace.appendChild(window);
-    }
+    },
 
     toggleDock() {
         const dock = document.getElementById('side-dock');

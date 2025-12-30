@@ -40,5 +40,15 @@ const vfs = {
             }
         }
         return total;
+    },
+
+    // Upgrade member's sustainability tier
+    async upgradeTier(newTier) {
+    if (this.TIERS[newTier] !== undefined) {
+        kernel.logAction(`Tier Upgrade: ${newTier}`);
+        this.currentTier = newTier; // In real use, this saves to the Member Profile
+        return `Sovereign Utility upgraded to ${newTier}`;
     }
+    throw new Error("Invalid Sustainability Tier");
+},
 };
