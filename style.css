@@ -385,3 +385,71 @@ body {
     opacity: 0.7;
     text-align: left;
 }
+
+/* Specific Charter Holiday Styling */
+.vpu-day-cell.holiday {
+    background: linear-gradient(135deg, #3c2c6c 0%, #e95420 100%) !important;
+    border: 2px solid #fff !important;
+    animation: pulse-gold 2s infinite;
+}
+
+@keyframes pulse-gold {
+    0% { box-shadow: 0 0 0 0px rgba(233, 84, 32, 0.4); }
+    70% { box-shadow: 0 0 0 10px rgba(233, 84, 32, 0); }
+    100% { box-shadow: 0 0 0 0px rgba(233, 84, 32, 0); }
+}
+
+.charter-holiday {
+    border-left: 3px solid #e95420 !important;
+    background: rgba(233, 84, 32, 0.1) !important;
+}
+
+.event-title { font-weight: bold; color: #fff; font-size: 11px; }
+.event-meta { font-size: 10px; color: #e95420; }
+
+.calendar-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px 15px;
+    background: #1a1a2e;
+    border-bottom: 1px solid #444;
+}
+
+#vpu-date-picker {
+    background: #0e0e1a;
+    border: 1px solid #a445ff;
+    color: white;
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 12px;
+    cursor: pointer;
+}
+
+#vpu-date-picker::-webkit-calendar-picker-indicator {
+    filter: invert(1); /* Makes the icon white */
+    cursor: pointer;
+}
+
+.nav-buttons {
+    display: flex;
+    gap: 5px;
+}
+
+.nav-buttons button {
+    background: #2c2c44;
+    border: none;
+    color: white;
+    padding: 5px 12px;
+    border-radius: 4px;
+    cursor: pointer;
+}
+
+.nav-buttons button:hover {
+    background: #a445ff;
+}
+
+.nav-controls { display: flex; gap: 4px; }
+.vpu-btn { background: #2c2c44; border: 1px solid #444; color: white; padding: 2px 10px; cursor: pointer; border-radius: 4px; }
+.vpu-btn:hover { background: #a445ff; }
+#vpu-date-picker { background: #000; color: #fff; border: 1px solid #a445ff; font-size: 10px; border-radius: 4px; padding: 2px; }

@@ -1,30 +1,29 @@
-/**
- * Thealcohesion Temporal Engine
- * Fully Integrated 13-Cycle Ubuntu Rhythm
+/** * THEALCOHESION TEMPORAL LAW - PHASE 4.3
+ * Strictly 28-Day Cycles + Fixed Holidays 
+ * Added: Date Navigation & Jump-to-Date logic
  */
 const thealTimeApp = {
     id: "time-manager",
-    name: "Thealcohesion Time",
+    name: "Temporal Engine",
     currentViewDate: new Date(),
-    
+
     cycles: [
-        { name: "1st Cycle", start: "21/11", color: "#a445ff" },
-        { name: "2nd Cycle", start: "19/12", color: "#a445ff" },
-        { name: "3rd Cycle", start: "16/01", color: "#a445ff" },
-        { name: "4th Cycle", start: "13/02", color: "#a445ff" },
-        { name: "5th Cycle", start: "13/03", color: "#a445ff" },
-        { name: "6th Cycle", start: "10/04", color: "#a445ff" },
-        { name: "7th Cycle", start: "08/05", color: "#a445ff" },
-        { name: "8th Cycle", start: "05/06", color: "#a445ff" },
-        { name: "9th Cycle", start: "03/07", color: "#a445ff" },
-        { name: "10th Cycle", start: "31/07", color: "#a445ff" },
-        { name: "11th Cycle", start: "28/08", color: "#a445ff" },
-        { name: "12th Cycle", start: "25/09", color: "#a445ff" },
-        { name: "13th Cycle", start: "23/10", color: "#a445ff" }
+        { name: "1st Cycle", start: "21/11", end: "18/12" },
+        { name: "2nd Cycle", start: "19/12", end: "15/01" },
+        { name: "3rd Cycle", start: "16/01", end: "12/02" },
+        { name: "4th Cycle", start: "13/02", end: "12/03" },
+        { name: "5th Cycle", start: "13/03", end: "09/04" },
+        { name: "6th Cycle", start: "10/04", end: "07/05" },
+        { name: "7th Cycle", start: "08/05", end: "04/06" },
+        { name: "8th Cycle", start: "05/06", end: "02/07" },
+        { name: "9th Cycle", start: "03/07", end: "30/07" },
+        { name: "10th Cycle", start: "31/07", end: "27/08" },
+        { name: "11th Cycle", start: "28/08", end: "24/09" },
+        { name: "12th Cycle", start: "25/09", end: "22/10" },
+        { name: "13th Cycle", start: "23/10", end: "19/11" }
     ],
 
     render() {
-        // Run initialization after the HTML is placed in the DOM
         setTimeout(() => {
             this.startClock();
             this.renderGrid(this.currentViewDate);
@@ -34,9 +33,14 @@ const thealTimeApp = {
         return `
             <div class="calendar-app-window">
                 <div class="calendar-header">
-                    <button onclick="thealTimeApp.changeMonth(-1)">←</button>
-                    <h2 id="vpu-month-label">Month Year</h2>
-                    <button onclick="thealTimeApp.changeMonth(1)">→</button>
+                    <div class="nav-controls">
+                        <button class="vpu-btn" onclick="thealTimeApp.changeMonth(-1)">←</button>
+                        <button class="vpu-btn" onclick="thealTimeApp.changeMonth(1)">→</button>
+                    </div>
+                    <h2 id="vpu-month-label" style="margin: 0; font-size: 1.2rem;">Month Year</h2>
+                    <div class="date-jump-container">
+                        <input type="date" id="vpu-date-picker" onchange="thealTimeApp.jumpToDate(this.value)">
+                    </div>
                 </div>
                 <div class="calendar-layout-vpu">
                     <div class="calendar-grid-container" id="vpu-calendar-grid">
@@ -53,8 +57,9 @@ const thealTimeApp = {
                             <div id="vpu-event-list"></div>
                         </div>
                         <div class="legend-vpu">
-                            <p><span style="color:#d586ff">■</span> Holiday</p>
-                            <p><span style="color:#44dddd">■</span> Reflection</p>
+                            <p><span style="color:#e95420">■</span> Holiday</p>
+                            <p><span style="color:#d586ff">■</span> Reflection</p>
+                            <p><span style="color:#FFD700">★</span> Allotment Day</p>
                         </div>
                     </div>
                 </div>
@@ -62,21 +67,53 @@ const thealTimeApp = {
         `;
     },
 
-    renderUpcomingEvents() {
-        const eventList = document.getElementById('vpu-event-list');
-        if (!eventList) return;
-        const currentMonth = new Date().getMonth();
-        const upcoming = this.cycles.filter(c => {
-            const [d, m] = c.start.split("/").map(Number);
-            return (m - 1) >= currentMonth;
-        }).slice(0, 3);
+    jumpToDate(dateString) {
+        if (!dateString) return;
+        const newDate = new Date(dateString);
+        this.currentViewDate = newDate;
+        this.renderGrid(newDate);
+        
+        // Highlight logic for the selected day
+        setTimeout(() => {
+            const day = newDate.getDate();
+            const cells = document.querySelectorAll('.greg-num');
+            cells.forEach(c => {
+                if(parseInt(c.textContent) === day) {
+                    const cell = c.parentElement.parentElement;
+                    cell.style.boxShadow = "inset 0 0 10px #a445ff";
+                    cell.style.borderColor = "#a445ff";
+                }
+            });
+        }, 200);
+    },
 
-        eventList.innerHTML = upcoming.map(e => `
-            <div class="event-item-vpu" style="margin-bottom: 10px; padding: 5px; border-left: 2px solid #a445ff; background: rgba(255,255,255,0.05); text-align: left;">
-                <div style="font-size: 11px; font-weight: bold; color: #fff;">${e.name}</div>
-                <div style="font-size: 10px; color: #aaa;">Starts: ${e.start}</div>
-            </div>
-        `).join('');
+    getThealDate(date) {
+        const d = date.getDate();
+        const m = date.getMonth() + 1; 
+        const year = date.getFullYear();
+
+        if (d === 20 && m === 11) return { label: "HOLIDAY: END YEAR", type: "holiday", color: "#e95420" };
+        if (d === 29 && m === 2) return { label: "HOLIDAY: SPECIAL DAY", type: "holiday", color: "#d586ff" };
+        if (d === 26 && m === 12) return { label: "Genesis Allotment", type: "milestone", color: "#FFD700" };
+
+        for (let i = 0; i < this.cycles.length; i++) {
+            const cycle = this.cycles[i];
+            const [startD, startM] = cycle.start.split('/').map(Number);
+            const [endD, endM] = cycle.end.split('/').map(Number);
+
+            let startDate = new Date(year, startM - 1, startD);
+            let endDate = new Date(year, endM - 1, endD);
+
+            if (startM >= 11 && m < 11) startDate.setFullYear(year - 1);
+            if (endM >= 11 && m < 11) endDate.setFullYear(year - 1);
+            if (endDate < startDate) endDate.setFullYear(endDate.getFullYear() + 1);
+
+            if (date >= startDate && date <= endDate) {
+                const diff = Math.floor((date - startDate) / 86400000) + 1;
+                return { label: `${cycle.name}, Day ${diff}`, type: "cycle" };
+            }
+        }
+        return { label: "Transition", type: "other" };
     },
 
     renderGrid(date) {
@@ -98,16 +135,15 @@ const thealTimeApp = {
         for (let day = 1; day <= lastDay.getDate(); day++) {
             const d = new Date(date.getFullYear(), date.getMonth(), day);
             const theal = this.getThealDate(d);
-            const moon = ['🌑','🌓','🌕','🌗'][day % 4];
             const cell = document.createElement("div");
             cell.className = `vpu-day-cell ${theal.type}`;
+            
             if (d.toDateString() === new Date().toDateString()) cell.classList.add("today-vpu");
-            if (theal.color) cell.style.backgroundColor = theal.color;
+            if (theal.color) cell.style.borderLeft = `4px solid ${theal.color}`;
 
             cell.innerHTML = `
                 <div class="cell-top">
                     <span class="greg-num">${day}</span>
-                    <span class="moon-vpu">${moon}</span>
                 </div>
                 <div class="theal-label">${theal.label}</div>
             `;
@@ -115,30 +151,22 @@ const thealTimeApp = {
         }
     },
 
-    getThealDate(date) {
-        const year = date.getFullYear();
-        const isLeap = (year % 4 === 0 && year % 100 !== 0) || (year % 400 === 0);
-        if (isLeap && date.getMonth() === 1 && date.getDate() === 29) 
-            return { label: "Special Day", type: "holiday", color: "#3c2c6c" };
-        if (date.getMonth() === 0 && date.getDate() <= 15) 
-            return { label: `Reflection ${date.getDate()}`, type: "reflection", color: "#164343" };
-        
-        for (let i = 0; i < this.cycles.length; i++) {
-            const [d, m] = this.cycles[i].start.split("/").map(Number);
-            const start = new Date(year, m - 1, d);
-            const end = new Date(start);
-            end.setDate(start.getDate() + 28);
-            if (date >= start && date < end) {
-                const diff = Math.floor((date - start) / 86400000) + 1;
-                return { label: `${this.cycles[i].name}, D${diff}`, type: "cycle" };
-            }
-        }
-        return { label: "Transition", type: "other" };
-    },
+    renderUpcomingEvents() {
+        const eventList = document.getElementById('vpu-event-list');
+        if (!eventList) return;
 
-    changeMonth(delta) {
-        this.currentViewDate.setMonth(this.currentViewDate.getMonth() + delta);
-        this.renderGrid(this.currentViewDate);
+        const charterHolidays = [
+            { name: "Special Day", date: "29/02", remark: "Reflection" },
+            { name: "End Year Day", date: "20/11", remark: "Closure" },
+            { name: "Allotment Day", date: "26/12", remark: "Genesis" }
+        ];
+
+        eventList.innerHTML = charterHolidays.map(h => `
+            <div class="event-item-vpu" style="border-left: 2px solid #e95420; margin-bottom: 8px; padding-left: 5px;">
+                <div style="font-size: 11px; font-weight: bold; color: #fff;">${h.name}</div>
+                <div style="font-size: 10px; color: #e95420;">${h.date} — ${h.remark}</div>
+            </div>
+        `).join('') + '<hr style="border:0; border-top:1px solid #444; margin: 10px 0;">';
     },
 
     startClock() {
@@ -155,6 +183,11 @@ const thealTimeApp = {
             }
             if (dateEl) dateEl.textContent = this.getThealDate(now).label;
         }, 1000);
+    },
+
+    changeMonth(delta) {
+        this.currentViewDate.setMonth(this.currentViewDate.getMonth() + delta);
+        this.renderGrid(this.currentViewDate);
     },
 
     convertToThealHour(hour) {
