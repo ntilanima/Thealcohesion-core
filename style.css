@@ -286,3 +286,43 @@ body {
     overflow-y: auto;
     color: #eee;
 }
+
+
+.calendar-app-window { display: flex; flex-direction: column; height: 100%; color: white; }
+.calendar-header { display: flex; justify-content: space-between; align-items: center; padding: 10px; background: rgba(0,0,0,0.2); }
+.calendar-layout-vpu { display: flex; flex: 1; overflow: hidden; }
+
+.calendar-grid-container {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 2px;
+    flex: 2;
+    padding: 10px;
+    background: #111;
+}
+
+.grid-header { font-size: 10px; text-transform: uppercase; color: var(--ubuntu-orange); text-align: center; padding-bottom: 5px; }
+
+.vpu-day-cell {
+    background: #1a1a2e;
+    border: 1px solid #333;
+    min-height: 45px;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    padding: 5px;
+    font-size: 11px;
+}
+
+.today-vpu { border: 1px solid var(--ubuntu-orange); background: rgba(233, 84, 32, 0.1); }
+.moon-vpu { font-size: 14px; text-align: center; }
+
+.calendar-info-sidebar {
+    flex: 1;
+    background: #1a1a2e;
+    border-left: 1px solid #333;
+    padding: 15px;
+    text-align: center;
+}
+
+.theal-time-big { font-size: 1.8rem; font-weight: bold; color: var(--ubuntu-orange); }
