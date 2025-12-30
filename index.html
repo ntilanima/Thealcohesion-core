@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Thealcohesion Core</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body class="sovereign-environment">
+    <header id="top-bar">
+        <div class="system-title">Thealcohesion Core</div>
+        <div id="system-time">Dec 30 09:00</div>
+        <div id="session-status">Identity Required</div>
+    </header>
+
+    <nav id="side-dock">
+        <div class="dock-icon" title="App Center (VPU)">
+            <img src="icons/vpu.png" alt="VPU">
+        </div>
+        <div class="dock-icon" title="Storage Utility">
+            <img src="icons/storage.png" alt="Storage">
+        </div>
+    </nav>
+
+    <main id="workspace">
+        <div id="login-gate">
+            <h2>VPU Identity Access</h2>
+            <input type="text" id="username" placeholder="Member Username">
+            <input type="password" id="password" placeholder="Password">
+            <button onclick="kernel.authenticate()">Verify Identity</button>
+        </div>
+    </main>
+
+    <script src="kernel.js"></script>
+</body>
+</html>

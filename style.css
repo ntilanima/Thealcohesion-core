@@ -1,0 +1,59 @@
+:root {
+    --ubuntu-purple: #300a24;
+    --ubuntu-orange: #E95420;
+    --glass-bg: rgba(255, 255, 255, 0.05);
+}
+
+body {
+    margin: 0;
+    background: linear-gradient(135deg, #1e0516, var(--ubuntu-purple));
+    font-family: 'Ubuntu', sans-serif;
+    color: white;
+    height: 100vh;
+    overflow: hidden;
+}
+
+#top-bar {
+    height: 30px;
+    background: #191919;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0 20px;
+    font-size: 13px;
+}
+
+#side-dock {
+    position: fixed;
+    left: 0;
+    top: 30px;
+    bottom: 0;
+    width: 60px;
+    background: rgba(0, 0, 0, 0.3);
+    backdrop-filter: blur(10px);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding-top: 15px;
+    border-right: 1px solid rgba(255,255,255,0.1);
+}
+
+.dock-icon {
+    width: 44px;
+    height: 44px;
+    margin-bottom: 15px;
+    cursor: pointer;
+    transition: 0.2s;
+}
+
+.dock-icon:hover { transform: scale(1.1); }
+
+#login-gate {
+    width: 300px;
+    margin: 150px auto;
+    background: var(--glass-bg);
+    padding: 30px;
+    border-radius: 8px;
+    backdrop-filter: blur(20px);
+    text-align: center;
+}
