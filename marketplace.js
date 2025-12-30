@@ -11,6 +11,7 @@ const vpuRegistry = {
         { id: 'audit', name: 'System Oversight', icon: 'audit', roles: ['STEWARD', 'GUARDIAN'] }, // Oversight roles only
         { id: 'council', name: 'Values Council', icon: 'council', roles: ['ADMIN'] },
         { id: 'mediation', name: 'Mediation Forum', icon: 'mediation', roles: ['MEMBER', 'STEWARD', 'MEDIATOR', 'GUARDIAN'] },
+        { id: 'resource-pool', name: 'Resource Pool', icon: 'resources', roles: ['MEMBER', 'STEWARD', 'GUARDIAN'] },
         { id: 'resource', name: 'Resource Pool', icon: 'resource', roles: ['MEMBER', 'STEWARD'] }
     ],
 

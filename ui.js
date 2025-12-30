@@ -84,6 +84,8 @@ const vpuUI = {
     content = auditApp.render();
     } else if (appId === 'mediation') {
     content = mediationApp.render();
+    }else if (appId === 'resource-pool') {
+    content = resourcePoolApp.render();
     }
 
     window.innerHTML = `
@@ -149,6 +151,7 @@ const vpuUI = {
         if (win.innerHTML.includes(`Thealcohesion: ${appId.toUpperCase()}`)) {
             const contentArea = win.querySelector('.window-content');
             if (appId === 'mediation') contentArea.innerHTML = mediationApp.render();
+            if (appId === 'resource-pool') contentArea.innerHTML = resourcePoolApp.render();
             // Add other apps here as needed
         }
     });

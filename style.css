@@ -122,3 +122,41 @@ body {
     font-weight: bold;
 }
 .lockdown-btn:hover { background: #c7461b; }
+
+.resource-container { padding: 15px; }
+.fund-total { 
+    background: var(--ubuntu-orange); 
+    padding: 10px; 
+    border-radius: 5px; 
+    font-weight: bold; 
+    margin-bottom: 20px;
+}
+.tier-cards { display: flex; gap: 10px; margin-top: 10px; }
+.tier-card { 
+    background: rgba(255,255,255,0.05); 
+    padding: 15px; 
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 8px;
+    flex: 1;
+    text-align: center;
+}
+.progress-bar {
+    background: #333;
+    height: 8px;
+    border-radius: 4px;
+    margin: 5px 0;
+}
+.progress-bar div {
+    background: #4caf50;
+    height: 100%;
+    border-radius: 4px;
+}
+.steward-btn {
+    width: 100%;
+    margin-top: 20px;
+    padding: 10px;
+    background: transparent;
+    border: 1px solid var(--ubuntu-orange);
+    color: var(--ubuntu-orange);
+    cursor: pointer;
+}
