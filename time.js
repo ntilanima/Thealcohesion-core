@@ -195,20 +195,35 @@ const thealTimeApp = {
         const picker = document.getElementById('vpu-date-picker');
         if(picker) picker.value = "";
     },
-
+    // Start the real-time clock update
     startClock() {
         if (this.timer) clearInterval(this.timer);
         this.timer = setInterval(() => {
             const now = new Date();
-            const timeEl = document.getElementById("vpu-theal-time");
-            const dateEl = document.getElementById("vpu-theal-date");
-            if (timeEl) {
-                const h = now.getHours();
-                const m = now.getMinutes().toString().padStart(2, "0");
-                const s = now.getSeconds().toString().padStart(2, "0");
-                timeEl.textContent = `${this.convertToThealHour(h).toString().padStart(2, "0")}:${m}:${s}`;
+            
+            // Elements
+            const timeEl = document.getElementById("vpu-theal-time"); // Inside App
+            const dateEl = document.getElementById("vpu-theal-date"); // Inside App
+            const topBarTime = document.getElementById("top-bar-time"); // System Top Bar
+            
+            // Calculations
+            const h = now.getHours();
+            const m = now.getMinutes().toString().padStart(2, "0");
+            const s = now.getSeconds().toString().padStart(2, "0");
+            const thealHour = this.convertToThealHour(h).toString().padStart(2, "0");
+            const timeString = `${thealHour}:${m}:${s}`;
+            const thealDate = this.getThealDate(now).label;
+
+            // Update App Window
+            if (timeEl) timeEl.textContent = timeString;
+            if (dateEl) dateEl.textContent = thealDate;
+            
+            // Update System Top Bar
+            if (topBarTime) {
+                topBarTime.textContent = timeString;
+                topBarTime.style.color = "#a445ff"; // Sovereignty Purple
+                topBarTime.style.fontWeight = "bold";
             }
-            if (dateEl) dateEl.textContent = this.getThealDate(now).label;
         }, 1000);
     },
 
