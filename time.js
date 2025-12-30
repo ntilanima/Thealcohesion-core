@@ -197,8 +197,19 @@ const thealTimeApp = {
             if (progFill) progFill.style.width = `${percent}%`;
             if (progText) progText.textContent = `${percent}%`;
         }
-        const events = [{ n: "Special Day", d: "29/02" }, { n: "End Year", d: "20/11" }, { n: "Genesis Allotment", d: "26/12" }];
-        list.innerHTML = events.map(e => `<div style="font-size:10px; margin-bottom:8px; border-left:2px solid #a445ff; padding-left:5px;"><b>${e.n}</b><br>${e.d}</div>`).join('');
+        const events = [
+    { n: "Special Day", d: "29/02", action: null },
+    { n: "End Year", d: "20/11", action: null },
+    { n: "Genesis Allotment", d: "26/12", action: "AllotmentEngine.showCertificate()" }
+    ];
+
+    list.innerHTML = events.map(e => `
+    <div style="font-size:10px; margin-bottom:12px; border-left:2px solid #a445ff; padding-left:8px; cursor: ${e.action ? 'pointer' : 'default'}" 
+         onclick="${e.action ? e.action : ''}">
+        <b style="color: ${e.action ? '#d586ff' : '#fff'}">${e.n} ${e.action ? '↗' : ''}</b><br>
+        <span style="color:#888;">${e.d}</span>
+    </div>
+`   ).join('');
     },
 
     goToToday() {

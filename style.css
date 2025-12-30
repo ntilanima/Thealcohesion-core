@@ -525,6 +525,7 @@ body {
     border-color: #d586ff !important;
 }
 
+/* HUD Slide Down Animation */
 @keyframes slideDownHUD {
     from { 
         opacity: 0; 
@@ -540,4 +541,80 @@ body {
     border-color: #a445ff !important;
     color: #fff !important;
     background: rgba(164, 69, 255, 0.1) !important;
+}
+
+#temporal-hud svg circle:last-child {
+    filter: drop-shadow(0 0 3px #a445ff);
+}
+
+#temporal-hud button:hover {
+    background: rgba(164, 69, 255, 0.2) !important;
+    color: #fff !important;
+    border-color: #a445ff !important;
+}
+
+/* Certificate Card with Animated Border */
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+.cert-card::before {
+    content: "";
+    position: absolute;
+    top: -2px; left: -2px; right: -2px; bottom: -2px;
+    background: linear-gradient(45deg, transparent, #a445ff, transparent);
+    z-index: -1;
+    border-radius: 20px;
+    animation: borderRotate 4s linear infinite;
+}
+
+@keyframes borderRotate {
+    0% { filter: hue-rotate(0deg); }
+    100% { filter: hue-rotate(360deg); }
+}
+
+/* Print Styles for Certificate */
+@media print {
+    /* Hide everything except the certificate card */
+    body * {
+        visibility: hidden;
+    }
+    #cert-overlay, #cert-overlay * {
+        visibility: visible;
+    }
+    #cert-overlay {
+        position: absolute;
+        left: 0;
+        top: 0;
+        width: 100%;
+        background: white !important; /* Professional print background */
+    }
+    .cert-card {
+        border: 2px solid #000 !important; /* Darker border for print clarity */
+        box-shadow: none !important;
+        color: black !important;
+        background: white !important;
+    }
+    /* Hide the buttons on the printed version */
+    #cert-overlay button {
+        display: none;
+    }
+}
+
+/* Genesis Seal Shimmer Effect */
+.genesis-seal-shimmer {
+    background: linear-gradient(
+        -45deg, 
+        rgba(164, 69, 255, 0) 40%, 
+        rgba(255, 255, 255, 0.6) 50%, 
+        rgba(164, 69, 255, 0) 60%
+    );
+    background-size: 300% 300%;
+    animation: shimmer 3s infinite;
+}
+
+@keyframes shimmer {
+    0% { background-position: 0% 50%; }
+    100% { background-position: 100% 50%; }
 }
