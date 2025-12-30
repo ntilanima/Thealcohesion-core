@@ -462,7 +462,7 @@ body {
     color: #a445ff;
     font-family: 'Courier New', monospace;
     font-weight: bold;
-    
+
     font-size: 14px;
     padding-right: 15px;
 }
@@ -476,4 +476,14 @@ body {
     border-bottom: 1px solid #333;
     height: 30px;
     z-index: 1000;
+}
+
+@keyframes slideDown {
+    from { opacity: 0; transform: translateY(-10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+#top-bar-time:hover {
+    background: rgba(164, 69, 255, 0.1);
+    border-radius: 4px;
 }

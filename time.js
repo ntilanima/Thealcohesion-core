@@ -238,8 +238,29 @@ const thealTimeApp = {
             const dateEl = document.getElementById("vpu-theal-date");
             if (timeEl) timeEl.textContent = timeString;
             if (dateEl) dateEl.textContent = thealDateObj.label;
-        };
+        
+            };
 
+            // Inside startClock -> tick function:
+            // Inside startClock -> tick function:
+            const normalH = now.getHours().toString().padStart(2, "0");
+            const normalM = now.getMinutes().toString().padStart(2, "0");
+            const normalS = now.getSeconds().toString().padStart(2, "0");
+            const normalTimeStr = `${normalH}:${normalM}:${normalS}`;
+            const normalDateStr = now.toLocaleDateString();
+
+            // Update HUD if it exists
+            const hudTime = document.getElementById("hud-theal-time");
+            const hudDate = document.getElementById("hud-theal-date");
+            const hudNormTime = document.getElementById("hud-normal-time");
+            const hudNormDate = document.getElementById("hud-normal-date");
+
+            if (hudTime) {
+                hudTime.textContent = timeString; // Your Theal mapping
+                hudDate.textContent = thealDateObj.label;
+                hudNormTime.textContent = normalTimeStr;
+                hudNormDate.textContent = normalDateStr;
+            }
         tick();
         this.timer = setInterval(tick, 1000);
     },
@@ -247,8 +268,52 @@ const thealTimeApp = {
     convertToThealHour(hour) {
         const mapping = { 7:1, 8:2, 9:3, 10:4, 11:5, 12:6, 13:7, 14:8, 15:9, 16:10, 17:11, 18:12, 19:1, 20:2, 21:3, 22:4, 23:5, 0:6, 1:7, 2:8, 3:9, 4:10, 5:11, 6:12 };
         return mapping[hour] || hour;
-    }
+    },
     
+    renderHUD() {
+        const existingHud = document.getElementById('temporal-hud');
+        if (existingHud) return; // Prevent duplicates
+
+        const hud = document.createElement('div');
+        hud.id = 'temporal-hud';
+        hud.style.cssText = `
+            position: absolute; top: 35px; right: 10px; width: 220px;
+            background: rgba(13, 13, 25, 0.95); backdrop-filter: blur(10px);
+            border: 1px solid #a445ff; border-radius: 8px; padding: 15px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5); z-index: 10000;
+            color: white; font-family: 'Segoe UI', sans-serif;
+            animation: slideDown 0.2s ease-out;
+        `;
+
+        hud.innerHTML = `
+            <div style="border-bottom: 1px solid #333; padding-bottom: 8px; margin-bottom: 10px; font-weight: bold; color: #a445ff; font-size: 12px; letter-spacing: 1px;">TEMPORAL OVERLAY</div>
+            
+            <div class="hud-section">
+                <small style="color: #888; font-size: 9px;">SOVEREIGN TIME</small>
+                <div id="hud-theal-time" style="font-size: 18px; font-weight: bold; color: #fff;">--:--:--</div>
+                <div id="hud-theal-date" style="font-size: 11px; color: #d586ff;">Loading...</div>
+            </div>
+
+            <div class="hud-section" style="margin-top: 12px; padding-top: 12px; border-top: 1px dashed #444;">
+                <small style="color: #888; font-size: 9px;">GREGORIAN SYNC</small>
+                <div id="hud-normal-time" style="font-size: 14px; color: #ccc;">--:--:--</div>
+                <div id="hud-normal-date" style="font-size: 11px; color: #888;">00/00/0000</div>
+            </div>
+            
+            <button onclick="document.getElementById('temporal-hud').remove()" style="margin-top: 15px; width: 100%; background: #222; border: 1px solid #444; color: #888; font-size: 10px; padding: 4px; cursor: pointer; border-radius: 4px;">CLOSE</button>
+        `;
+
+        document.body.appendChild(hud);
+        
+        // Auto-close when clicking elsewhere
+        const closer = (e) => {
+            if (!hud.contains(e.target) && e.target.id !== 'top-bar-time') {
+                hud.remove();
+                document.removeEventListener('click', closer);
+            }
+        };
+        setTimeout(() => document.addEventListener('click', closer), 10);
+    },
 };
 
 // Initialize the Temporal Engine after a short delay
