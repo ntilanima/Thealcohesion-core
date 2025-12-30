@@ -218,17 +218,74 @@ const thealTimeApp = {
 
     renderHUD() {
         if (document.getElementById('temporal-hud')) return;
+
+        const clockBtn = document.getElementById('top-bar-time');
+        const rect = clockBtn.getBoundingClientRect();
+        
+        // Calculate Cycle Progress for the Ring
+        const now = new Date();
+        const theal = this.getThealDate(now);
+        let progressPercent = 0;
+        if (theal.type === "cycle" || theal.type === "milestone") {
+            const dayNum = parseInt(theal.label.match(/Day (\d+)/)[1]);
+            progressPercent = (dayNum / 28) * 100;
+        }
+        
+        const circumference = 2 * Math.PI * 18; // Radius is 18
+        const offset = circumference - (progressPercent / 100) * circumference;
+
         const hud = document.createElement('div');
         hud.id = 'temporal-hud';
-        hud.style.cssText = `position:absolute; top:35px; right:10px; width:220px; background:rgba(13,13,25,0.95); backdrop-filter:blur(10px); border:1px solid #a445ff; border-radius:8px; padding:15px; box-shadow:0 10px 30px rgba(0,0,0,0.5); z-index:10000; color:white; font-family:sans-serif;`;
-        hud.innerHTML = `
-            <div style="color:#a445ff; font-size:10px; margin-bottom:10px;">TEMPORAL OVERLAY</div>
-            <div style="margin-bottom:10px;"><small style="color:#888;">SOVEREIGN</small><div id="hud-theal-time" style="font-size:18px;"></div><div id="hud-theal-date" style="font-size:10px; color:#d586ff;"></div></div>
-            <div style="border-top:1px dashed #444; padding-top:10px;"><small style="color:#888;">GREGORIAN</small><div id="hud-normal-time" style="font-size:14px; color:#ccc;"></div><div id="hud-normal-date" style="font-size:10px; color:#888;"></div></div>
-            <button onclick="this.parentElement.remove()" style="margin-top:10px; width:100%; background:#222; border:1px solid #444; color:#fff; cursor:pointer; font-size:10px;">CLOSE</button>
+        hud.style.cssText = `
+            position: absolute; top: ${rect.bottom + 8}px; left: ${rect.left + (rect.width / 2) - 110}px;
+            width: 220px; background: rgba(10, 10, 20, 0.98); backdrop-filter: blur(15px);
+            border: 1px solid #a445ff; border-radius: 12px; padding: 20px 15px;
+            box-shadow: 0 15px 50px rgba(0,0,0,0.9), 0 0 20px rgba(164, 69, 255, 0.15);
+            z-index: 10000; color: white; font-family: sans-serif;
+            animation: slideDownHUD 0.3s cubic-bezier(0.18, 0.89, 0.32, 1.28);
         `;
+
+        hud.innerHTML = `
+            <div style="display: flex; flex-direction: column; align-items: center; gap: 15px;">
+                <div style="position: relative; width: 50px; height: 50px;">
+                    <svg width="50" height="50" style="transform: rotate(-90deg);">
+                        <circle cx="25" cy="25" r="18" stroke="#222" stroke-width="4" fill="transparent" />
+                        <circle cx="25" cy="25" r="18" stroke="#a445ff" stroke-width="4" fill="transparent" 
+                            stroke-dasharray="${circumference}" 
+                            stroke-dashoffset="${offset}" 
+                            style="transition: stroke-dashoffset 1s ease; stroke-linecap: round;" />
+                    </svg>
+                    <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); font-size: 10px; font-weight: bold;">
+                        ${Math.round(progressPercent)}%
+                    </div>
+                </div>
+
+                <div style="text-align: center; width: 100%;">
+                    <small style="color:#888; text-transform:uppercase; font-size:9px; letter-spacing:1px;">Sovereign Time</small>
+                    <div id="hud-theal-time" style="font-size:24px; font-family:monospace; font-weight:bold; color:#fff;">00:00:00</div>
+                    <div id="hud-theal-date" style="font-size:11px; color:#d586ff; margin-top:2px;">---</div>
+                </div>
+
+                <div style="width: 100%; border-top: 1px solid #333; padding-top: 15px; text-align: center;">
+                    <small style="color:#888; text-transform:uppercase; font-size:9px;">Gregorian Sync</small>
+                    <div id="hud-normal-time" style="font-size:14px; color:#aaa; font-family:monospace;">00:00:00</div>
+                    <div id="hud-normal-date" style="font-size:10px; color:#666;">---</div>
+                </div>
+                
+                <button onclick="this.closest('#temporal-hud').remove()" style="width:100%; background:rgba(255,255,255,0.05); border:1px solid #444; color:#888; cursor:pointer; font-size:10px; padding:6px; border-radius:6px; transition:0.2s;">CLOSE</button>
+            </div>
+        `;
+
         document.body.appendChild(hud);
-    }
+
+        const closeHandler = (e) => {
+            if (!hud.contains(e.target) && e.target !== clockBtn) {
+                hud.remove();
+                document.removeEventListener('mousedown', closeHandler);
+            }
+        };
+        document.addEventListener('mousedown', closeHandler);
+    },
 };
 
 setTimeout(() => { thealTimeApp.startClock(); }, 500);
