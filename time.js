@@ -359,34 +359,48 @@ const thealTimeApp = {
     },
 };
 
-// GLOBAL SCOPE FUNCTION - This ensures onclick always works
+// GLOBAL SCOPE FUNCTION - Re-optimized for visibility
 function triggerGenesisCert() {
-    console.log("Certificate Engine: Accessing Allotment Records...");
+    // 1. Debugging check: Open your browser console (F12) to see if this appears
+    console.log("CRITICAL: Genesis Certificate Triggered!");
     
     if (document.getElementById('cert-overlay')) return;
 
     const serial = `VPU-GEN-${Date.now().toString().slice(-6)}`;
     const overlay = document.createElement('div');
     overlay.id = "cert-overlay";
+    
+    // We use !important to override any inherited styles from your OS CSS
     overlay.style.cssText = `
-        position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-        background: rgba(5, 5, 10, 0.95); backdrop-filter: blur(15px);
-        display: flex; justify-content: center; align-items: center;
-        z-index: 99999; animation: fadeIn 0.3s ease-out;
+        position: fixed !important; 
+        top: 0 !important; 
+        left: 0 !important; 
+        width: 100vw !important; 
+        height: 100vh !important;
+        background: rgba(0, 0, 0, 0.95) !important; 
+        backdrop-filter: blur(20px) !important;
+        -webkit-backdrop-filter: blur(20px) !important;
+        display: flex !important; 
+        justify-content: center !important; 
+        align-items: center !important;
+        z-index: 2147483647 !important; /* Maximum possible z-index */
+        animation: fadeIn 0.3s ease-out;
     `;
 
     overlay.innerHTML = `
         <div class="cert-card" style="
             width: 450px; padding: 40px; background: #0a0a12;
             border: 2px solid #a445ff; border-radius: 15px; text-align: center;
-            color: white; font-family: 'Georgia', serif; box-shadow: 0 0 50px rgba(164,69,255,0.4);
+            color: white; font-family: 'Georgia', serif; 
+            box-shadow: 0 0 70px rgba(164,69,255,0.5);
+            pointer-events: auto;
         ">
-            <h1 style="color: #a445ff; font-size: 22px; letter-spacing: 2px;">ALLOTMENT RECORD</h1>
+            <h1 style="color: #a445ff; font-size: 22px; letter-spacing: 2px; margin: 0;">ALLOTMENT RECORD</h1>
             <p style="font-size: 10px; color: #666; margin-bottom: 25px;">THEALCOHESION GENESIS PHASE</p>
             
             <div style="border: 1px solid #222; padding: 20px; border-radius: 10px; background: rgba(255,255,255,0.02);">
                 <p style="font-size: 12px; color: #888;">HOLDER STATUS</p>
-                <h2 style="font-size: 24px; margin: 5px 0;">INVESTORS & EPOS</h2>
+                <h2 style="font-size: 24px; margin: 5px 0; color: #fff;">INVESTORS & EPOS</h2>
                 <p style="color: #d586ff; font-weight: bold; margin-top: 15px;">DECEMBER 26, 2025</p>
             </div>
 
@@ -394,7 +408,7 @@ function triggerGenesisCert() {
 
             <div style="margin-top: 30px; display: flex; gap: 10px; justify-content: center;">
                 <button onclick="window.print()" style="background:#a445ff; color:white; border:none; padding:10px 20px; border-radius:5px; cursor:pointer; font-weight:bold;">PDF DOWNLOAD</button>
-                <button onclick="this.closest('#cert-overlay').remove()" style="background:transparent; color:#555; border:1px solid #333; padding:10px 20px; border-radius:5px; cursor:pointer;">EXIT</button>
+                <button onclick="document.getElementById('cert-overlay').remove()" style="background:#333; color:#eee; border:none; padding:10px 20px; border-radius:5px; cursor:pointer;">EXIT</button>
             </div>
         </div>
     `;
