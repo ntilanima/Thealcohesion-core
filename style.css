@@ -618,3 +618,33 @@ body {
     0% { background-position: 0% 50%; }
     100% { background-position: 100% 50%; }
 }
+
+/* Print Styles for Certificate - Revised */
+
+@media print {
+    /* Hide everything on the OS */
+    body > *:not(#cert-overlay) {
+        display: none !important;
+    }
+    
+    #cert-overlay {
+        background: white !important;
+        position: absolute !important;
+        padding: 0 !important;
+    }
+
+    .cert-card {
+        border: 2px solid #a445ff !important;
+        background: white !important;
+        color: black !important;
+        box-shadow: none !important;
+        width: 100% !important;
+        -webkit-print-color-adjust: exact; /* Forces background colors to print */
+        print-color-adjust: exact;
+    }
+
+    /* Hide the buttons on the PDF */
+    .cert-card button {
+        display: none !important;
+    }
+}

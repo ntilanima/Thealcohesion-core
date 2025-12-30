@@ -188,28 +188,44 @@ const thealTimeApp = {
         const list = document.getElementById('vpu-event-list');
         const progFill = document.getElementById('vpu-progress-fill');
         const progText = document.getElementById('vpu-progress-percent');
+        
         if (!list) return;
+
+        // 1. Update Event List with Certificate Trigger
+        const events = [
+            { n: "Special Day", d: "29/02", action: null },
+            { n: "End Year", d: "20/11", action: null },
+            { n: "Genesis Allotment", d: "26/12", action: "thealTimeApp.showCertificate()" }
+        ];
+
+        list.innerHTML = events.map(e => `
+            <div style="font-size:10px; margin-bottom:12px; border-left:2px solid #a445ff; padding-left:8px; cursor: ${e.action ? 'pointer' : 'default'}; transition: 0.2s;" 
+                 onmouseover="${e.action ? "this.style.background='rgba(164,69,255,0.1)'" : ""}"
+                 onmouseout="this.style.background='transparent'"
+                 onclick="${e.action ? e.action : ''}">
+                <b style="color: ${e.action ? '#d586ff' : '#fff'}">${e.n} ${e.action ? '↗' : ''}</b><br>
+                <span style="color:#888;">${e.d}</span>
+            </div>
+        `).join('');
+
+        // 2. Update Progress Bar logic
         const now = new Date();
         const theal = this.getThealDate(now);
+        
         if (theal.type === "cycle" || theal.type === "milestone") {
-            const dayNum = parseInt(theal.label.match(/Day (\d+)/)[1]);
-            const percent = Math.round((dayNum / 28) * 100);
-            if (progFill) progFill.style.width = `${percent}%`;
-            if (progText) progText.textContent = `${percent}%`;
+            // Extract the day number from label (e.g., "Cycle 2, Day 13")
+            const dayMatch = theal.label.match(/Day (\d+)/);
+            if (dayMatch) {
+                const dayNum = parseInt(dayMatch[1]);
+                const percent = Math.round((dayNum / 28) * 100);
+                if (progFill) progFill.style.width = `${percent}%`;
+                if (progText) progText.textContent = `${percent}%`;
+            }
+        } else {
+            // If it's a holiday or transition
+            if (progFill) progFill.style.width = "100%";
+            if (progText) progText.textContent = "Break";
         }
-        const events = [
-    { n: "Special Day", d: "29/02", action: null },
-    { n: "End Year", d: "20/11", action: null },
-    { n: "Genesis Allotment", d: "26/12", action: "AllotmentEngine.showCertificate()" }
-    ];
-
-    list.innerHTML = events.map(e => `
-    <div style="font-size:10px; margin-bottom:12px; border-left:2px solid #a445ff; padding-left:8px; cursor: ${e.action ? 'pointer' : 'default'}" 
-         onclick="${e.action ? e.action : ''}">
-        <b style="color: ${e.action ? '#d586ff' : '#fff'}">${e.n} ${e.action ? '↗' : ''}</b><br>
-        <span style="color:#888;">${e.d}</span>
-    </div>
-`   ).join('');
     },
 
     goToToday() {
@@ -296,6 +312,50 @@ const thealTimeApp = {
             }
         };
         document.addEventListener('mousedown', closeHandler);
+    },
+    // Certificate Display
+    showCertificate() {
+        if (document.getElementById('cert-overlay')) return;
+
+        // Generate a Unique Serial Number (Genesis Batch + Timestamp)
+        const serial = `VPU-GEN-${Date.now().toString().slice(-6)}`;
+
+        const overlay = document.createElement('div');
+        overlay.id = "cert-overlay";
+        overlay.style.cssText = `
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0, 0, 0, 0.92); backdrop-filter: blur(15px);
+            display: flex; justify-content: center; align-items: center;
+            z-index: 20000; animation: fadeIn 0.4s ease-out;
+        `;
+
+        overlay.innerHTML = `
+            <div class="cert-card" style="
+                width: 500px; padding: 50px; background: #0a0a12;
+                border: 2px solid #a445ff; border-radius: 20px; text-align: center;
+                color: white; font-family: 'Georgia', serif; position: relative;
+                box-shadow: 0 0 50px rgba(164,69,255,0.4);
+            ">
+                <div style="font-size: 10px; color: #a445ff; letter-spacing: 3px; margin-bottom: 20px;">GENESIS ALLOTMENT RECORD</div>
+                <h1 style="font-size: 26px; margin: 0; letter-spacing: 1px;">Sovereignty Allotment</h1>
+                <p style="font-style: italic; color: #888; font-size: 13px; margin-top: 5px;">Phase 1: Initial Distribution</p>
+                
+                <hr style="border:0; border-top: 1px solid #222; margin: 30px 0;">
+                
+                <p style="font-size: 12px; color: #aaa; text-transform: uppercase; letter-spacing: 1px;">Confirming Stake For:</p>
+                <h2 style="font-size: 32px; margin: 10px 0; color: #fff;">EPOS & INVESTORS</h2>
+                
+                <p style="margin-top: 30px; font-size: 14px; color: #d586ff;">December 26th, 2025</p>
+                <div style="font-size: 9px; color: #444; margin-top: 5px;">Serial: ${serial}</div>
+
+                <div style="margin-top: 40px; display: flex; gap: 15px; justify-content: center;">
+                    <button onclick="window.print()" style="background:#a445ff; color:white; border:none; padding:10px 20px; border-radius:6px; cursor:pointer; font-weight:bold; transition: 0.3s;" onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='scale(1)'">Download PDF</button>
+                    <button onclick="document.getElementById('cert-overlay').remove()" style="background:transparent; color:#666; border:1px solid #333; padding:10px 20px; border-radius:6px; cursor:pointer;">Close</button>
+                </div>
+            </div>
+        `;
+
+        document.body.appendChild(overlay);
     },
 };
 
