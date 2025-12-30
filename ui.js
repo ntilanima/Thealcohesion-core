@@ -14,13 +14,20 @@ const vpuUI = {
     },
     // 1. Ubuntu-aligned Top Bar Clock [cite: 151-152]
     setupClock() {
-        const update = () => {
+        setInterval(() => {
             const now = new Date();
-            document.getElementById('system-time').innerText = 
-                now.toLocaleString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
-        };
-        setInterval(update, 60000);
-        update();
+            const h = now.getHours();
+            const m = now.getMinutes().toString().padStart(2, '0');
+            
+            // Convert to Thealcohesion Hour
+            const thealH = thealTimeApp.convertToThealHour(h);
+            
+            const clockEl = document.querySelector('.top-bar .clock');
+            if (clockEl) {
+                clockEl.textContent = `Cycle Time: ${thealH}:${m}`;
+                clockEl.title = `Standard Time: ${h}:${m}`;
+            }
+        }, 1000);
     },
 
     // 2. Custom Context Menu (Right-Click) logic
@@ -81,7 +88,7 @@ const vpuUI = {
         else if (appId === 'mediation') content = mediationApp.render();
         else if (appId === 'resource-pool') content = resourcePoolApp.render();
         else if (appId === 'values-council') content = valuesCouncilApp.render();
-        else if (appId === 'values-council') content = valuesCouncilApp.render();
+        else if (appId === 'time-manager') content = thealTimeApp.render();
         else if (appId === 'marketplace') {
         // Renders the App Center View
         const apps = vpuRegistry.getAppsForMember(kernel.member.role);
@@ -177,7 +184,8 @@ const vpuUI = {
         const defaultIcons = [
             { id: 'storage', name: 'My Files', icon: 'folder' },
             { id: 'governance', name: 'Mandates', icon: 'scroll' },
-            { id: 'resource-pool', name: 'Treasury', icon: 'bank' }
+            { id: 'resource-pool', name: 'Treasury', icon: 'bank' },
+            { id: 'time-manager', name: 'Temporal Engine', icon: 'calendar' }
         ];
 
         defaultIcons.forEach(data => {
