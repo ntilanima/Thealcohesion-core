@@ -1,6 +1,6 @@
-/** * THEALCOHESION TEMPORAL LAW - PHASE 4.3
- * Strictly 28-Day Cycles + Fixed Holidays 
- * Added: Date Navigation & Jump-to-Date logic
+/** * THEALCOHESION TEMPORAL LAW - PHASE 4.4
+ * Strictly 28-Day Cycles + Holiday Pauses
+ * Genesis Allotment: 26-12-2025 
  */
 const thealTimeApp = {
     id: "time-manager",
@@ -32,34 +32,27 @@ const thealTimeApp = {
 
         return `
             <div class="calendar-app-window">
-                <div class="calendar-header">
+                <div class="calendar-header" style="display:flex; justify-content:space-between; align-items:center; padding:10px; background:#1a1a2e; border-bottom:1px solid #444;">
                     <div class="nav-controls">
                         <button class="vpu-btn" onclick="thealTimeApp.changeMonth(-1)">←</button>
                         <button class="vpu-btn" onclick="thealTimeApp.changeMonth(1)">→</button>
                     </div>
-                    <h2 id="vpu-month-label" style="margin: 0; font-size: 1.2rem;">Month Year</h2>
+                    <h2 id="vpu-month-label" style="margin:0; font-size:1.1rem; color:#fff;">Loading...</h2>
                     <div class="date-jump-container">
-                        <input type="date" id="vpu-date-picker" onchange="thealTimeApp.jumpToDate(this.value)">
+                        <input type="date" id="vpu-date-picker" onchange="thealTimeApp.jumpToDate(this.value)" style="background:#000; color:#fff; border:1px solid #a445ff; font-size:12px;">
                     </div>
                 </div>
-                <div class="calendar-layout-vpu">
-                    <div class="calendar-grid-container" id="vpu-calendar-grid">
+                <div class="calendar-layout-vpu" style="display:flex; height:calc(100% - 50px);">
+                    <div id="vpu-calendar-grid" class="calendar-grid-container" style="flex:2; display:grid; grid-template-columns:repeat(7, 1fr); gap:2px; padding:10px; background:#111; overflow-y:auto;">
                         </div>
-                    
-                    <div class="calendar-info-sidebar">
+                    <div class="calendar-info-sidebar" style="flex:1; background:#1a1a2e; border-left:1px solid #333; padding:15px; text-align:center;">
                         <div class="clock-widget">
-                            <div id="vpu-theal-time" class="theal-time-big">--:--:--</div>
-                            <div id="vpu-theal-date" class="theal-date-sub">Loading...</div>
+                            <div id="vpu-theal-time" class="theal-time-big" style="font-size:1.8rem; font-weight:bold; color:#a445ff;">--:--:--</div>
+                            <div id="vpu-theal-date" class="theal-date-sub" style="color:#aaa; font-size:0.9rem; margin-bottom:20px;">Loading...</div>
                         </div>
-
-                        <div class="next-events-vpu">
-                            <h4>Next Sovereignty Events</h4>
+                        <div class="next-events-vpu" style="text-align:left; border-top:1px solid #444; padding-top:10px;">
+                            <h4 style="font-size:12px; color:#a445ff; margin-bottom:10px;">CHARTER EVENTS</h4>
                             <div id="vpu-event-list"></div>
-                        </div>
-                        <div class="legend-vpu">
-                            <p><span style="color:#e95420">■</span> Holiday</p>
-                            <p><span style="color:#d586ff">■</span> Reflection</p>
-                            <p><span style="color:#FFD700">★</span> Allotment Day</p>
                         </div>
                     </div>
                 </div>
@@ -67,71 +60,38 @@ const thealTimeApp = {
         `;
     },
 
-    jumpToDate(dateString) {
-        if (!dateString) return;
-        const newDate = new Date(dateString);
-        this.currentViewDate = newDate;
-        this.renderGrid(newDate);
-        
-        // Highlight logic for the selected day
-        setTimeout(() => {
-            const day = newDate.getDate();
-            const cells = document.querySelectorAll('.greg-num');
-            cells.forEach(c => {
-                if(parseInt(c.textContent) === day) {
-                    const cell = c.parentElement.parentElement;
-                    cell.style.boxShadow = "inset 0 0 10px #a445ff";
-                    cell.style.borderColor = "#a445ff";
-                }
-            });
-        }, 200);
-    },
-
     getThealDate(date) {
         const d = date.getDate();
         const m = date.getMonth() + 1; 
         const year = date.getFullYear();
-        const isLeap = (year % 4 === 0 && year % 100 !== 0) || (year % 400 === 0);
+        const isLeap = (year % 4 === 0 && (year % 100 !== 0 || year % 400 === 0));
 
-        // 1. HOLIDAY: END YEAR (20th November)
         if (d === 20 && m === 11) return { label: "HOLIDAY: END YEAR", type: "holiday", color: "#e95420" };
-        
-        // 2. HOLIDAY: SPECIAL DAY (29th February)
-        // This day is "Time Outside of Cycles"
         if (d === 29 && m === 2) return { label: "HOLIDAY: SPECIAL DAY", type: "holiday", color: "#d586ff" };
 
-        if (d === 26 && m === 12) return { label: "Genesis Allotment", type: "milestone", color: "#FFD700" };
+        let milestone = (d === 26 && m === 12) ? " ★ Genesis Allotment" : "";
 
-        // 3. CYCLE CALCULATION
         for (let i = 0; i < this.cycles.length; i++) {
             const cycle = this.cycles[i];
-            const [startD, startM] = cycle.start.split('/').map(Number);
-            const [endD, endM] = cycle.end.split('/').map(Number);
+            const [sD, sM] = cycle.start.split('/').map(Number);
+            const [eD, eM] = cycle.end.split('/').map(Number);
 
-            let startDate = new Date(year, startM - 1, startD);
-            let endDate = new Date(year, endM - 1, endD);
+            let startDate = new Date(year, sM - 1, sD);
+            let endDate = new Date(year, eM - 1, eD);
 
-            if (startM >= 11 && m < 11) startDate.setFullYear(year - 1);
-            if (endM >= 11 && m < 11) endDate.setFullYear(year - 1);
+            if (sM >= 11 && m < 11) startDate.setFullYear(year - 1);
+            if (eM >= 11 && m < 11) endDate.setFullYear(year - 1);
             if (endDate < startDate) endDate.setFullYear(endDate.getFullYear() + 1);
 
             if (date >= startDate && date <= endDate) {
-                // Calculate raw difference
                 let diff = Math.floor((date - startDate) / 86400000) + 1;
+                if (isLeap && date > new Date(year, 1, 29) && startDate <= new Date(year, 1, 29)) diff--;
                 
-                // LEAP YEAR FIX: 
-                // If we are in or after March of a leap year, and this cycle started before Feb 29 
-                // but ends after it (or we are simply past it), we subtract the special day 
-                // so the cycle doesn't stretch to 29 days.
-                if (isLeap && date > new Date(year, 1, 29)) {
-                    // Only subtract if the leap day actually fell within this specific cycle's range
-                    const leapDay = new Date(year, 1, 29);
-                    if (leapDay >= startDate && leapDay <= date) {
-                        diff--;
-                    }
-                }
-
-                return { label: `${cycle.name}, Day ${diff}`, type: "cycle" };
+                return { 
+                    label: `${cycle.name}, Day ${diff}${milestone}`, 
+                    type: milestone ? "milestone" : "cycle",
+                    color: milestone ? "#FFD700" : null
+                };
             }
         }
         return { label: "Transition", type: "other" };
@@ -145,51 +105,50 @@ const thealTimeApp = {
         label.textContent = date.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
 
         ['Sat', 'Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri'].forEach(d => {
-            grid.innerHTML += `<div class="grid-header">${d}</div>`;
+            grid.innerHTML += `<div class="grid-header" style="font-size:10px; color:#a445ff; text-align:center;">${d}</div>`;
         });
 
-        const firstDay = new Date(date.getFullYear(), date.getMonth(), 1);
-        const lastDay = new Date(date.getFullYear(), date.getMonth() + 1, 0);
-        const startIndex = (firstDay.getDay() + 1) % 7;
+        const first = new Date(date.getFullYear(), date.getMonth(), 1);
+        const last = new Date(date.getFullYear(), date.getMonth() + 1, 0);
+        const startIndex = (first.getDay() + 1) % 7;
         for (let i = 0; i < startIndex; i++) grid.innerHTML += `<div></div>`;
 
-        for (let day = 1; day <= lastDay.getDate(); day++) {
+        for (let day = 1; day <= last.getDate(); day++) {
             const d = new Date(date.getFullYear(), date.getMonth(), day);
             const theal = this.getThealDate(d);
             const cell = document.createElement("div");
             cell.className = `vpu-day-cell ${theal.type}`;
+            cell.style.cssText = "background:#1a1a2e; border:1px solid #333; min-height:50px; padding:5px; font-size:10px; color:#fff;";
             
-            if (d.toDateString() === new Date().toDateString()) cell.classList.add("today-vpu");
+            if (d.toDateString() === new Date().toDateString()) cell.style.border = "1px solid #e95420";
             if (theal.color) cell.style.borderLeft = `4px solid ${theal.color}`;
 
-            cell.innerHTML = `
-                <div class="cell-top">
-                    <span class="greg-num">${day}</span>
-                </div>
-                <div class="theal-label">${theal.label}</div>
-            `;
+            cell.innerHTML = `<div style="display:flex; justify-content:space-between;"><span>${day}</span></div><div style="font-size:8px; margin-top:5px; color:#aaa;">${theal.label}</div>`;
             grid.appendChild(cell);
         }
     },
 
+    jumpToDate(val) {
+        if(!val) return;
+        this.currentViewDate = new Date(val);
+        this.renderGrid(this.currentViewDate);
+    },
+
+    changeMonth(delta) {
+        this.currentViewDate.setMonth(this.currentViewDate.getMonth() + delta);
+        this.renderGrid(this.currentViewDate);
+    },
+
     renderUpcomingEvents() {
-        const eventList = document.getElementById('vpu-event-list');
-        if (!eventList) return;
-
-        // Ensure the remark reflects that these days don't count towards cycle duration
-        const charterHolidays = [
-            { name: "Special Day", date: "29/02", remark: "Non-Cycle Day" },
-            { name: "End Year Day", date: "20/11", remark: "Year Closure" },
-            { name: "Allotment Day", date: "26/12", remark: "Genesis" }
+        const list = document.getElementById('vpu-event-list');
+        if (!list) return;
+        const events = [
+            { n: "Special Day", d: "29/02" },
+            { n: "End Year", d: "20/11" },
+            { n: "Genesis Allotment", d: "26/12" }
         ];
-
-        eventList.innerHTML = charterHolidays.map(h => `
-            <div class="event-item-vpu" style="border-left: 2px solid #e95420; margin-bottom: 8px; padding-left: 5px;">
-                <div style="font-size: 11px; font-weight: bold; color: #fff;">${h.name}</div>
-                <div style="font-size: 10px; color: #e95420;">${h.date} — ${h.remark}</div>
-            </div>
-        `).join('') + '<hr style="border:0; border-top:1px solid #444; margin: 10px 0;">';
-    }
+        list.innerHTML = events.map(e => `<div style="font-size:10px; margin-bottom:5px; padding-left:5px; border-left:2px solid #a445ff;"><b>${e.n}</b><br>${e.d}</div>`).join('');
+    },
 
     startClock() {
         if (this.timer) clearInterval(this.timer);
@@ -205,11 +164,6 @@ const thealTimeApp = {
             }
             if (dateEl) dateEl.textContent = this.getThealDate(now).label;
         }, 1000);
-    },
-
-    changeMonth(delta) {
-        this.currentViewDate.setMonth(this.currentViewDate.getMonth() + delta);
-        this.renderGrid(this.currentViewDate);
     },
 
     convertToThealHour(hour) {
