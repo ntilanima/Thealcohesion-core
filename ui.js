@@ -64,20 +64,24 @@ const vpuUI = {
 
     // 4. Windowed Internal Apps [cite: 159-160]
     launchApp(appId) {
-        const workspace = document.getElementById('workspace');
-        const window = document.createElement('div');
-        window.className = 'app-window';
-        window.innerHTML = `
-            <div class="window-header">
-                <span>App: ${appId}</span>
-                <button onclick="this.parentElement.parentElement.remove()">×</button>
-            </div>
-            <div class="window-content">
-                <p>Loading Sovereign Module...</p>
-            </div>
-        `;
-        workspace.appendChild(window);
-    },
+    const workspace = document.getElementById('workspace');
+    const window = document.createElement('div');
+    window.className = 'app-window';
+    
+    let content = '<p>Loading Sovereign Module...</p>';
+    if (appId === 'governance') {
+        content = governanceApp.render(); // Calls the notice app
+    }
+
+    window.innerHTML = `
+        <div class="window-header">
+            <span>Thealcohesion: ${appId.toUpperCase()}</span>
+            <button onclick="this.parentElement.parentElement.remove()">×</button>
+        </div>
+        <div class="window-content">${content}</div>
+    `;
+    workspace.appendChild(window);
+    }
 
     toggleDock() {
         const dock = document.getElementById('side-dock');
@@ -102,11 +106,10 @@ const vpuUI = {
     },
 
     getAuthorizedApps(role) {
-        // Example registry: Real implementation uses an internal registry [cite: 285]
-        const registry = [
-            { id: 'council', name: 'Values Council', icon: 'council', roles: ['STEWARD', 'ADMIN'] },
-            { id: 'storage', name: 'My Storage', icon: 'storage', roles: ['MEMBER', 'STEWARD', 'ADMIN'] }
-        ];
-        return registry.filter(app => app.roles.includes(role));
-    }
+    const registry = [
+        { id: 'governance', name: 'Governance', icon: 'governance', roles: ['MEMBER', 'STEWARD', 'ADMIN'] },
+        { id: 'storage', name: 'My Storage', icon: 'storage', roles: ['MEMBER', 'STEWARD', 'ADMIN'] }
+    ];
+    return registry.filter(app => app.roles.includes(role));
+    },
 };
