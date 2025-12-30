@@ -146,6 +146,12 @@ const thealTimeApp = {
                 document.getElementById("hud-normal-time").textContent = `${h.toString().padStart(2, "0")}:${m}:${s}`;
                 document.getElementById("hud-normal-date").textContent = now.toLocaleDateString();
             }
+            
+            // 6. Update Taskbar Clock
+            const taskClock = document.getElementById('taskbar-clock');
+            if (taskClock) {
+                taskClock.textContent = timeString; // This shows the C#-D# theal time in the taskbar
+            }
         };
         tick();
         this.timer = setInterval(tick, 1000);
