@@ -93,7 +93,7 @@ const vpuUI = {
     `;
     workspace.appendChild(window);
     },
-
+    // Helper to create a new folder on the workspace
     toggleDock() {
         const dock = document.getElementById('side-dock');
         const workspace = document.getElementById('workspace');
@@ -115,7 +115,7 @@ const vpuUI = {
             this.dockPosition = 'left';
         }
     },
-
+    // Helper to get apps based on role
     getAuthorizedApps(role) {
     const registry = [
         { id: 'governance', name: 'Governance', icon: 'governance', roles: ['MEMBER', 'STEWARD', 'ADMIN'] },
@@ -123,4 +123,19 @@ const vpuUI = {
     ];
     return registry.filter(app => app.roles.includes(role));
     },
+
+    // 5. Emergency Lockdown Screen
+    renderLockdownScreen() {
+    const shield = document.createElement('div');
+    shield.id = 'sovereign-shield';
+    shield.innerHTML = `
+        <div class="lockdown-message">
+            <h1>SYSTEM LOCKED</h1>
+            <p>Thealcohesion Core has entered Emergency Protocol.</p>
+            <p>Contact the Values Council or a System Steward for details.</p>
+            <div class="shield-icon">🛡️</div>
+        </div>
+    `;
+    document.body.appendChild(shield);
+},
 };

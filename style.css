@@ -83,3 +83,42 @@ body {
     border-radius: 4px;
     font-family: monospace;
 }
+
+/* Emergency Lockdown Overlay */
+#sovereign-shield {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background: rgba(48, 10, 36, 0.98); /* Deep Ubuntu Purple */
+    z-index: 9999; /* Above everything */
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    text-align: center;
+    backdrop-filter: blur(20px);
+}
+
+.lockdown-message h1 {
+    color: var(--ubuntu-orange);
+    font-size: 3rem;
+    margin-bottom: 10px;
+}
+
+.shield-icon {
+    font-size: 80px;
+    margin-top: 30px;
+    opacity: 0.5;
+}
+
+.lockdown-btn {
+    background: #E95420;
+    color: white;
+    border: none;
+    padding: 10px 20px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-weight: bold;
+}
+.lockdown-btn:hover { background: #c7461b; }

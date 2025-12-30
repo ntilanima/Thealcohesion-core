@@ -35,6 +35,9 @@ const auditApp = {
                 </table>
                 
                 <div class="audit-controls">
+                <div class="audit-controls" style="margin-top: 20px; border-top: 1px solid red; padding-top: 10px;">
+                    <p style="color: #ff6666; font-size: 11px;">EMERGENCY CONTROLS:</p>
+                    <button class="lockdown-btn" onclick="kernel.triggerEmergencyLockdown()">TRIGGER GLOBAL LOCKDOWN</button>
                     <button onclick="kernel.logAction('Audit Export Requested')">Export for Council</button>
                 </div>
             </div>

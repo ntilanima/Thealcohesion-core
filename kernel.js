@@ -1,9 +1,43 @@
 /**
  * Thealcohesion Sovereign Kernel
- * Identity & Role Enforcement [cite: 143]
+ * Updated for Phase 3: Emergency Controls
  */
 const kernel = {
     member: null,
+    systemState: "ACTIVE", // States: ACTIVE, LOCKED
+    logs: [],
+
+    // 1. The Kill-Switch: Can only be triggered by Guardians
+    triggerEmergencyLockdown() {
+        if (this.member && (this.member.role === "GUARDIAN" || this.member.role === "STEWARD")) {
+            this.systemState = "LOCKED";
+            this.logAction("EMERGENCY LOCKDOWN ACTIVATED");
+            ui.renderLockdownScreen();
+            console.error("CRITICAL: Sovereign Environment is now LOCKED.");
+        } else {
+            this.logAction("UNAUTHORIZED LOCKDOWN ATTEMPT");
+            throw new Error("Unauthorized: Only Guardians may trigger lockdown.");
+        }
+    },
+
+    // 2. Security Middleware: Prevents actions if system is locked
+    isSystemReady() {
+        if (this.systemState === "LOCKED") {
+            alert("System is LOCKED. All operations suspended by Governance.");
+            return false;
+        }
+        return true;
+    },
+
+    logAction(action) {
+        const entry = {
+            timestamp: new Date().toISOString(),
+            member: this.member ? this.member.username : "System",
+            action: action,
+            state: this.systemState
+        };
+        this.logs.push(entry);
+    },
 
     async authenticate() {
         const user = document.getElementById('username').value;
