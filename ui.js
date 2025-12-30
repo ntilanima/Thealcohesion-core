@@ -86,6 +86,8 @@ const vpuUI = {
     content = mediationApp.render();
     }else if (appId === 'resource-pool') {
     content = resourcePoolApp.render();
+    }else if (appId === 'values-council') {
+    content = valuesCouncilApp.render();
     }
 
     window.innerHTML = `
@@ -152,6 +154,7 @@ const vpuUI = {
             const contentArea = win.querySelector('.window-content');
             if (appId === 'mediation') contentArea.innerHTML = mediationApp.render();
             if (appId === 'resource-pool') contentArea.innerHTML = resourcePoolApp.render();
+            if (appId === 'values-council') contentArea.innerHTML = valuesCouncilApp.render();
             // Add other apps here as needed
         }
     });
