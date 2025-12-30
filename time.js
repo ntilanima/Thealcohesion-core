@@ -33,13 +33,14 @@ const thealTimeApp = {
         return `
             <div class="calendar-app-window">
                 <div class="calendar-header" style="display:flex; justify-content:space-between; align-items:center; padding:10px; background:#1a1a2e; border-bottom:1px solid #444;">
-                    <div class="nav-controls">
+                    <div class="nav-controls" style="display:flex; gap:5px;">
                         <button class="vpu-btn" onclick="thealTimeApp.changeMonth(-1)">←</button>
+                        <button class="vpu-btn" onclick="thealTimeApp.goToToday()" style="font-size:10px; text-transform:uppercase; font-weight:bold; color:#a445ff; min-width:60px;">Today</button>
                         <button class="vpu-btn" onclick="thealTimeApp.changeMonth(1)">→</button>
                     </div>
                     <h2 id="vpu-month-label" style="margin:0; font-size:1.1rem; color:#fff;">Loading...</h2>
                     <div class="date-jump-container">
-                        <input type="date" id="vpu-date-picker" onchange="thealTimeApp.jumpToDate(this.value)" style="background:#000; color:#fff; border:1px solid #a445ff; font-size:12px;">
+                        <input type="date" id="vpu-date-picker" onchange="thealTimeApp.jumpToDate(this.value)" style="background:#000; color:#fff; border:1px solid #a445ff; font-size:12px; border-radius:4px; padding:2px;">
                     </div>
                 </div>
                 <div class="calendar-layout-vpu" style="display:flex; height:calc(100% - 50px);">
@@ -48,7 +49,17 @@ const thealTimeApp = {
                     <div class="calendar-info-sidebar" style="flex:1; background:#1a1a2e; border-left:1px solid #333; padding:15px; text-align:center;">
                         <div class="clock-widget">
                             <div id="vpu-theal-time" class="theal-time-big" style="font-size:1.8rem; font-weight:bold; color:#a445ff;">--:--:--</div>
-                            <div id="vpu-theal-date" class="theal-date-sub" style="color:#aaa; font-size:0.9rem; margin-bottom:20px;">Loading...</div>
+                            <div id="vpu-theal-date" class="theal-date-sub" style="color:#aaa; font-size:0.9rem; margin-bottom:10px;">Loading...</div>
+                            
+                            <div id="vpu-cycle-progress-container" style="margin-bottom:20px;">
+                                <div style="display:flex; justify-content:space-between; font-size:9px; color:#888; margin-bottom:4px;">
+                                    <span>Cycle Progress</span>
+                                    <span id="vpu-progress-percent">0%</span>
+                                </div>
+                                <div style="width:100%; height:6px; background:#000; border-radius:3px; overflow:hidden; border:1px solid #333;">
+                                    <div id="vpu-progress-fill" style="width:0%; height:100%; background:linear-gradient(90deg, #a445ff, #d586ff); transition: width 0.5s ease;"></div>
+                                </div>
+                            </div>
                         </div>
                         <div class="next-events-vpu" style="text-align:left; border-top:1px solid #444; padding-top:10px;">
                             <h4 style="font-size:12px; color:#a445ff; margin-bottom:10px;">CHARTER EVENTS</h4>
@@ -150,13 +161,39 @@ const thealTimeApp = {
 
     renderUpcomingEvents() {
         const list = document.getElementById('vpu-event-list');
+        const progFill = document.getElementById('vpu-progress-fill');
+        const progText = document.getElementById('vpu-progress-percent');
         if (!list) return;
+
+        // 1. Update Progress Bar logic
+        const now = new Date();
+        const theal = this.getThealDate(now);
+        if (theal.type === "cycle" || theal.type === "milestone") {
+            // Extract the day number from label "Cycle X, Day Y"
+            const dayNum = parseInt(theal.label.match(/Day (\d+)/)[1]);
+            const percent = Math.round((dayNum / 28) * 100);
+            if (progFill) progFill.style.width = `${percent}%`;
+            if (progText) progText.textContent = `${percent}%`;
+        } else {
+            // If it's a holiday or transition, show full/empty
+            if (progFill) progFill.style.width = "100%";
+            if (progText) progText.textContent = "Break";
+        }
+
+        // 2. Update Event List
         const events = [
             { n: "Special Day", d: "29/02" },
             { n: "End Year", d: "20/11" },
             { n: "Genesis Allotment", d: "26/12" }
         ];
-        list.innerHTML = events.map(e => `<div style="font-size:10px; margin-bottom:5px; padding-left:5px; border-left:2px solid #a445ff;"><b>${e.n}</b><br>${e.d}</div>`).join('');
+        list.innerHTML = events.map(e => `<div style="font-size:10px; margin-bottom:8px; padding-left:5px; border-left:2px solid #a445ff;"><b>${e.n}</b><br><span style="color:#888;">${e.d}</span></div>`).join('');
+    },
+
+    goToToday() {
+        this.currentViewDate = new Date();
+        this.renderGrid(this.currentViewDate);
+        const picker = document.getElementById('vpu-date-picker');
+        if(picker) picker.value = "";
     },
 
     startClock() {
