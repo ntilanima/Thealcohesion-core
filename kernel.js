@@ -63,7 +63,7 @@ const kernel = {
         console.log("Entering Private Operational Environment...");
     },
 
-    // Add this inside the kernel object in kernel.js
+    // 3. Audit Log: Immutable record of critical actions
     logs: [],
 
     logAction(action) {
@@ -75,5 +75,39 @@ const kernel = {
     this.logs.push(entry);
     // In Phase 3, these will be sent to a dedicated Audit Vault
     console.log("Audit Log Recorded:", entry);
+    },
+
+    // 4. Identity Verification Flow
+    async login() {
+        const userField = document.getElementById('username').value;
+        const passField = document.getElementById('password').value;
+
+        try {
+            const verifiedMember = await identityGate.verify(userField, passField);
+            
+            // Link identity to session
+            this.member = {
+                username: userField,
+                role: verifiedMember.role,
+                tier: verifiedMember.tier,
+                allotment: 5 * 1024 * 1024 * 1024 // 5GB Baseline
+            };
+
+            this.logAction("IDENTITY VERIFIED");
+            this.bootShell();
+        } catch (error) {
+            alert(error.message);
+            this.logAction(`FAILED ACCESS ATTEMPT: ${userField}`);
+        }
+    },
+
+    bootShell() {
+        // Hide Login Gate, Show VPU Shell
+        document.getElementById('login-gate').classList.add('hidden');
+        document.getElementById('sovereign-shell').classList.remove('hidden');
+        
+        // Initialize UI with Role-based permissions
+        vpuUI.init();
+        console.log(`VPU Session Started for ${this.member.username} as ${this.member.role}`);
     }
 };
