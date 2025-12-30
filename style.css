@@ -57,3 +57,29 @@ body {
     backdrop-filter: blur(20px);
     text-align: center;
 }
+
+.audit-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 15px;
+    font-size: 12px;
+}
+
+.audit-table th {
+    text-align: left;
+    padding: 8px;
+    background: rgba(255,255,255,0.1);
+    color: var(--ubuntu-orange);
+}
+
+.audit-table td {
+    padding: 8px;
+    border-bottom: 1px solid rgba(255,255,255,0.05);
+}
+
+.action-tag {
+    background: #444;
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-family: monospace;
+}

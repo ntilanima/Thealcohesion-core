@@ -80,6 +80,8 @@ const vpuUI = {
                 ${apps.map(a => `<div class="app-card">${a.name} <button onclick="vpuRegistry.activateModule('${a.id}')">Activate</button></div>`).join('')}
             </div>
         `;
+    } else if (appId === 'audit') {
+    content = auditApp.render();
     }
 
     window.innerHTML = `
