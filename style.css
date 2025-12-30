@@ -770,3 +770,47 @@ body, html {
     cursor: pointer;
     text-align: left;
 }
+
+/* Ensure the OS doesn't scroll away */
+body {
+    height: 100vh;
+    overflow: hidden;
+}
+
+#vpu-taskbar {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    height: 48px;
+    background: #0d0d19;
+    border-top: 1px solid #a445ff;
+    display: flex;
+    align-items: center;
+    padding: 0 10px;
+    z-index: 10000; /* Stays above everything */
+}
+
+#vpu-start-menu {
+    position: fixed;
+    bottom: 55px; /* Sits exactly above the taskbar */
+    left: 10px;
+    display: none; /* Hidden by default, shown by toggle */
+    flex-direction: column;
+    z-index: 10001;
+}
+
+.menu-item {
+    background: #1a1a2e;
+    color: white;
+    border: 1px solid #333;
+    padding: 10px;
+    margin-bottom: 5px;
+    cursor: pointer;
+    border-radius: 4px;
+    text-align: left;
+}
+
+.menu-item:hover {
+    background: #a445ff;
+}
