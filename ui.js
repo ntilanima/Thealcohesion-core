@@ -82,6 +82,8 @@ const vpuUI = {
         `;
     } else if (appId === 'audit') {
     content = auditApp.render();
+    } else if (appId === 'mediation') {
+    content = mediationApp.render();
     }
 
     window.innerHTML = `
@@ -138,4 +140,17 @@ const vpuUI = {
     `;
     document.body.appendChild(shield);
 },
+
+    // 6. Refresh App Content
+    refreshApp(appId) {
+    // Finds the open window for this app and re-renders the content
+    const windows = document.querySelectorAll('.app-window');
+    windows.forEach(win => {
+        if (win.innerHTML.includes(`Thealcohesion: ${appId.toUpperCase()}`)) {
+            const contentArea = win.querySelector('.window-content');
+            if (appId === 'mediation') contentArea.innerHTML = mediationApp.render();
+            // Add other apps here as needed
+        }
+    });
+}
 };
