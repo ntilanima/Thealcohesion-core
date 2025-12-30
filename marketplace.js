@@ -14,6 +14,7 @@ const vpuRegistry = {
         { id: 'resource-pool', name: 'Resource Pool', icon: 'resources', roles: ['MEMBER', 'STEWARD', 'GUARDIAN'] },
         { id: 'values-council', name: 'Values Council', icon: 'council', roles: ['ADMIN', 'STEWARD'] },
         { id: 'time-manager', name: 'Dual Calendar', icon: 'calendar', roles: ['MEMBER', 'STEWARD'] },
+        { id: 'time-manager', name: 'Temporal Engine', icon: 'calendar', roles: ['MEMBER', 'STEWARD'] },
         { id: 'resource', name: 'Resource Pool', icon: 'resource', roles: ['MEMBER', 'STEWARD'] }
     ],
 

@@ -201,7 +201,8 @@ const vpuUI = {
         const icons = {
             folder: `<svg viewBox="0 0 24 24" width="48" height="48" fill="#e95420"><path d="M10 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2h-8l-2-2z"/></svg>`,
             scroll: `<svg viewBox="0 0 24 24" width="48" height="48" fill="#e95420"><path d="M14 2H6c-1.1 0-1.99.9-1.99 2L4 20c0 1.1.89 2 1.99 2H18c1.1 0 2-.9 2-2V8l-6-6zm2 16H8v-2h8v2zm0-4H8v-2h8v2zm-3-5V3.5L18.5 9H13z"/></svg>`,
-            bank: `<svg viewBox="0 0 24 24" width="48" height="48" fill="#e95420"><path d="M11.5 1L2 6v2h19V6L11.5 1zM2 22h19v-3H2v3zm18.5-13H17v8h3.5V9zM15 9h-2.5v8H15V9zm-4 0H8.5v8H11V9zM7 9H3.5v8H7V9z"/></svg>`
+            bank: `<svg viewBox="0 0 24 24" width="48" height="48" fill="#e95420"><path d="M11.5 1L2 6v2h19V6L11.5 1zM2 22h19v-3H2v3zm18.5-13H17v8h3.5V9zM15 9h-2.5v8H15V9zm-4 0H8.5v8H11V9zM7 9H3.5v8H7V9z"/></svg>`,
+            calendar: `<svg viewBox="0 0 24 24" width="48" height="48" fill="#e95420"><path d="M19 4h-1V2h-2v2H8V2H6v2H5c-1.11 0-1.99.9-1.99 2L3 20c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 16H5V10h14v10zm0-12H5V6h14v2z"/></svg>`
         };
         return icons[type] || '';
     },
