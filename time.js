@@ -198,37 +198,61 @@ const thealTimeApp = {
     // Start the real-time clock update
     startClock() {
         if (this.timer) clearInterval(this.timer);
-        this.timer = setInterval(() => {
+        
+        const tick = () => {
             const now = new Date();
             
-            // Elements
-            const timeEl = document.getElementById("vpu-theal-time"); // Inside App
-            const dateEl = document.getElementById("vpu-theal-date"); // Inside App
-            const topBarTime = document.getElementById("top-bar-time"); // System Top Bar
-            
-            // Calculations
+            // 1. Time Calculations
             const h = now.getHours();
             const m = now.getMinutes().toString().padStart(2, "0");
             const s = now.getSeconds().toString().padStart(2, "0");
             const thealHour = this.convertToThealHour(h).toString().padStart(2, "0");
             const timeString = `${thealHour}:${m}:${s}`;
-            const thealDate = this.getThealDate(now).label;
 
-            // Update App Window
-            if (timeEl) timeEl.textContent = timeString;
-            if (dateEl) dateEl.textContent = thealDate;
-            
-            // Update System Top Bar
-            if (topBarTime) {
-                topBarTime.textContent = timeString;
-                topBarTime.style.color = "#a445ff"; // Sovereignty Purple
-                topBarTime.style.fontWeight = "bold";
+            // 2. Date Calculations
+            const thealDateObj = this.getThealDate(now);
+            let compactDate = "";
+
+            if (thealDateObj.type === "holiday") {
+                compactDate = "HOLIDAY";
+            } else {
+                // Extracts "2" and "12" from "2nd Cycle, Day 12" to make "C2-D12"
+                const cycleMatch = thealDateObj.label.match(/(\d+)(?:st|nd|rd|th) Cycle/);
+                const dayMatch = thealDateObj.label.match(/Day (\d+)/);
+                if (cycleMatch && dayMatch) {
+                    compactDate = `C${cycleMatch[1]}-D${dayMatch[1]}`;
+                } else {
+                    compactDate = "TRANSIT";
+                }
             }
-        }, 1000);
+
+            // 3. Update System Top Bar
+            const topBarTime = document.getElementById("top-bar-time");
+            if (topBarTime) {
+                // Display format: "C2-D12 | 05:30:15"
+                topBarTime.innerHTML = `<span style="color: #888; font-size: 10px; margin-right: 8px;">${compactDate}</span> ${timeString}`;
+            }
+            
+            // 4. Update App Window (if open)
+            const timeEl = document.getElementById("vpu-theal-time");
+            const dateEl = document.getElementById("vpu-theal-date");
+            if (timeEl) timeEl.textContent = timeString;
+            if (dateEl) dateEl.textContent = thealDateObj.label;
+        };
+
+        tick();
+        this.timer = setInterval(tick, 1000);
     },
 
     convertToThealHour(hour) {
         const mapping = { 7:1, 8:2, 9:3, 10:4, 11:5, 12:6, 13:7, 14:8, 15:9, 16:10, 17:11, 18:12, 19:1, 20:2, 21:3, 22:4, 23:5, 0:6, 1:7, 2:8, 3:9, 4:10, 5:11, 6:12 };
         return mapping[hour] || hour;
     }
+    
 };
+
+// Initialize the Temporal Engine after a short delay
+setTimeout(() => {
+    console.log("Temporal Engine: Initializing Global Heartbeat...");
+    thealTimeApp.startClock();
+}, 500);

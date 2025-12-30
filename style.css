@@ -455,13 +455,16 @@ body {
 #vpu-date-picker { background: #000; color: #fff; border: 1px solid #a445ff; font-size: 10px; border-radius: 4px; padding: 2px; }
 
 #top-bar-time {
-    color: #a445ff; /* Purple */
-    font-family: 'Courier New', Courier, monospace;
+    display: flex;
+    align-items: center;
+    min-width: 140px; /* Increased width for C2-D12 */
+    justify-content: flex-end;
+    color: #a445ff;
+    font-family: 'Courier New', monospace;
     font-weight: bold;
-    padding: 0 15px;
-    text-shadow: 0 0 5px rgba(164, 69, 255, 0.5);
+    
     font-size: 14px;
-    letter-spacing: 1px;
+    padding-right: 15px;
 }
 
 .top-bar {
