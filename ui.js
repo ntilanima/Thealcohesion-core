@@ -14,20 +14,16 @@ const vpuUI = {
     },
     // 1. Ubuntu-aligned Top Bar Clock [cite: 151-152]
     setupClock() {
-        setInterval(() => {
-            const now = new Date();
+    setInterval(() => {
+        const now = new Date();
+        const clockEl = document.querySelector('.top-bar .clock');
+        if (clockEl && typeof thealTimeApp !== 'undefined') {
             const h = now.getHours();
             const m = now.getMinutes().toString().padStart(2, '0');
-            
-            // Convert to Thealcohesion Hour
             const thealH = thealTimeApp.convertToThealHour(h);
-            
-            const clockEl = document.querySelector('.top-bar .clock');
-            if (clockEl) {
-                clockEl.textContent = `Cycle Time: ${thealH}:${m}`;
-                clockEl.title = `Standard Time: ${h}:${m}`;
-            }
-        }, 1000);
+            clockEl.textContent = `Cycle Time: ${thealH}:${m}`;
+        }
+    }, 1000);
     },
 
     // 2. Custom Context Menu (Right-Click) logic
