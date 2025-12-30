@@ -60,6 +60,15 @@ const thealTimeApp = {
         `;
     },
 
+    // Navigate to today's date
+    goToToday() {
+        this.currentViewDate = new Date();
+        this.renderGrid(this.currentViewDate);
+        
+        // Reset the date picker visually to empty or current date
+        const picker = document.getElementById('vpu-date-picker');
+        if(picker) picker.value = "";
+    },
     getThealDate(date) {
         const d = date.getDate();
         const m = date.getMonth() + 1; 
