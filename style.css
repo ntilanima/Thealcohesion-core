@@ -326,3 +326,62 @@ body {
 }
 
 .theal-time-big { font-size: 1.8rem; font-weight: bold; color: var(--ubuntu-orange); }
+
+/* Calendar Identity Colors */
+.vpu-day-cell.holiday {
+    background-color: #3c2c6c !important;
+    border-color: #d586ff !important;
+}
+
+.vpu-day-cell.reflection {
+    background-color: #164343 !important;
+    border-color: #44dddd !important;
+    color: #cceeee;
+}
+
+.vpu-day-cell.cycle {
+    border-color: rgba(164, 69, 255, 0.3);
+}
+
+.theal-label {
+    font-size: 8px;
+    line-height: 1;
+    margin-top: 4px;
+    opacity: 0.8;
+    word-break: break-word;
+}
+
+.cell-top {
+    display: flex;
+    justify-content: space-between;
+    width: 100%;
+}
+
+.vpu-timer-strip {
+    background: rgba(164, 69, 255, 0.2);
+    padding: 5px 10px;
+    font-size: 11px;
+    text-align: center;
+    border-bottom: 1px solid #a445ff;
+}
+
+.next-events-vpu {
+    margin-top: 25px;
+    border-top: 1px solid #444;
+    padding-top: 15px;
+}
+
+.next-events-vpu h4 {
+    font-size: 12px;
+    color: #a445ff;
+    margin-bottom: 10px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+.legend-vpu {
+    margin-top: 30px;
+    font-size: 10px;
+    opacity: 0.7;
+    text-align: left;
+}
