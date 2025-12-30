@@ -63,15 +63,26 @@ const vpuUI = {
     },
 
     // 4. Windowed Internal Apps
+
     launchApp(appId) {
-    const workspace = document.getElementById('workspace');
-    const window = document.createElement('div');
-    window.className = 'app-window';
-    
-    let content = '';
-    if (appId === 'governance') {
-        content = governanceApp.render();
-    } else if (appId === 'marketplace') {
+        const workspace = document.getElementById('workspace');
+        const window = document.createElement('div');
+        window.className = 'app-window';
+        
+        // Initial positioning so they don't all stack perfectly
+        const offset = document.querySelectorAll('.app-window').length * 20;
+        window.style.top = (100 + offset) + "px";
+        window.style.left = (150 + offset) + "px";
+        window.style.zIndex = ++this.zIndexCounter;
+
+        let content = '';
+        if (appId === 'governance') content = governanceApp.render();
+        else if (appId === 'audit') content = auditApp.render();
+        else if (appId === 'mediation') content = mediationApp.render();
+        else if (appId === 'resource-pool') content = resourcePoolApp.render();
+        else if (appId === 'values-council') content = valuesCouncilApp.render();
+        else if (appId === 'values-council') content = valuesCouncilApp.render();
+        else if (appId === 'marketplace') {
         // Renders the App Center View
         const apps = vpuRegistry.getAppsForMember(kernel.member.role);
         content = `
@@ -79,25 +90,21 @@ const vpuUI = {
                 <h3>App Center (Registry)</h3>
                 ${apps.map(a => `<div class="app-card">${a.name} <button onclick="vpuRegistry.activateModule('${a.id}')">Activate</button></div>`).join('')}
             </div>
+        `; }
+        window.innerHTML = `
+            <div class="window-header">
+                <span>Thealcohesion: ${appId.toUpperCase()}</span>
+                <div class="window-controls">
+                    <button onclick="this.parentElement.parentElement.parentElement.remove()">×</button>
+                </div>
+            </div>
+            <div class="window-content">${content}</div>
         `;
-    } else if (appId === 'audit') {
-    content = auditApp.render();
-    } else if (appId === 'mediation') {
-    content = mediationApp.render();
-    }else if (appId === 'resource-pool') {
-    content = resourcePoolApp.render();
-    }else if (appId === 'values-council') {
-    content = valuesCouncilApp.render();
-    }
 
-    window.innerHTML = `
-        <div class="window-header">
-            <span>Thealcohesion: ${appId.toUpperCase()}</span>
-            <button onclick="this.parentElement.parentElement.remove()">×</button>
-        </div>
-        <div class="window-content">${content}</div>
-    `;
-    workspace.appendChild(window);
+        workspace.appendChild(window);
+        
+        // ACTIVATE DRAGGING
+        this.makeDraggable(window);
     },
     // Helper to create a new folder on the workspace
     toggleDock() {
@@ -193,5 +200,42 @@ const vpuUI = {
             bank: `<svg viewBox="0 0 24 24" width="48" height="48" fill="#e95420"><path d="M11.5 1L2 6v2h19V6L11.5 1zM2 22h19v-3H2v3zm18.5-13H17v8h3.5V9zM15 9h-2.5v8H15V9zm-4 0H8.5v8H11V9zM7 9H3.5v8H7V9z"/></svg>`
         };
         return icons[type] || '';
+    },
+
+    // 8. Draggable Windows
+
+    activeWindow: null,
+    zIndexCounter: 100,
+
+    makeDraggable(windowElement) {
+        const header = windowElement.querySelector('.window-header');
+        let pos1 = 0, pos2 = 0, pos3 = 0, pos4 = 0;
+
+        header.onmousedown = (e) => {
+            // Bring to front on click
+            this.zIndexCounter++;
+            windowElement.style.zIndex = this.zIndexCounter;
+            
+            e.preventDefault();
+            pos3 = e.clientX;
+            pos4 = e.clientY;
+            document.onmouseup = closeDragElement;
+            document.onmousemove = elementDrag;
+        };
+
+        function elementDrag(e) {
+            e.preventDefault();
+            pos1 = pos3 - e.clientX;
+            pos2 = pos4 - e.clientY;
+            pos3 = e.clientX;
+            pos4 = e.clientY;
+            windowElement.style.top = (windowElement.offsetTop - pos2) + "px";
+            windowElement.style.left = (windowElement.offsetLeft - pos1) + "px";
+        }
+
+        function closeDragElement() {
+            document.onmouseup = null;
+            document.onmousemove = null;
+        }
     }
 };

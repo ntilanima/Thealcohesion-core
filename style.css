@@ -253,3 +253,36 @@ body {
     overflow: hidden;
     resize: both;
 }
+
+.window-header {
+    background: #3d3d3d;
+    padding: 8px 12px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    cursor: grab; /* Shows the hand icon */
+    user-select: none;
+}
+
+.window-header:active {
+    cursor: grabbing; /* Shows closed hand when moving */
+}
+
+.window-controls button {
+    background: #e95420;
+    border: none;
+    color: white;
+    border-radius: 50%;
+    width: 20px;
+    height: 20px;
+    cursor: pointer;
+    font-size: 12px;
+    line-height: 1;
+}
+
+.window-content {
+    padding: 15px;
+    height: calc(100% - 40px);
+    overflow-y: auto;
+    color: #eee;
+}
