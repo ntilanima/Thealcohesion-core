@@ -487,3 +487,40 @@ body {
     background: rgba(164, 69, 255, 0.1);
     border-radius: 4px;
 }
+
+/* The Pulse Animation */
+.sync-pulse-active {
+    animation: sovereignty-glow 2s ease-in-out;
+}
+
+@keyframes sovereignty-glow {
+    0% {
+        background: rgba(0, 0, 0, 0.8);
+        box-shadow: inset 0 0 0px rgba(164, 69, 255, 0);
+    }
+    50% {
+        background: rgba(164, 69, 255, 0.2); /* Soft Purple Glow */
+        box-shadow: inset 0 0 20px rgba(164, 69, 255, 0.4);
+    }
+    100% {
+        background: rgba(0, 0, 0, 0.8);
+        box-shadow: inset 0 0 0px rgba(164, 69, 255, 0);
+    }
+}
+
+.hud-section {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+#temporal-hud div {
+    transition: all 0.3s ease;
+}
+
+/* Hover effect for the HUD close button */
+#temporal-hud button:hover {
+    background: #a445ff !important;
+    color: white !important;
+    border-color: #d586ff !important;
+}

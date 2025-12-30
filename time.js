@@ -1,11 +1,12 @@
-/** * THEALCOHESION TEMPORAL LAW - PHASE 4.4
- * Strictly 28-Day Cycles + Holiday Pauses
+/** * THEALCOHESION TEMPORAL LAW - PHASE 4.5
+ * Strictly 28-Day Cycles + Holiday Pauses + Sync Pulse
  * Genesis Allotment: 26-12-2025 
  */
 const thealTimeApp = {
     id: "time-manager",
     name: "Temporal Engine",
     currentViewDate: new Date(),
+    lastHour: null, // Tracks hour changes for Sync Pulse
 
     cycles: [
         { name: "1st Cycle", start: "21/11", end: "18/12" },
@@ -44,13 +45,11 @@ const thealTimeApp = {
                     </div>
                 </div>
                 <div class="calendar-layout-vpu" style="display:flex; height:calc(100% - 50px);">
-                    <div id="vpu-calendar-grid" class="calendar-grid-container" style="flex:2; display:grid; grid-template-columns:repeat(7, 1fr); gap:2px; padding:10px; background:#111; overflow-y:auto;">
-                        </div>
+                    <div id="vpu-calendar-grid" class="calendar-grid-container" style="flex:2; display:grid; grid-template-columns:repeat(7, 1fr); gap:2px; padding:10px; background:#111; overflow-y:auto;"></div>
                     <div class="calendar-info-sidebar" style="flex:1; background:#1a1a2e; border-left:1px solid #333; padding:15px; text-align:center;">
                         <div class="clock-widget">
                             <div id="vpu-theal-time" class="theal-time-big" style="font-size:1.8rem; font-weight:bold; color:#a445ff;">--:--:--</div>
                             <div id="vpu-theal-date" class="theal-date-sub" style="color:#aaa; font-size:0.9rem; margin-bottom:10px;">Loading...</div>
-                            
                             <div id="vpu-cycle-progress-container" style="margin-bottom:20px;">
                                 <div style="display:flex; justify-content:space-between; font-size:9px; color:#888; margin-bottom:4px;">
                                     <span>Cycle Progress</span>
@@ -71,15 +70,6 @@ const thealTimeApp = {
         `;
     },
 
-    // Navigate to today's date
-    goToToday() {
-        this.currentViewDate = new Date();
-        this.renderGrid(this.currentViewDate);
-        
-        // Reset the date picker visually to empty or current date
-        const picker = document.getElementById('vpu-date-picker');
-        if(picker) picker.value = "";
-    },
     getThealDate(date) {
         const d = date.getDate();
         const m = date.getMonth() + 1; 
@@ -88,17 +78,14 @@ const thealTimeApp = {
 
         if (d === 20 && m === 11) return { label: "HOLIDAY: END YEAR", type: "holiday", color: "#e95420" };
         if (d === 29 && m === 2) return { label: "HOLIDAY: SPECIAL DAY", type: "holiday", color: "#d586ff" };
-
         let milestone = (d === 26 && m === 12) ? " ★ Genesis Allotment" : "";
 
         for (let i = 0; i < this.cycles.length; i++) {
             const cycle = this.cycles[i];
             const [sD, sM] = cycle.start.split('/').map(Number);
             const [eD, eM] = cycle.end.split('/').map(Number);
-
             let startDate = new Date(year, sM - 1, sD);
             let endDate = new Date(year, eM - 1, eD);
-
             if (sM >= 11 && m < 11) startDate.setFullYear(year - 1);
             if (eM >= 11 && m < 11) endDate.setFullYear(year - 1);
             if (endDate < startDate) endDate.setFullYear(endDate.getFullYear() + 1);
@@ -106,7 +93,6 @@ const thealTimeApp = {
             if (date >= startDate && date <= endDate) {
                 let diff = Math.floor((date - startDate) / 86400000) + 1;
                 if (isLeap && date > new Date(year, 1, 29) && startDate <= new Date(year, 1, 29)) diff--;
-                
                 return { 
                     label: `${cycle.name}, Day ${diff}${milestone}`, 
                     type: milestone ? "milestone" : "cycle",
@@ -117,46 +103,85 @@ const thealTimeApp = {
         return { label: "Transition", type: "other" };
     },
 
+    startClock() {
+        if (this.timer) clearInterval(this.timer);
+        const tick = () => {
+            const now = new Date();
+            const h = now.getHours();
+            const m = now.getMinutes().toString().padStart(2, "0");
+            const s = now.getSeconds().toString().padStart(2, "0");
+            
+            // 1. Theal Mapping
+            const thealHourNum = this.convertToThealHour(h);
+            const thealHourStr = thealHourNum.toString().padStart(2, "0");
+            const timeString = `${thealHourStr}:${m}:${s}`;
+            const thealDateObj = this.getThealDate(now);
+
+            // 2. Pulse Check
+            if (this.lastHour !== null && thealHourNum !== this.lastHour) {
+                this.triggerSyncPulse();
+            }
+            this.lastHour = thealHourNum;
+
+            // 3. Update Top Bar
+            const topBarTime = document.getElementById("top-bar-time");
+            if (topBarTime) {
+                const cycleMatch = thealDateObj.label.match(/(\d+)(?:st|nd|rd|th) Cycle/);
+                const dayMatch = thealDateObj.label.match(/Day (\d+)/);
+                const compactDate = (cycleMatch && dayMatch) ? `C${cycleMatch[1]}-D${dayMatch[1]}` : "TRANSIT";
+                topBarTime.innerHTML = `<span style="color: #888; font-size: 10px; margin-right: 8px;">${compactDate}</span> ${timeString}`;
+            }
+            
+            // 4. Update App Window
+            const timeEl = document.getElementById("vpu-theal-time");
+            const dateEl = document.getElementById("vpu-theal-date");
+            if (timeEl) timeEl.textContent = timeString;
+            if (dateEl) dateEl.textContent = thealDateObj.label;
+
+            // 5. Update HUD
+            const hudTime = document.getElementById("hud-theal-time");
+            if (hudTime) {
+                hudTime.textContent = timeString;
+                document.getElementById("hud-theal-date").textContent = thealDateObj.label;
+                document.getElementById("hud-normal-time").textContent = `${h.toString().padStart(2, "0")}:${m}:${s}`;
+                document.getElementById("hud-normal-date").textContent = now.toLocaleDateString();
+            }
+        };
+        tick();
+        this.timer = setInterval(tick, 1000);
+    },
+
+    triggerSyncPulse() {
+        const topBar = document.querySelector('.top-bar');
+        if (topBar) {
+            topBar.classList.add('sync-pulse-active');
+            setTimeout(() => topBar.classList.remove('sync-pulse-active'), 2000);
+        }
+    },
+
     renderGrid(date) {
         const grid = document.getElementById("vpu-calendar-grid");
         const label = document.getElementById("vpu-month-label");
-        if (!grid) return;
+        if (!grid || !label) return;
         grid.innerHTML = "";
         label.textContent = date.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
-
         ['Sat', 'Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri'].forEach(d => {
             grid.innerHTML += `<div class="grid-header" style="font-size:10px; color:#a445ff; text-align:center;">${d}</div>`;
         });
-
         const first = new Date(date.getFullYear(), date.getMonth(), 1);
         const last = new Date(date.getFullYear(), date.getMonth() + 1, 0);
         const startIndex = (first.getDay() + 1) % 7;
         for (let i = 0; i < startIndex; i++) grid.innerHTML += `<div></div>`;
-
         for (let day = 1; day <= last.getDate(); day++) {
             const d = new Date(date.getFullYear(), date.getMonth(), day);
             const theal = this.getThealDate(d);
             const cell = document.createElement("div");
-            cell.className = `vpu-day-cell ${theal.type}`;
             cell.style.cssText = "background:#1a1a2e; border:1px solid #333; min-height:50px; padding:5px; font-size:10px; color:#fff;";
-            
             if (d.toDateString() === new Date().toDateString()) cell.style.border = "1px solid #e95420";
             if (theal.color) cell.style.borderLeft = `4px solid ${theal.color}`;
-
-            cell.innerHTML = `<div style="display:flex; justify-content:space-between;"><span>${day}</span></div><div style="font-size:8px; margin-top:5px; color:#aaa;">${theal.label}</div>`;
+            cell.innerHTML = `<div>${day}</div><div style="font-size:8px; margin-top:5px; color:#aaa;">${theal.label}</div>`;
             grid.appendChild(cell);
         }
-    },
-
-    jumpToDate(val) {
-        if(!val) return;
-        this.currentViewDate = new Date(val);
-        this.renderGrid(this.currentViewDate);
-    },
-
-    changeMonth(delta) {
-        this.currentViewDate.setMonth(this.currentViewDate.getMonth() + delta);
-        this.renderGrid(this.currentViewDate);
     },
 
     renderUpcomingEvents() {
@@ -164,160 +189,46 @@ const thealTimeApp = {
         const progFill = document.getElementById('vpu-progress-fill');
         const progText = document.getElementById('vpu-progress-percent');
         if (!list) return;
-
-        // 1. Update Progress Bar logic
         const now = new Date();
         const theal = this.getThealDate(now);
         if (theal.type === "cycle" || theal.type === "milestone") {
-            // Extract the day number from label "Cycle X, Day Y"
             const dayNum = parseInt(theal.label.match(/Day (\d+)/)[1]);
             const percent = Math.round((dayNum / 28) * 100);
             if (progFill) progFill.style.width = `${percent}%`;
             if (progText) progText.textContent = `${percent}%`;
-        } else {
-            // If it's a holiday or transition, show full/empty
-            if (progFill) progFill.style.width = "100%";
-            if (progText) progText.textContent = "Break";
         }
-
-        // 2. Update Event List
-        const events = [
-            { n: "Special Day", d: "29/02" },
-            { n: "End Year", d: "20/11" },
-            { n: "Genesis Allotment", d: "26/12" }
-        ];
-        list.innerHTML = events.map(e => `<div style="font-size:10px; margin-bottom:8px; padding-left:5px; border-left:2px solid #a445ff;"><b>${e.n}</b><br><span style="color:#888;">${e.d}</span></div>`).join('');
+        const events = [{ n: "Special Day", d: "29/02" }, { n: "End Year", d: "20/11" }, { n: "Genesis Allotment", d: "26/12" }];
+        list.innerHTML = events.map(e => `<div style="font-size:10px; margin-bottom:8px; border-left:2px solid #a445ff; padding-left:5px;"><b>${e.n}</b><br>${e.d}</div>`).join('');
     },
 
     goToToday() {
         this.currentViewDate = new Date();
         this.renderGrid(this.currentViewDate);
-        const picker = document.getElementById('vpu-date-picker');
-        if(picker) picker.value = "";
+        if(document.getElementById('vpu-date-picker')) document.getElementById('vpu-date-picker').value = "";
     },
-    // Start the real-time clock update
-    startClock() {
-        if (this.timer) clearInterval(this.timer);
-        
-        const tick = () => {
-            const now = new Date();
-            
-            // 1. Time Calculations
-            const h = now.getHours();
-            const m = now.getMinutes().toString().padStart(2, "0");
-            const s = now.getSeconds().toString().padStart(2, "0");
-            const thealHour = this.convertToThealHour(h).toString().padStart(2, "0");
-            const timeString = `${thealHour}:${m}:${s}`;
 
-            // 2. Date Calculations
-            const thealDateObj = this.getThealDate(now);
-            let compactDate = "";
+    jumpToDate(val) { if(val) { this.currentViewDate = new Date(val); this.renderGrid(this.currentViewDate); } },
 
-            if (thealDateObj.type === "holiday") {
-                compactDate = "HOLIDAY";
-            } else {
-                // Extracts "2" and "12" from "2nd Cycle, Day 12" to make "C2-D12"
-                const cycleMatch = thealDateObj.label.match(/(\d+)(?:st|nd|rd|th) Cycle/);
-                const dayMatch = thealDateObj.label.match(/Day (\d+)/);
-                if (cycleMatch && dayMatch) {
-                    compactDate = `C${cycleMatch[1]}-D${dayMatch[1]}`;
-                } else {
-                    compactDate = "TRANSIT";
-                }
-            }
-
-            // 3. Update System Top Bar
-            const topBarTime = document.getElementById("top-bar-time");
-            if (topBarTime) {
-                // Display format: "C2-D12 | 05:30:15"
-                topBarTime.innerHTML = `<span style="color: #888; font-size: 10px; margin-right: 8px;">${compactDate}</span> ${timeString}`;
-            }
-            
-            // 4. Update App Window (if open)
-            const timeEl = document.getElementById("vpu-theal-time");
-            const dateEl = document.getElementById("vpu-theal-date");
-            if (timeEl) timeEl.textContent = timeString;
-            if (dateEl) dateEl.textContent = thealDateObj.label;
-        
-            };
-
-            // Inside startClock -> tick function:
-            // Inside startClock -> tick function:
-            const normalH = now.getHours().toString().padStart(2, "0");
-            const normalM = now.getMinutes().toString().padStart(2, "0");
-            const normalS = now.getSeconds().toString().padStart(2, "0");
-            const normalTimeStr = `${normalH}:${normalM}:${normalS}`;
-            const normalDateStr = now.toLocaleDateString();
-
-            // Update HUD if it exists
-            const hudTime = document.getElementById("hud-theal-time");
-            const hudDate = document.getElementById("hud-theal-date");
-            const hudNormTime = document.getElementById("hud-normal-time");
-            const hudNormDate = document.getElementById("hud-normal-date");
-
-            if (hudTime) {
-                hudTime.textContent = timeString; // Your Theal mapping
-                hudDate.textContent = thealDateObj.label;
-                hudNormTime.textContent = normalTimeStr;
-                hudNormDate.textContent = normalDateStr;
-            }
-        tick();
-        this.timer = setInterval(tick, 1000);
-    },
+    changeMonth(delta) { this.currentViewDate.setMonth(this.currentViewDate.getMonth() + delta); this.renderGrid(this.currentViewDate); },
 
     convertToThealHour(hour) {
         const mapping = { 7:1, 8:2, 9:3, 10:4, 11:5, 12:6, 13:7, 14:8, 15:9, 16:10, 17:11, 18:12, 19:1, 20:2, 21:3, 22:4, 23:5, 0:6, 1:7, 2:8, 3:9, 4:10, 5:11, 6:12 };
         return mapping[hour] || hour;
     },
-    
-    renderHUD() {
-        const existingHud = document.getElementById('temporal-hud');
-        if (existingHud) return; // Prevent duplicates
 
+    renderHUD() {
+        if (document.getElementById('temporal-hud')) return;
         const hud = document.createElement('div');
         hud.id = 'temporal-hud';
-        hud.style.cssText = `
-            position: absolute; top: 35px; right: 10px; width: 220px;
-            background: rgba(13, 13, 25, 0.95); backdrop-filter: blur(10px);
-            border: 1px solid #a445ff; border-radius: 8px; padding: 15px;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.5); z-index: 10000;
-            color: white; font-family: 'Segoe UI', sans-serif;
-            animation: slideDown 0.2s ease-out;
-        `;
-
+        hud.style.cssText = `position:absolute; top:35px; right:10px; width:220px; background:rgba(13,13,25,0.95); backdrop-filter:blur(10px); border:1px solid #a445ff; border-radius:8px; padding:15px; box-shadow:0 10px 30px rgba(0,0,0,0.5); z-index:10000; color:white; font-family:sans-serif;`;
         hud.innerHTML = `
-            <div style="border-bottom: 1px solid #333; padding-bottom: 8px; margin-bottom: 10px; font-weight: bold; color: #a445ff; font-size: 12px; letter-spacing: 1px;">TEMPORAL OVERLAY</div>
-            
-            <div class="hud-section">
-                <small style="color: #888; font-size: 9px;">SOVEREIGN TIME</small>
-                <div id="hud-theal-time" style="font-size: 18px; font-weight: bold; color: #fff;">--:--:--</div>
-                <div id="hud-theal-date" style="font-size: 11px; color: #d586ff;">Loading...</div>
-            </div>
-
-            <div class="hud-section" style="margin-top: 12px; padding-top: 12px; border-top: 1px dashed #444;">
-                <small style="color: #888; font-size: 9px;">GREGORIAN SYNC</small>
-                <div id="hud-normal-time" style="font-size: 14px; color: #ccc;">--:--:--</div>
-                <div id="hud-normal-date" style="font-size: 11px; color: #888;">00/00/0000</div>
-            </div>
-            
-            <button onclick="document.getElementById('temporal-hud').remove()" style="margin-top: 15px; width: 100%; background: #222; border: 1px solid #444; color: #888; font-size: 10px; padding: 4px; cursor: pointer; border-radius: 4px;">CLOSE</button>
+            <div style="color:#a445ff; font-size:10px; margin-bottom:10px;">TEMPORAL OVERLAY</div>
+            <div style="margin-bottom:10px;"><small style="color:#888;">SOVEREIGN</small><div id="hud-theal-time" style="font-size:18px;"></div><div id="hud-theal-date" style="font-size:10px; color:#d586ff;"></div></div>
+            <div style="border-top:1px dashed #444; padding-top:10px;"><small style="color:#888;">GREGORIAN</small><div id="hud-normal-time" style="font-size:14px; color:#ccc;"></div><div id="hud-normal-date" style="font-size:10px; color:#888;"></div></div>
+            <button onclick="this.parentElement.remove()" style="margin-top:10px; width:100%; background:#222; border:1px solid #444; color:#fff; cursor:pointer; font-size:10px;">CLOSE</button>
         `;
-
         document.body.appendChild(hud);
-        
-        // Auto-close when clicking elsewhere
-        const closer = (e) => {
-            if (!hud.contains(e.target) && e.target.id !== 'top-bar-time') {
-                hud.remove();
-                document.removeEventListener('click', closer);
-            }
-        };
-        setTimeout(() => document.addEventListener('click', closer), 10);
-    },
+    }
 };
 
-// Initialize the Temporal Engine after a short delay
-setTimeout(() => {
-    console.log("Temporal Engine: Initializing Global Heartbeat...");
-    thealTimeApp.startClock();
-}, 500);
+setTimeout(() => { thealTimeApp.startClock(); }, 500);
