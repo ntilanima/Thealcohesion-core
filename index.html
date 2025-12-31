@@ -2,40 +2,54 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Thealcohesion OS | Sovereign Core</title>
-    <link rel="stylesheet" href="css/theme.css">
-    <link rel="stylesheet" href="css/layout.css">
+    <link rel="stylesheet" href="./css/theme.css">
+    <link rel="stylesheet" href="./css/layout.css">
 </head>
 <body class="sovereign-environment">
     
     <header id="top-bar">
-        <div class="system-title">THEALCOHESION CORE</div>
-        <span id="top-bar-time">--:--:--</span>
-        <div id="session-status">Identity Required</div>
+        <div class="left-section">
+            <span class="activities">Activities</span>
+        </div>
+        <div class="center-section">
+            <span id="top-bar-time">Thu Jan 1 12:00 AM</span>
+        </div>
+        <div class="right-section">
+            <div id="system-icons">⛶ 🔊 🔋 ▾</div>
+        </div>
     </header>
 
-    <main id="workspace">
-        <div id="login-gate">
-            <div class="login-box">
-                <img src="logo.png" alt="Thealcohesion" class="login-logo">
-                <h1>Identity Access</h1>
-                <p>Virtual Pragmatic Universe</p>
-                <div class="input-group">
-                    <input type="text" id="username" placeholder="Member Username">
-                    <input type="password" id="password" placeholder="Key Phrase">
-                </div>
-                <button id="login-btn">Verify Identity</button>
-                <p class="legal-notice">Access restricted per Section 0.5.2 of the Charter.</p>
+    <main id="os-root">
+        <nav id="side-dock" class="hidden">
+            <div class="dock-bottom-trigger">
+                <span class="grid-icon">⣿</span>
             </div>
-        </div>
+        </nav>
 
-        <div id="sovereign-shell" class="hidden">
-            <div id="bento-launcher"></div>
+        <div id="workspace">
+            <section id="login-gate">
+                <div class="login-box">
+                    <img src="logo.png" alt="Thealcohesion" class="login-logo">
+                    <h1>Identity Access</h1>
+                    <p>Virtual Pragmatic Universe</p>
+                    <div class="input-group">
+                        <input type="text" id="username" placeholder="Member Username">
+                        <input type="password" id="password" placeholder="Key Phrase">
+                    </div>
+                    <button id="login-btn">Verify Identity</button>
+                    <p class="legal-notice">Access restricted per Section 0.5.2 of the Charter.</p>
+                </div>
+            </section>
+
+            <section id="sovereign-shell" class="hidden">
+                <div id="desktop-icons">
+                    </div>
+            </section>
         </div>
     </main>
-    <script src="js/registry.js"></script>
-    <script src="js/os.js"></script>
-    
-    <script type="module" src="js/os.js"></script>
+
+    <script type="module" src="./js/os.js"></script>
 </body>
 </html>
