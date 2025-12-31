@@ -2,66 +2,92 @@ import { registry } from './registry.js';
 
 class TLC_Kernel {
     constructor() {
+        console.log("Kernel: Initializing Sovereign Environment...");
+        // This ensures the code waits for the HTML to be ready
+        if (document.readyState === 'loading') {
+            window.addEventListener('DOMContentLoaded', () => this.init());
+        } else {
+            this.init();
+        }
+    }
+
+    init() {
         this.initListeners();
+        console.log("Kernel: Systems Online.");
     }
 
     initListeners() {
-        document.getElementById('login-btn').addEventListener('click', () => this.login());
+        const loginBtn = document.getElementById('login-btn');
+        if (loginBtn) {
+            loginBtn.addEventListener('click', () => this.login());
+        }
     }
 
     login() {
-        // Here you would check credentials against auth.js logic
         console.log("Identity Verified.");
-        document.getElementById('login-gate').classList.add('hidden');
-        document.getElementById('sovereign-shell').classList.remove('hidden');
-        this.bootShell();
+        const loginGate = document.getElementById('login-gate');
+        const shell = document.getElementById('sovereign-shell');
+        
+        if (loginGate && shell) {
+            loginGate.classList.add('hidden');
+            shell.classList.remove('hidden');
+            this.bootShell();
+        }
     }
 
     bootShell() {
-    const launcher = document.getElementById('bento-launcher');
-    launcher.innerHTML = ''; 
+        const launcher = document.getElementById('bento-launcher');
+        if (!launcher) {
+            console.error("Layout Error: #bento-launcher not found.");
+            return;
+        }
 
-    registry.forEach(app => {
-        const card = document.createElement('div');
-        // Add the 'wide' or 'large' class if specified in registry
-        card.className = `bento-card ${app.size || ''}`; 
-        
-        card.innerHTML = `
-            <div class="bento-icon">${app.icon}</div>
-            <div class="bento-name">${app.name}</div>
-        `;
-        
-        card.onclick = () => this.launchApp(app.id);
-        launcher.appendChild(card);
-    });
+        launcher.innerHTML = ''; 
+
+        registry.forEach(app => {
+            const card = document.createElement('div');
+            // Uses 'small' as a fallback if size isn't defined
+            card.className = `bento-card ${app.size || 'small'}`; 
+            
+            card.innerHTML = `
+                <div class="bento-icon">${app.icon}</div>
+                <div class="bento-name">${app.name}</div>
+            `;
+            
+            card.onclick = () => this.launchApp(app.id);
+            launcher.appendChild(card);
+        });
+        console.log("UI: Bento Grid Rendered.");
     }
-    // 6. Application Launch Handler
+
     launchApp(appId) {
-    const app = registry.find(a => a.id === appId);
-    if (!app) return;
+        const app = registry.find(a => a.id === appId);
+        if (!app) return;
 
-    // Create a DamianB-style Window
-    const win = document.createElement('div');
-    win.className = 'os-window';
-    win.style.zIndex = 1000; // Ensure it's on top
-    
-    win.innerHTML = `
-        <div class="window-header">
-            <span class="title">${app.icon} ${app.name}</span>
-            <div class="controls">
-                <button class="win-btn min">-</button>
-                <button class="win-btn close" onclick="this.closest('.os-window').remove()">×</button>
+        console.log(`Launching ${app.name}...`);
+
+        const win = document.createElement('div');
+        win.className = 'os-window';
+        
+        win.innerHTML = `
+            <div class="window-header">
+                <span class="title">${app.icon} ${app.name}</span>
+                <div class="controls">
+                    <button class="win-btn close">×</button>
+                </div>
             </div>
-        </div>
-        <div class="window-content" id="content-${app.id}">
-            <p>Initializing ${app.name} from ${app.file}...</p>
-        </div>
-    `;
+            <div class="window-content" id="content-${app.id}">
+                <p>Accessing ${app.file}...</p>
+                <div class="loading-bar"></div>
+            </div>
+        `;
 
-    document.getElementById('workspace').appendChild(win);
-    
-    // Add Draggable logic here if needed
-}
+        document.getElementById('workspace').appendChild(win);
+        
+        // Window close listener
+        win.querySelector('.close').onclick = () => win.remove();
+    }
 }
 
+// Instantiate the Kernel
 const kernel = new TLC_Kernel();

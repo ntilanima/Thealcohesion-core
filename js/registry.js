@@ -1,5 +1,5 @@
 // --- BEGIN OS COMPONENTS ---
-export const registry = [
+window.registry = [
     // ROW 1: CORE INFRASTRUCTURE (Large/Wide)
     { id: 'governance', name: 'Official Records', icon: '📜', file: 'governance.js', size: 'large' },
     { id: 'tnfi', name: 'TNFI Banking', icon: '🏦', file: 'tnfi.js', size: 'wide' },
