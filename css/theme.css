@@ -814,3 +814,29 @@ body {
 .menu-item:hover {
     background: #a445ff;
 }
+
+/* Sovereign Theme Variables and Base Styles */
+
+:root {
+    /* Obsidian Palette from DamianB */
+    --bg-dark: #050505;
+    --card-bg: rgba(12, 12, 12, 0.7);
+    --border-subtle: rgba(255, 255, 255, 0.08);
+    --accent-glow: rgba(164, 69, 255, 0.3); /* Your purple color */
+    
+    /* Typography per Constitution */
+    --font-main: 'Inter', sans-serif;
+    --font-mono: 'JetBrains Mono', monospace;
+    
+    /* Glassmorphism */
+    --glass: blur(12px) saturate(160%);
+}
+
+.sovereign-environment {
+    background-color: var(--bg-dark);
+    color: #eee;
+    font-family: var(--font-main);
+    margin: 0;
+    height: 100vh;
+    overflow: hidden;
+}

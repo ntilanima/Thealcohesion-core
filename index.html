@@ -2,88 +2,38 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Thealcohesion Core</title>
-    <link rel="stylesheet" href="style.css">
+    <title>Thealcohesion OS | Sovereign Core</title>
+    <link rel="stylesheet" href="css/theme.css">
+    <link rel="stylesheet" href="css/layout.css">
 </head>
 <body class="sovereign-environment">
+    
     <header id="top-bar">
-        <div class="system-title">Thealcohesion Core</div>
-        <span id="top-bar-time" onclick="thealTimeApp.renderHUD()" style="cursor: pointer;">--:--:--</span>
+        <div class="system-title">THEALCOHESION CORE</div>
+        <span id="top-bar-time">--:--:--</span>
         <div id="session-status">Identity Required</div>
     </header>
 
-    <nav id="side-dock">
-        <div class="dock-icon" title="App Center (VPU)">
-            <img src="icons/vpu.png" alt="VPU">
-        </div>
-        <div class="dock-icon" title="Storage Utility">
-            <img src="icons/storage.png" alt="Storage">
-        </div>
-    </nav>
-
     <main id="workspace">
         <div id="login-gate">
-        <div class="login-box">
-            <img src="logo.png" alt="Thealcohesion" class="login-logo">
-            <h1>Identity Access</h1>
-            <p>Virtual Pragmatic Universe</p>
-            <input type="text" id="username" placeholder="Member Username">
-            <input type="password" id="password" placeholder="Key Phrase">
-            <button onclick="kernel.login()">Verify Identity</button>
-            <p class="legal-notice">Access restricted to verified members per Section 0.5.2 of the Charter.</p>
+            <div class="login-box">
+                <img src="logo.png" alt="Thealcohesion" class="login-logo">
+                <h1>Identity Access</h1>
+                <p>Virtual Pragmatic Universe</p>
+                <div class="input-group">
+                    <input type="text" id="username" placeholder="Member Username">
+                    <input type="password" id="password" placeholder="Key Phrase">
+                </div>
+                <button id="login-btn">Verify Identity</button>
+                <p class="legal-notice">Access restricted per Section 0.5.2 of the Charter.</p>
+            </div>
         </div>
-    </div>
-    <div id="sovereign-shell" class="hidden">
+
+        <div id="sovereign-shell" class="hidden">
+            <div id="bento-launcher"></div>
         </div>
     </main>
-    <script>
-        function initVPOS() {
-    // Prevent double-loading if login is pressed twice
-    if (document.getElementById('vpu-shell-root')) return;
 
-    const shellContainer = document.createElement('div');
-    shellContainer.id = "vpu-shell-root";
-
-    shellContainer.innerHTML = `
-        <div id="vpu-start-menu">
-            <div style="color:#a445ff; font-size:10px; font-weight:bold; margin-bottom:15px; border-bottom:1px solid #333; padding-bottom:5px;">SYSTEM APPLICATIONS</div>
-            
-            <button class="menu-item" onclick="WindowManager.open(thealTimeApp); toggleStartMenu();">
-                📅 Temporal Engine
-            </button>
-            
-            <button class="menu-item" onclick="toggleStartMenu();">
-                📟 Terminal
-            </button>
-
-            <div style="margin-top:15px; font-size:9px; color:#444;">VPU GENESIS v1.0</div>
-        </div>
-
-        <div id="vpu-taskbar">
-            <button onclick="toggleStartMenu()" id="vpu-start-btn">★</button>
-            <div id="vpu-active-tasks"></div>
-            <div id="taskbar-clock">00:00:00</div>
-        </div>
-    `;
-
-    document.body.appendChild(shellContainer);
-}
-    </script>
-
-    <script src="auth.js"></script>
-
-    <script src="kernel.js"></script>
-    <script src="time.js"></script>
-
-    <script src="vfs.js"></script>
-    <script src="governance.js"></script>
-    <script src="marketplace.js"></script>
-    <script src="audit.js"></script>
-    <script src="mediation.js"></script>
-    <script src="resource-pool.js"></script>
-    <script src="values-council.js"></script>
-
-    <script src="ui.js"></script>
-    
+    <script type="module" src="js/os.js"></script>
 </body>
 </html>

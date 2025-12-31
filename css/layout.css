@@ -1,0 +1,22 @@
+#os-root {
+    display: grid;
+    grid-template-rows: 50px 1fr 140px; /* Top Bar, Main Workspace, Bottom Launcher */
+    height: 100vh;
+    background: #050505;
+}
+
+#workspace {
+    padding: 20px;
+    overflow: hidden;
+}
+
+/* THE BENTO LAUNCHER */
+#app-launcher {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+    gap: 15px;
+    padding: 20px 40px;
+    background: rgba(10, 10, 10, 0.6);
+    backdrop-filter: blur(15px);
+    border-top: 1px solid rgba(255,255,255,0.1);
+}
