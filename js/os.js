@@ -1,107 +1,126 @@
-
 import { registry } from './registry.js';
 
 class TLC_Kernel {
     constructor() {
-        // Ensure the system waits for the DOM to be fully loaded
-        if (document.readyState === 'loading') {
-            document.addEventListener('DOMContentLoaded', () => this.init());
-        } else {
-            this.init();
-        }
+        console.log("Kernel: Initializing Sovereign Environment...");
+        // Wait for the window to load so it can find the HTML elements
+        window.addEventListener('load', () => this.init());
     }
 
     init() {
-        console.log("Kernel: Systems Online. Awaiting Identity...");
+        this.initListeners();
+        console.log("Kernel: Systems Online.");
+    }
+
+    initListeners() {
         const loginBtn = document.getElementById('login-btn');
-        
         if (loginBtn) {
-            // Remove any old listeners and add a fresh one
-            loginBtn.onclick = () => this.login();
+            loginBtn.addEventListener('click', () => this.verifyIdentity());
         } else {
-            console.error("CRITICAL: Login button not found in DOM.");
+            // Fallback for your current HTML button without an ID
+            const legacyBtn = document.querySelector('button[onclick="kernel.login()"]');
+            if (legacyBtn) {
+                legacyBtn.removeAttribute('onclick');
+                legacyBtn.addEventListener('click', () => this.verifyIdentity());
+            }
         }
     }
 
-    login() {
-        const user = document.getElementById('username').value;
-        const pass = document.getElementById('password').value;
+    /**
+     * Authentication Logic
+     * Ensures compliance with Section 0.5.2 of the Charter
+     */
+    verifyIdentity() {
+        const userField = document.getElementById('username');
+        const passField = document.getElementById('password');
 
-        // Simple check for now - can be linked to your auth.js later
-        if (user !== "" && pass !== "") {
-            console.log(`Identity Verified: Welcome, ${user}`);
-            
-            // 1. Hide the Login Gate
-            document.getElementById('login-gate').classList.add('hidden');
-            
-            // 2. Reveal the Ubuntu Environment
-            document.getElementById('side-dock').classList.remove('hidden');
-            document.getElementById('sovereign-shell').classList.remove('hidden');
-            
-            this.bootShell();
+        if (!userField || !passField) {
+            console.error("Critical: Identity fields not found in DOM.");
+            return;
+        }
+
+        const username = userField.value.trim();
+        const password = passField.value.trim();
+
+        // Basic verification (expand this using your auth.js logic later)
+        if (username !== "" && password !== "") {
+            console.log(`Identity Verified: ${username}`);
+            this.transitionToShell();
         } else {
-            alert("Identity Required: Please enter credentials.");
+            alert("Sovereign Identity Required. Please enter credentials.");
         }
     }
 
+    /**
+     * Transition UI from Login Gate to Desktop Shell
+     */
+    transitionToShell() {
+        const loginGate = document.getElementById('login-gate');
+        const shell = document.getElementById('sovereign-shell');
+        const status = document.getElementById('session-status');
+
+        if (loginGate) loginGate.style.display = 'none';
+        if (shell) {
+            shell.classList.remove('hidden');
+            shell.style.display = 'grid'; // Ensures grid layout triggers
+        }
+        if (status) status.innerText = "Identity: Verified Member";
+
+        this.bootShell();
+    }
+
+    /**
+     * Renders the Ubuntu-style Desktop Environment
+     */
     bootShell() {
-        const desktop = document.getElementById('desktop-icons');
+        const desktop = document.getElementById('workspace');
         const dock = document.getElementById('side-dock');
-        
-        if (!desktop || !dock) return;
 
-        desktop.innerHTML = ''; 
-        // Keep the dock bottom trigger (the ⣿ icon)
-        dock.innerHTML = '<div class="dock-bottom-trigger"><span class="grid-icon">⣿</span></div>';
+        // Clear existing content
+        if (desktop) desktop.innerHTML = '';
+        if (dock) dock.innerHTML = '';
 
         registry.forEach(app => {
-            // Create Desktop Icon
-            const iconWrap = document.createElement('div');
-            iconWrap.className = 'desktop-icon';
-            iconWrap.innerHTML = `
-                <span>${app.icon}</span>
-                <div class="icon-label">${app.name}</div>
-            `;
-            iconWrap.onclick = () => this.launchApp(app.id);
-            desktop.appendChild(iconWrap);
+            // 1. Create Desktop Icon
+            const dIcon = document.createElement('div');
+            dIcon.className = 'desktop-icon';
+            dIcon.innerHTML = `<span>${app.icon}</span><p>${app.name}</p>`;
+            dIcon.onclick = () => this.launchApp(app.id);
+            if (desktop) desktop.appendChild(dIcon);
 
-            // Create Dock Icon (First 8)
-            if (registry.indexOf(app) < 8) {
-                const dockIcon = document.createElement('div');
-                dockIcon.className = 'dock-icon';
-                dockIcon.innerHTML = `<span>${app.icon}</span>`;
-                dockIcon.title = app.name;
-                dockIcon.onclick = () => this.launchApp(app.id);
-                dock.prepend(dockIcon);
-            }
+            // 2. Create Sidebar/Dock Icon
+            const sIcon = document.createElement('div');
+            sIcon.className = 'dock-item';
+            sIcon.innerHTML = `<span>${app.icon}</span>`;
+            sIcon.title = app.name;
+            sIcon.onclick = () => this.launchApp(app.id);
+            if (dock) dock.appendChild(sIcon);
         });
+
+        console.log("UI: Desktop Environment Rendered.");
     }
 
     launchApp(appId) {
         const app = registry.find(a => a.id === appId);
-        const workspace = document.getElementById('workspace');
+        if (!app) return;
+
+        console.log(`Launching ${app.name}...`);
 
         const win = document.createElement('div');
-        win.className = 'app-window';
-        win.style.left = '120px';
-        win.style.top = '60px';
-
+        win.className = 'os-window';
         win.innerHTML = `
             <div class="window-header">
-                <span>${app.icon} ${app.name}</span>
-                <div class="window-controls">
-                    <button class="close-btn">×</button>
-                </div>
+                <span class="title">${app.icon} ${app.name}</span>
+                <button class="close-btn" onclick="this.closest('.os-window').remove()">×</button>
             </div>
             <div class="window-content">
-                <p>Accessing Mandate: ${app.id}...</p>
-                <div class="loader-line"></div>
+                <p>Accessing ${app.name} VFS...</p>
+                <div class="spinner"></div>
             </div>
         `;
-
-        workspace.appendChild(win);
-        win.querySelector('.close-btn').onclick = () => win.remove();
+        document.getElementById('workspace').appendChild(win);
     }
 }
 
-const kernel = new TLC_Kernel();
+// Global kernel instance
+window.kernel = new TLC_Kernel();
