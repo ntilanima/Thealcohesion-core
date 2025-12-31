@@ -8,13 +8,27 @@
     <link rel="stylesheet" href="./css/layout.css">
 </head>
 <body class="sovereign-environment">
-    
-    <header id="top-bar">
+
+    <section id="login-gate">
+        <div class="login-box">
+            <img src="logo.png" alt="Thealcohesion" class="login-logo">
+            <h1>Identity Access</h1>
+            <p>Virtual Pragmatic Universe</p>
+            <div class="input-group">
+                <input type="text" id="username" placeholder="Member Username">
+                <input type="password" id="password" placeholder="Key Phrase">
+            </div>
+            <button id="login-btn">Verify Identity</button>
+            <p class="legal-notice">Access restricted per Section 0.5.2 of the Charter.</p>
+        </div>
+    </section>
+
+    <header id="top-bar" class="hidden">
         <div class="left-section">
             <span class="activities">Activities</span>
         </div>
         <div class="center-section">
-            <span id="top-bar-time">Thu Jan 1 12:00 AM</span>
+            <span id="top-bar-time">--:--:--</span>
         </div>
         <div class="right-section">
             <div id="system-icons">⛶ 🔊 🔋 ▾</div>
@@ -28,25 +42,11 @@
             </div>
         </nav>
 
-        <div id="workspace">
-            <section id="login-gate">
-                <div class="login-box">
-                    <img src="logo.png" alt="Thealcohesion" class="login-logo">
-                    <h1>Identity Access</h1>
-                    <p>Virtual Pragmatic Universe</p>
-                    <div class="input-group">
-                        <input type="text" id="username" placeholder="Member Username">
-                        <input type="password" id="password" placeholder="Key Phrase">
-                    </div>
-                    <button id="login-btn">Verify Identity</button>
-                    <p class="legal-notice">Access restricted per Section 0.5.2 of the Charter.</p>
-                </div>
-            </section>
-
-            <section id="sovereign-shell" class="hidden">
+        <div id="workspace" class="hidden">
+            <div id="sovereign-shell">
                 <div id="desktop-icons">
                     </div>
-            </section>
+            </div>
         </div>
     </main>
 

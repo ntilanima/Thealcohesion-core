@@ -1,26 +1,47 @@
+
 import { registry } from './registry.js';
 
 class TLC_Kernel {
     constructor() {
-        console.log("Kernel: Initializing Focal Fossa Environment...");
-        this.init();
+        // Ensure the system waits for the DOM to be fully loaded
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', () => this.init());
+        } else {
+            this.init();
+        }
     }
 
     init() {
+        console.log("Kernel: Systems Online. Awaiting Identity...");
         const loginBtn = document.getElementById('login-btn');
+        
         if (loginBtn) {
-            loginBtn.addEventListener('click', () => this.login());
+            // Remove any old listeners and add a fresh one
+            loginBtn.onclick = () => this.login();
+        } else {
+            console.error("CRITICAL: Login button not found in DOM.");
         }
     }
 
     login() {
-        console.log("Kernel: Identity Verified.");
-        // UI Transitions
-        document.getElementById('login-gate').classList.add('hidden');
-        document.getElementById('side-dock').classList.remove('hidden');
-        document.getElementById('sovereign-shell').classList.remove('hidden');
-        
-        this.bootShell();
+        const user = document.getElementById('username').value;
+        const pass = document.getElementById('password').value;
+
+        // Simple check for now - can be linked to your auth.js later
+        if (user !== "" && pass !== "") {
+            console.log(`Identity Verified: Welcome, ${user}`);
+            
+            // 1. Hide the Login Gate
+            document.getElementById('login-gate').classList.add('hidden');
+            
+            // 2. Reveal the Ubuntu Environment
+            document.getElementById('side-dock').classList.remove('hidden');
+            document.getElementById('sovereign-shell').classList.remove('hidden');
+            
+            this.bootShell();
+        } else {
+            alert("Identity Required: Please enter credentials.");
+        }
     }
 
     bootShell() {
@@ -29,10 +50,12 @@ class TLC_Kernel {
         
         if (!desktop || !dock) return;
 
-        desktop.innerHTML = ''; // Clear workspace
+        desktop.innerHTML = ''; 
+        // Keep the dock bottom trigger (the ⣿ icon)
+        dock.innerHTML = '<div class="dock-bottom-trigger"><span class="grid-icon">⣿</span></div>';
 
         registry.forEach(app => {
-            // Create Desktop Icon (The Grid)
+            // Create Desktop Icon
             const iconWrap = document.createElement('div');
             iconWrap.className = 'desktop-icon';
             iconWrap.innerHTML = `
@@ -42,14 +65,14 @@ class TLC_Kernel {
             iconWrap.onclick = () => this.launchApp(app.id);
             desktop.appendChild(iconWrap);
 
-            // Create Dock Icon (The Sidebar) - only first 7 for cleanliness
-            if (registry.indexOf(app) < 7) {
+            // Create Dock Icon (First 8)
+            if (registry.indexOf(app) < 8) {
                 const dockIcon = document.createElement('div');
                 dockIcon.className = 'dock-icon';
                 dockIcon.innerHTML = `<span>${app.icon}</span>`;
                 dockIcon.title = app.name;
                 dockIcon.onclick = () => this.launchApp(app.id);
-                dock.appendChild(dockIcon);
+                dock.prepend(dockIcon);
             }
         });
     }
@@ -60,8 +83,8 @@ class TLC_Kernel {
 
         const win = document.createElement('div');
         win.className = 'app-window';
-        win.style.left = '100px';
-        win.style.top = '50px';
+        win.style.left = '120px';
+        win.style.top = '60px';
 
         win.innerHTML = `
             <div class="window-header">
@@ -71,47 +94,14 @@ class TLC_Kernel {
                 </div>
             </div>
             <div class="window-content">
-                <h3>${app.name}</h3>
-                <p>Loading module from ./js/mandates/${app.file}...</p>
+                <p>Accessing Mandate: ${app.id}...</p>
                 <div class="loader-line"></div>
             </div>
         `;
 
         workspace.appendChild(win);
         win.querySelector('.close-btn').onclick = () => win.remove();
-        
-        this.makeDraggable(win);
-    }
-
-    makeDraggable(el) {
-        let pos1 = 0, pos2 = 0, pos3 = 0, pos4 = 0;
-        const header = el.querySelector('.window-header');
-        
-        header.onmousedown = dragMouseDown;
-
-        function dragMouseDown(e) {
-            e.preventDefault();
-            pos3 = e.clientX;
-            pos4 = e.clientY;
-            document.onmouseup = closeDragElement;
-            document.onmousemove = elementDrag;
-        }
-
-        function elementDrag(e) {
-            e.preventDefault();
-            pos1 = pos3 - e.clientX;
-            pos2 = pos4 - e.clientY;
-            pos3 = e.clientX;
-            pos4 = e.clientY;
-            el.style.top = (el.offsetTop - pos2) + "px";
-            el.style.left = (el.offsetLeft - pos1) + "px";
-        }
-
-        function closeDragElement() {
-            document.onmouseup = null;
-            document.onmousemove = null;
-        }
     }
 }
 
-new TLC_Kernel();
+const kernel = new TLC_Kernel();
