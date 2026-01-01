@@ -19,5 +19,11 @@ export const registry = [
     { id: 'transport', name: 'Logistics', icon: '🚛', file: 'transport.js' },
     { id: 'roam', name: 'Travel Desk', icon: '🧭', file: 'roam.js' },
     { id: 'ascent', name: 'Ascent Business', icon: '📈', file: 'ascent.js' },
-    { id: 'deployment', name: 'Deployment', icon: '🚀', file: 'deployment.js' }
+    { id: 'deployment', name: 'Deployment', icon: '🚀', file: 'deployment.js' },
+    { id: 'terminal', name: 'Terminal', icon: '📟' },
+    { id: 'files', name: 'Files', icon: '📁' },
+    { id: 'browser', name: 'Web', icon: '🌐' },
+    { id: 'messages', name: 'Messages', icon: '💬' },
+    { id: 'camera', name: 'Camera', icon: '📸' },
+    { id: 'settings', name: 'Settings', icon: '⚙️' }
 ];
