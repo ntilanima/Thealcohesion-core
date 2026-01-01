@@ -1,12 +1,12 @@
-/* UBUNTU-STYLE DESKTOP LAYOUT */
+/* --- CORE LAYOUT --- */
 #os-root {
-    display: flex; /* Using Flex for the side-by-side Dock and Workspace */
-    height: calc(100vh - 35px); /* Full height minus the top bar */
+    display: none; /* Controlled by JS transition */
+    flex-direction: row;
     width: 100vw;
+    height: calc(100vh - 35px);
     overflow: hidden;
 }
 
-/* TOP BAR (Permanent Header) */
 #top-bar {
     height: 35px;
     background: rgba(0, 0, 0, 0.9);
@@ -18,83 +18,34 @@
     color: white;
     backdrop-filter: blur(5px);
     border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    z-index: 9999;
 }
 
-/* SIDE DOCK (Left Sidebar) */
 #side-dock {
-    width: 70px; /* Fixed width for Ubuntu feel */
+    width: 70px !important;
     background: rgba(0, 0, 0, 0.7);
-    display: flex;
+    display: flex !important;
     flex-direction: column;
     align-items: center;
     padding-top: 15px;
     gap: 12px;
     height: 100%;
+    flex-shrink: 0;
 }
 
-.dock-item {
-    width: 48px;
-    height: 48px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    background: rgba(255, 255, 255, 0.05);
-    border-radius: 10px;
-    cursor: pointer;
-    transition: all 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-    font-size: 1.5rem;
-}
-
-.dock-item:hover {
-    background: rgba(255, 255, 255, 0.15);
-    transform: scale(1.1);
-}
-
-/* WORKSPACE AREA */
 #workspace {
-    flex: 1; /* Takes up remaining width */
-    position: relative;
-    padding: 20px;
-    overflow: hidden;
-}
-
-/* DESKTOP ICON PLACEMENT */
-#desktop-icons {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, 100px);
-    grid-auto-rows: 110px;
-    grid-auto-flow: column; /* Vertical stacking like Ubuntu */
-    gap: 15px;
-    justify-content: end; /* Keeps icons on the right */
+    flex-grow: 1;
     height: 100%;
+    position: relative;
+    overflow: hidden;
+    background: transparent;
 }
 
-.desktop-icon {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    color: white;
-    text-shadow: 1px 1px 3px rgba(0,0,0,0.8);
-    cursor: pointer;
-    text-align: center;
-}
-
-.desktop-icon span {
-    font-size: 2.5rem;
-    margin-bottom: 4px;
-}
-
-.desktop-icon p {
-    font-size: 0.7rem;
-    margin: 0;
-    font-weight: 500;
-}
-
-/* WINDOW WRAPPER - THEALCOHESION OS */
+/* --- WINDOW SYSTEM --- */
 .os-window {
     position: absolute;
-    min-width: 400px;
-    min-height: 300px;
+    width: 850px;
+    height: 550px;
     background: rgba(30, 30, 30, 0.85);
     backdrop-filter: blur(20px);
     border: 1px solid rgba(255, 255, 255, 0.1);
@@ -104,9 +55,24 @@
     flex-direction: column;
     overflow: hidden;
     z-index: 1000;
+    /* Smooth transitions for Maximize/Hide */
+    transition: width 0.3s cubic-bezier(0.165, 0.84, 0.44, 1), 
+                height 0.3s cubic-bezier(0.165, 0.84, 0.44, 1), 
+                top 0.3s ease, left 0.3s ease, 
+                opacity 0.3s ease, transform 0.3s ease;
 }
 
-/* DRAGGABLE HEADER */
+/* WINDOW STATES */
+.os-window.maximized {
+    width: 100% !important;
+    height: 100% !important;
+    top: 0 !important;
+    left: 0 !important;
+    border-radius: 0;
+    z-index: 5000;
+}
+
+/* --- HEADER & CONTROLS --- */
 .window-header {
     height: 38px;
     background: linear-gradient(to bottom, #444, #333);
@@ -114,16 +80,11 @@
     justify-content: space-between;
     align-items: center;
     padding: 0 12px;
-    cursor: move; /* Indicates it can be dragged */
+    cursor: grab;
     user-select: none;
 }
 
-.window-header .title {
-    font-size: 0.85rem;
-    font-weight: 600;
-    color: #dfdfdf;
-    font-family: var(--font-main);
-}
+.window-header:active { cursor: grabbing; }
 
 .window-controls {
     display: flex;
@@ -131,146 +92,37 @@
 }
 
 .win-btn {
-    width: 22px;
-    height: 22px;
+    width: 12px; /* Smaller Ubuntu style dots or keep your size */
+    height: 12px;
     border-radius: 50%;
     border: none;
     cursor: pointer;
-    font-size: 14px;
+    font-size: 9px;
     display: flex;
     align-items: center;
     justify-content: center;
+    color: transparent; /* Hide icons until hover */
+    transition: 0.2s;
 }
 
-.win-btn.close { background: #e94b35; color: #fff; }
-.win-btn.close:hover { background: #ff5f47; }
+.win-btn:hover { color: rgba(0,0,0,0.6); }
 
-/* WINDOW CONTENT AREA */
+.win-btn.close { background: #ff5f56; }
+.win-btn.hide { background: #ffbd2e; }
+.win-btn.expand { background: #27c93f; }
+
+/* --- CONTENT AREA --- */
 .window-content {
     flex: 1;
-    padding: 20px;
-    color: #eee;
-    font-family: var(--font-mono);
+    position: relative;
     overflow-y: auto;
+    color: #eee;
 }
 
-/* TEMPORAL ENGINE STYLES */
+/* TEMPORAL ENGINE SPECIFIC OVERRIDE */
 .calendar-app-window {
     height: 100%;
     display: flex;
     flex-direction: column;
     background: #050505;
-}
-
-.vpu-btn {
-    background: #1a1a2e;
-    border: 1px solid #444;
-    color: white;
-    padding: 4px 10px;
-    border-radius: 4px;
-    cursor: pointer;
-    transition: 0.2s;
-}
-
-.vpu-btn:hover {
-    border-color: #a445ff;
-    background: rgba(164, 69, 255, 0.1);
-}
-
-.grid-header {
-    font-weight: bold;
-    padding: 5px;
-    border-bottom: 1px solid #333;
-}
-
-/* SYNC PULSE ANIMATION */
-@keyframes slideDownHUD {
-    from { transform: translateY(-10px); opacity: 0; }
-    to { transform: translateY(0); opacity: 1; }
-}
-
-.sync-pulse-active {
-    box-shadow: inset 0 0 20px rgba(164, 69, 255, 0.4);
-    transition: box-shadow 0.5s ease;
-}
-
-/* FULLSCREEN SHELL CONTAINER */
-#sovereign-shell {
-    height: 100%;
-    width: 100%;
-}
-
-/* THE MASTER CONTAINER */
-#os-root {
-    display: none; /* JS will change this to 'flex' on login */
-    width: 100vw;
-    height: calc(100vh - 35px); /* Space below Top Bar */
-    overflow: hidden;
-}
-
-/* THE SIDEBAR (Dock) */
-#side-dock {
-    width: 70px !important;
-    height: 100%;
-    background: rgba(0, 0, 0, 0.8);
-    display: flex !important;
-    flex-direction: column;
-    align-items: center;
-    padding-top: 15px;
-    gap: 15px;
-    flex-shrink: 0; /* Prevents it from being squished */
-}
-
-/* THE MAIN AREA */
-#workspace {
-    border: 1px solid rgba(164, 69, 255, 0.3); /* Temporary purple border to see the area */
-    min-height: 500px;
-    flex-grow: 1; /* Fills remaining width */
-    height: 100%;
-    position: relative;
-    overflow: hidden;
-}
-
-#desktop-icons {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, 100px);
-    grid-auto-rows: 110px;
-    grid-auto-flow: column;
-    justify-content: end; /* Keeps icons on the right */
-    padding: 20px;
-    height: 100%;
-}
-
-/* DRAGGABLE WINDOWS */
-.os-window {
-    position: absolute; /* Required for dragging */
-    z-index: 1000;
-    transition: box-shadow 0.3s ease;
-}
-
-.os-window:active {
-    z-index: 2000; /* Brings the current window to the front */
-    box-shadow: 0 30px 60px rgba(0, 0, 0, 0.8);
-}
-
-.window-header {
-    cursor: grab; /* Shows the user they can move it */
-}
-
-.window-header:active {
-    cursor: grabbing;
-}
-
-/* TEMPORAL ENGINE WINDOW SIZE FIX */
-.os-window {
-    width: 850px !important;
-    height: 550px !important;
-    display: flex;
-    flex-direction: column;
-}
-
-.window-content {
-    flex: 1;
-    position: relative;
-    overflow: hidden; /* Important so the calendar scrolls internally */
 }
