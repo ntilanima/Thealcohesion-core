@@ -88,10 +88,9 @@ class TLC_Kernel {
         menuBtn.appendChild(dot);
     }
 
-    menuBtn.onclick = () => this.toggleAppMenu();
-    dock.appendChild(menuBtn);
-    
+    menuBtn.onclick = () => {
     console.log("UI: Sovereign Shell Synchronized.");
+    this.openAppMenu();
     }
 
     launchApp(appId) {
