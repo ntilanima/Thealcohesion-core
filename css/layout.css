@@ -275,31 +275,47 @@ body, html {
     box-sizing: border-box;
 }
 
-/* Search Box */
-.search-container {
-    display: flex;
-    justify-content: center;
-    margin-bottom: 50px;
-}
-
+/* --- SEARCH BOX REFINEMENT --- */
 .search-box {
     background: rgba(255, 255, 255, 0.15);
     border: 1px solid rgba(255, 255, 255, 0.2);
     border-radius: 12px;
-    padding: 10px 20px;
+    padding: 8px 15px; /* Reduced vertical padding from 10px to 8px */
     width: 100%;
     max-width: 500px;
     display: flex;
     align-items: center;
+    transition: all 0.2s ease;
 }
 
 .search-box input {
     background: none;
     border: none;
     color: white;
-    font-size: 1.1rem;
-    margin-left: 15px;
+    font-size: 1rem; /* Reduced from 1.1rem */
+    margin-left: 10px;
     width: 100%;
+    outline: none;
+}
+
+/* MOBILE SPECIFIC HEIGHT FIX */
+@media (max-width: 768px) {
+    .search-container {
+        margin-bottom: 25px; /* Half the desktop margin to save space */
+    }
+
+    .search-box {
+        padding: 6px 12px; /* Even tighter for mobile */
+        border-radius: 8px;
+    }
+
+    .search-box input {
+        font-size: 0.9rem; /* Smaller font for mobile height reduction */
+    }
+
+    .search-icon {
+        font-size: 0.9rem;
+    }
 }
 
 /* App Grid */
