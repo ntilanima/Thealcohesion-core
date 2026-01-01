@@ -132,6 +132,7 @@ class TLC_Kernel {
 
         // App Content Injection
         const container = document.getElementById(`canvas-${appId}`);
+
         if (appId === 'tnfi') {
             container.innerHTML = `
                 <div style="padding:20px;">
@@ -139,6 +140,19 @@ class TLC_Kernel {
                     <p>Investor Allotment: <strong>EPOS 2025</strong></p>
                     <p>Status: <span style="color:#00ff00;">Liquid</span></p>
                 </div>`;
+        } else if (appId === 'terminal') {
+            // Isolated Terminal HTML
+            container.innerHTML = `
+                <div id="vpu-terminal" style="background:#000; color:#00ff41; font-family:monospace; height:100%; display:flex; flex-direction:column; padding:15px; box-sizing:border-box;">
+                    <div id="term-output" style="flex:1; overflow-y:auto; white-space:pre-wrap; margin-bottom:10px; font-size:14px;">VPU Sovereign Terminal v1.0.0\nType 'help' for commands...</div>
+                    <div style="display:flex; gap:10px;">
+                        <span style="color:#a445ff; font-weight:bold;">admin@vpu:~$</span>
+                        <input type="text" id="term-input" autocomplete="off" style="background:transparent; border:none; color:#00ff41; font-family:inherit; outline:none; flex:1;">
+                    </div>
+                </div>`;
+            
+            // Trigger the command listener (Step 2 below)
+            this.initTerminalLogic();
         } else {
             container.innerHTML = `<div style="padding:20px;">${app.name} system online.</div>`;
         }
@@ -230,7 +244,48 @@ class TLC_Kernel {
         });
         return max + 1;
     }
+    initTerminalLogic() {
+    const input = document.getElementById('term-input');
+    if (!input) return;
 
+    input.focus();
+    input.onkeydown = (e) => {
+        if (e.key === 'Enter') {
+            const cmd = input.value;
+            this.handleTerminalCommand(cmd);
+            input.value = '';
+        }
+    };
+}
+    // Terminal Command Handler
+    handleTerminalCommand(cmd) {
+        const output = document.getElementById('term-output');
+        let response = "";
+        const cleanCmd = cmd.toLowerCase().trim();
+
+        switch(cleanCmd) {
+            case 'help':
+                response = "Available: status, allotment, clear, whoami";
+                break;
+            case 'status':
+                response = "System: ONLINE\nKernel: Sovereign Core v1.0\nShield: ACTIVE";
+                break;
+            case 'allotment':
+                response = "QUERY: Genesis Distribution...\nRESULT: EPOS and Investors confirmed for initial allotment.";
+                break;
+            case 'whoami':
+                response = "User: Verified Member\nRole: Sovereign Access";
+                break;
+            case 'clear':
+                output.innerHTML = "";
+                return;
+            default:
+                response = `Command not found: ${cleanCmd}`;
+        }
+
+        output.innerHTML += `\n<span style="color:#888;">> ${cmd}</span>\n${response}\n`;
+        output.scrollTop = output.scrollHeight;
+        }
     makeDraggable(el) {
         const header = el.querySelector('.window-header');
         const dragStart = (e) => {
