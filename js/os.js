@@ -142,16 +142,29 @@ class TLC_Kernel {
                 </div>`;
         } else if (appId === 'terminal') {
             // Isolated Terminal HTML
+            // Define the Fancy VPU Logo
+                const vpuLogo = `
+            _   _  ____  _   _ 
+            | | | ||  _ \\| | | |
+            | | | || |_) | | | |
+            | |/ / |  __/| |_| |
+            |___/  |_|    \\___/ 
+                                
+            VIRTUAL PRAGMATIC UNIVERSE
+            --------------------------`;
+
             container.innerHTML = `
-                <div id="vpu-terminal" style="background:#000; color:#00ff41; font-family:monospace; height:100%; display:flex; flex-direction:column; padding:15px; box-sizing:border-box;">
-                    <div id="term-output" style="flex:1; overflow-y:auto; white-space:pre-wrap; margin-bottom:10px; font-size:14px;">VPU Sovereign Terminal v1.0.0\nType 'help' for commands...</div>
-                    <div style="display:flex; gap:10px;">
-                        <span style="color:#a445ff; font-weight:bold;">admin@vpu:~$</span>
-                        <input type="text" id="term-input" autocomplete="off" style="background:transparent; border:none; color:#00ff41; font-family:inherit; outline:none; flex:1;">
-                    </div>
-                </div>`;
-            
-            // Trigger the command listener (Step 2 below)
+                    <div id="vpu-terminal" style="background:#000; color:#00ff41; font-family:monospace; height:100%; display:flex; flex-direction:column; padding:15px; box-sizing:border-box;">
+                        <div id="term-output" style="flex:1; overflow-y:auto; white-space:pre; margin-bottom:10px; font-size:12px; line-height:1.2; color:#a445ff;">${vpuLogo}
+            <span style="color:#00ff41;">
+            VPU Sovereign Terminal v1.0.0
+            Type 'help' for commands...</span></div>
+                        <div style="display:flex; gap:10px;">
+                            <span style="color:#a445ff; font-weight:bold;">admin@vpu:~$</span>
+                            <input type="text" id="term-input" autocomplete="off" style="background:transparent; border:none; color:#00ff41; font-family:inherit; outline:none; flex:1;">
+                        </div>
+                    </div>`;
+                
             this.initTerminalLogic();
         } else {
             container.innerHTML = `<div style="padding:20px;">${app.name} system online.</div>`;
@@ -277,7 +290,8 @@ class TLC_Kernel {
                 response = "User: Verified Member\nRole: Sovereign Access";
                 break;
             case 'clear':
-                output.innerHTML = "";
+            // Re-inject the logo when cleared so it always stays "fancy"
+                output.innerHTML = `<span style="color:#a445ff;">${vpuLogo}</span>\n`;
                 return;
             default:
                 response = `Command not found: ${cleanCmd}`;
