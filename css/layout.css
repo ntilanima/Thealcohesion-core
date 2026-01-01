@@ -127,3 +127,70 @@
     flex-direction: column;
     background: #050505;
 }
+/* --- DOCK & APP MENU (Mobile Optimized) --- */
+
+:root {
+    --dock-width: 65px;
+    --app-size: 50px; /* Scaled for Samsung A16 density */
+}
+
+/* SIDE DOCK - 8 Slots Limit */
+#side-dock {
+    width: var(--dock-width) !important;
+    background: rgba(10, 10, 10, 0.8);
+    display: flex !important;
+    flex-direction: column;
+    align-items: center;
+    padding: 10px 0;
+    gap: 8px; /* Adjusted spacing to fit exactly 8 apps + Menu icon */
+    border-right: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.dock-item {
+    width: var(--app-size);
+    height: var(--app-size);
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 12px; /* Ubuntu-style squircles */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.8rem;
+    transition: transform 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+/* APP MENU TRIGGER (At the bottom of dock) */
+.dock-bottom-trigger {
+    margin-top: auto; /* Pushes to bottom */
+    width: var(--app-size);
+    height: var(--app-size);
+    background: rgba(164, 69, 255, 0.2); /* Sovereign Purple accent */
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    font-size: 1.5rem;
+}
+
+/* ALL-APPS DRAWER (The window that opens the menu) */
+.app-drawer-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr); /* 4 columns for mobile spacing */
+    gap: 20px;
+    padding: 20px;
+}
+
+.drawer-icon {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    cursor: pointer;
+}
+
+.drawer-icon span {
+    font-size: 2.2rem;
+    background: rgba(255, 255, 255, 0.03);
+    padding: 15px;
+    border-radius: 18px;
+}

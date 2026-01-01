@@ -1,6 +1,69 @@
 import { registry } from './registry.js';
 
 class TLC_Kernel {
+    // Add these to the top of your TLC_Kernel class
+pinnedApps = ['time', 'tnfi', 'terminal', 'files', 'settings', 'browser', 'messages', 'camera']; 
+
+bootShell() {
+    const dock = document.getElementById('side-dock');
+    dock.innerHTML = ''; 
+
+    // 1. Render only the first 8 Pinned Apps to the Dock
+    this.pinnedApps.forEach(appId => {
+        const app = registry.find(a => a.id === appId);
+        if (app) {
+            const dItem = document.createElement('div');
+            dItem.className = 'dock-item';
+            dItem.innerHTML = `<span>${app.icon}</span>`;
+            dItem.onclick = () => this.launchApp(app.id);
+            dock.appendChild(dItem);
+        }
+    });
+
+    // 2. Add the "All Apps" Grid Trigger at the bottom
+    const menuBtn = document.createElement('div');
+    menuBtn.className = 'dock-bottom-trigger';
+    menuBtn.innerHTML = '⣿';
+    menuBtn.onclick = () => this.openAppMenu();
+    dock.appendChild(menuBtn);
+}
+
+openAppMenu() {
+    // Check if Menu is already open
+    if (document.getElementById('win-app-menu')) {
+        this.focusWindow('win-app-menu');
+        return;
+    }
+
+    // Launch a special window for the Menu
+    const winId = 'win-app-menu';
+    const win = document.createElement('div');
+    win.className = 'os-window maximized'; // Open full screen like a drawer
+    win.id = winId;
+    
+    let gridHTML = '<div class="app-drawer-grid">';
+    registry.forEach(app => {
+        gridHTML += `
+            <div class="drawer-icon" onclick="kernel.launchApp('${app.id}'); kernel.closeWindow('win-app-menu');">
+                <span>${app.icon}</span>
+                <p>${app.name}</p>
+            </div>
+        `;
+    });
+    gridHTML += '</div>';
+
+    win.innerHTML = `
+        <div class="window-header">
+            <span class="title">Sovereign Applications</span>
+            <div class="window-controls">
+                <button class="win-btn close" onclick="kernel.closeWindow('${winId}')">×</button>
+            </div>
+        </div>
+        <div class="window-content">${gridHTML}</div>
+    `;
+
+    document.getElementById('workspace').appendChild(win);
+    }
     constructor() {
         console.log("Kernel: Initializing Sovereign Core...");
         // This ensures the login button works when the page is ready
