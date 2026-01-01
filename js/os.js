@@ -88,41 +88,49 @@ class TLC_Kernel {
     // --- WINDOW CAPABILITIES ---
 
     launchApp(appId) {
-        const app = registry.find(a => a.id === appId);
-        if (!app) return;
+    const app = registry.find(a => a.id === appId);
+    if (!app) return;
 
-        // Unique ID for each window instance
-        const winId = `win-${appId}-${Date.now()}`;
-        const win = document.createElement('div');
-        win.className = 'os-window';
-        win.id = winId;
-        win.style.zIndex = this.getTopZIndex();
-        win.style.left = '100px';
-        win.style.top = '100px';
+    const winId = `win-${appId}-${Date.now()}`;
+    const win = document.createElement('div');
+    win.className = 'os-window';
+    win.id = winId;
+    win.style.zIndex = this.getTopZIndex();
+    win.style.left = '100px';
+    win.style.top = '100px';
 
-        win.innerHTML = `
-            <div class="window-header" onmousedown="kernel.focusWindow('${winId}')">
-                <span class="title">${app.icon} ${app.name}</span>
-                <div class="window-controls">
-                    <button class="win-btn hide" onclick="kernel.minimizeWindow('${winId}')">─</button>
-                    <button class="win-btn expand" onclick="kernel.toggleMaximize('${winId}')">▢</button>
-                    <button class="win-btn close" onclick="kernel.closeWindow('${winId}')">×</button>
-                </div>
+    win.innerHTML = `
+        <div class="window-header" onmousedown="kernel.focusWindow('${winId}')">
+            <span class="title">${app.icon} ${app.name}</span>
+            <div class="window-controls">
+                <button class="win-btn hide" onclick="kernel.minimizeWindow('${winId}')">─</button>
+                <button class="win-btn expand" onclick="kernel.toggleMaximize('${winId}')">▢</button>
+                <button class="win-btn close" onclick="kernel.closeWindow('${winId}')">×</button>
             </div>
-            <div class="window-content" id="canvas-${winId}">
-                <div class="boot-loader">Syncing...</div>
-            </div>
-        `;
+        </div>
+        <div class="window-content" id="canvas-${winId}">
+            <div class="boot-loader">Syncing Sovereign Systems...</div>
+        </div>
+    `;
 
-        document.getElementById('workspace').appendChild(win);
-        this.makeDraggable(win);
+    document.getElementById('workspace').appendChild(win);
+    
+    // FIX 1: Pass the element directly to the draggable function
+    this.makeDraggable(win);
 
-        // Specific App Content Logic
-        if (appId === 'time') {
-            const container = document.getElementById(`canvas-${winId}`);
+    // FIX 2: Target the specific dynamic ID
+    if (appId === 'time') {
+        const container = document.getElementById(`canvas-${winId}`);
+        if (container) {
             container.innerHTML = thealTimeApp.render();
-            requestAnimationFrame(() => thealTimeApp.reboot());
+            // Wait for DOM to paint before rebooting engine
+            requestAnimationFrame(() => {
+                if (typeof thealTimeApp.reboot === 'function') {
+                    thealTimeApp.reboot(`canvas-${winId}`);
+                }
+            });
         }
+    }
     }
 
     getTopZIndex() {
@@ -160,30 +168,37 @@ class TLC_Kernel {
     }
 
     makeDraggable(el) {
-        const header = el.querySelector('.window-header');
-        let p1 = 0, p2 = 0, p3 = 0, p4 = 0;
+    const header = el.querySelector('.window-header');
+    let p1 = 0, p2 = 0, p3 = 0, p4 = 0;
+
+    header.onmousedown = (e) => {
+        // Don't drag if we are clicking a button or if maximized
+        if (e.target.closest('.win-btn') || el.classList.contains('maximized')) return;
         
-        header.onmousedown = (e) => {
-            if (el.classList.contains('maximized')) return;
+        e.preventDefault();
+        // Get initial mouse position
+        p3 = e.clientX;
+        p4 = e.clientY;
+
+        // Use document listeners so mouse doesn't "slip off" the header
+        document.onmousemove = (e) => {
             e.preventDefault();
-            p3 = e.clientX; 
+            // Calculate movement
+            p1 = p3 - e.clientX;
+            p2 = p4 - e.clientY;
+            p3 = e.clientX;
             p4 = e.clientY;
-            
-            document.onmouseup = () => {
-                document.onmouseup = null;
-                document.onmousemove = null;
-            };
-            
-            document.onmousemove = (e) => {
-                if (el.classList.contains('maximized')) return;
-                p1 = p3 - e.clientX;
-                p2 = p4 - e.clientY;
-                p3 = e.clientX;
-                p4 = e.clientY;
-                el.style.top = (el.offsetTop - p2) + "px";
-                el.style.left = (el.offsetLeft - p1) + "px";
-            };
+
+            // Apply new position
+            el.style.top = (el.offsetTop - p2) + "px";
+            el.style.left = (el.offsetLeft - p1) + "px";
         };
+
+        document.onmouseup = () => {
+            document.onmousemove = null;
+            document.onmouseup = null;
+        };
+    };
     }
 }
 
