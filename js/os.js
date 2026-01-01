@@ -2,21 +2,26 @@ import { registry } from './registry.js';
 
 class TLC_Kernel {
     constructor() {
-        console.log("Kernel: Initializing...");
-        window.addEventListener('load', () => this.init());
+        console.log("Kernel: Initializing Sovereign Core...");
+        // This ensures the login button works when the page is ready
+        window.addEventListener('DOMContentLoaded', () => this.init());
     }
 
     init() {
         const loginBtn = document.getElementById('login-btn');
         if (loginBtn) {
-            loginBtn.addEventListener('click', () => this.verifyIdentity());
+            loginBtn.onclick = () => this.verifyIdentity();
+            console.log("Kernel: Identity Listeners Active.");
         }
     }
 
     verifyIdentity() {
         const user = document.getElementById('username').value;
         const pass = document.getElementById('password').value;
+        
+        // Identity Verification Logic
         if (user.trim() !== "" && pass.trim() !== "") {
+            console.log("Identity Verified. Bypassing Login Gate...");
             this.transitionToShell();
         } else {
             alert("Sovereign Identity Required.");
@@ -27,14 +32,19 @@ class TLC_Kernel {
         const loginGate = document.getElementById('login-gate');
         const topBar = document.getElementById('top-bar');
         const osRoot = document.getElementById('os-root');
+        const sideDock = document.getElementById('side-dock');
+        const workspace = document.getElementById('workspace');
         
         if (loginGate) loginGate.style.display = 'none';
+        
+        // Reveal Core UI
         if (topBar) topBar.classList.remove('hidden');
         if (osRoot) {
-            osRoot.style.display = 'flex';
-            document.getElementById('side-dock').classList.remove('hidden');
-            document.getElementById('workspace').classList.remove('hidden');
+            osRoot.style.display = 'flex'; // Force grid/flex visibility
+            if (sideDock) sideDock.classList.remove('hidden');
+            if (workspace) workspace.classList.remove('hidden');
         }
+
         this.bootShell();
     }
 
@@ -43,19 +53,21 @@ class TLC_Kernel {
         const desktop = document.getElementById('desktop-icons');
         if (!dock || !desktop) return;
 
+        // Preserve the grid icon if it exists
         const gridIcon = dock.querySelector('.dock-bottom-trigger');
         dock.innerHTML = '';
         desktop.innerHTML = '';
 
         registry.forEach(app => {
-            // Sidebar Dock
+            // Render Sidebar Item
             const dItem = document.createElement('div');
             dItem.className = 'dock-item';
             dItem.innerHTML = `<span>${app.icon}</span>`;
+            dItem.title = app.name;
             dItem.onclick = () => this.launchApp(app.id);
             dock.appendChild(dItem);
 
-            // Desktop Icon
+            // Render Desktop Item
             const deskIcon = document.createElement('div');
             deskIcon.className = 'desktop-icon';
             deskIcon.innerHTML = `<span>${app.icon}</span><p>${app.name}</p>`;
@@ -66,17 +78,20 @@ class TLC_Kernel {
         if (gridIcon) dock.appendChild(gridIcon);
     }
 
-    // --- WINDOW MANAGEMENT CAPABILITIES ---
+    // --- WINDOW CAPABILITIES ---
 
     launchApp(appId) {
         const app = registry.find(a => a.id === appId);
         if (!app) return;
 
+        // Unique ID for each window instance
         const winId = `win-${appId}-${Date.now()}`;
         const win = document.createElement('div');
         win.className = 'os-window';
         win.id = winId;
         win.style.zIndex = this.getTopZIndex();
+        win.style.left = '100px';
+        win.style.top = '100px';
 
         win.innerHTML = `
             <div class="window-header" onmousedown="kernel.focusWindow('${winId}')">
@@ -88,15 +103,17 @@ class TLC_Kernel {
                 </div>
             </div>
             <div class="window-content" id="canvas-${winId}">
-                <div class="boot-loader">Syncing Sovereign Systems...</div>
+                <div class="boot-loader">Syncing...</div>
             </div>
         `;
 
         document.getElementById('workspace').appendChild(win);
         this.makeDraggable(win);
 
+        // Specific App Content Logic
         if (appId === 'time') {
-            document.getElementById(`canvas-${winId}`).innerHTML = thealTimeApp.render();
+            const container = document.getElementById(`canvas-${winId}`);
+            container.innerHTML = thealTimeApp.render();
             requestAnimationFrame(() => thealTimeApp.reboot());
         }
     }
@@ -104,16 +121,26 @@ class TLC_Kernel {
     getTopZIndex() {
         const wins = document.querySelectorAll('.os-window');
         let max = 1000;
-        wins.forEach(w => { if (parseInt(w.style.zIndex) > max) max = parseInt(w.style.zIndex); });
+        wins.forEach(w => { 
+            const z = parseInt(w.style.zIndex) || 1000;
+            if (z > max) max = z; 
+        });
         return max + 1;
     }
 
-    focusWindow(id) { document.getElementById(id).style.zIndex = this.getTopZIndex(); }
+    focusWindow(id) {
+        const el = document.getElementById(id);
+        if (el) el.style.zIndex = this.getTopZIndex();
+    }
 
-    closeWindow(id) { document.getElementById(id).remove(); }
+    closeWindow(id) {
+        const el = document.getElementById(id);
+        if (el) el.remove();
+    }
 
     minimizeWindow(id) {
         const el = document.getElementById(id);
+        if (!el) return;
         el.style.transform = "scale(0.7) translateY(200px)";
         el.style.opacity = "0";
         setTimeout(() => el.style.display = "none", 300);
@@ -121,21 +148,31 @@ class TLC_Kernel {
 
     toggleMaximize(id) {
         const el = document.getElementById(id);
+        if (!el) return;
         el.classList.toggle('maximized');
     }
 
     makeDraggable(el) {
         const header = el.querySelector('.window-header');
         let p1 = 0, p2 = 0, p3 = 0, p4 = 0;
+        
         header.onmousedown = (e) => {
-            if (el.classList.contains('maximized')) return; // No drag if maximized
+            if (el.classList.contains('maximized')) return;
             e.preventDefault();
-            p3 = e.clientX; p4 = e.clientY;
-            document.onmouseup = () => { document.onmouseup = null; document.onmousemove = null; };
+            p3 = e.clientX; 
+            p4 = e.clientY;
+            
+            document.onmouseup = () => {
+                document.onmouseup = null;
+                document.onmousemove = null;
+            };
+            
             document.onmousemove = (e) => {
-                if (el.classList.contains('maximized')) return; // STOP dragging if maximized
-                p1 = p3 - e.clientX; p2 = p4 - e.clientY;
-                p3 = e.clientX; p4 = e.clientY;
+                if (el.classList.contains('maximized')) return;
+                p1 = p3 - e.clientX;
+                p2 = p4 - e.clientY;
+                p3 = e.clientX;
+                p4 = e.clientY;
                 el.style.top = (el.offsetTop - p2) + "px";
                 el.style.left = (el.offsetLeft - p1) + "px";
             };
@@ -143,5 +180,5 @@ class TLC_Kernel {
     }
 }
 
-// Global instance for onclick events
+// Global instance so HTML 'onclick' can find it
 window.kernel = new TLC_Kernel();
