@@ -6,6 +6,7 @@ class TLC_Kernel {
         this.runningApps = new Set(); 
         
         console.log("Kernel: Initializing Sovereign Core...");
+        this.vaultLocked = true; // Start locked
         this.vpuLogo = `
         _   _  ____  _   _ 
         | | | ||  _ \\| | | |
@@ -326,7 +327,11 @@ class TLC_Kernel {
     const output = document.getElementById('term-output');
     const termBody = document.getElementById('vpu-terminal'); 
     let response = "";
-    const cleanCmd = cmd.toLowerCase().trim();
+    
+    // Split to handle commands with arguments (like 'unlock key')
+    const parts = cmd.trim().split(' ');
+    const cleanCmd = parts[0].toLowerCase();
+    const argument = parts[1] ? parts[1].toLowerCase() : null;
 
     switch(cleanCmd) {
         case 'neofetch':
@@ -334,7 +339,7 @@ class TLC_Kernel {
                 `OS: Thealcohesion Sovereign Core`,
                 `Kernel: VPU 3.5.2-Genesis`,
                 `Uptime: ${Math.floor(performance.now() / 60000)} mins`,
-                `Shell: Sovereign-Bash`,
+                `Vault: ${this.vaultLocked ? 'LOCKED 🔒' : 'UNLOCKED 🔓'}`,
                 `Allotment: EPOS/Investor Confirmed`,
                 `Status: Verified Member`
             ];
@@ -350,8 +355,31 @@ class TLC_Kernel {
             ).join('\n');
             break;
 
+        case 'unlock':
+            if (argument === 'genesis2025') {
+                this.vaultLocked = false;
+                response = `<span style="color:#00ff41;">[SUCCESS]</span> Vault decrypted. Type 'vault' to view contents.`;
+            } else {
+                response = `<span style="color:#ff4545;">[ERROR]</span> Invalid Key Phrase. Access logged.`;
+            }
+            break;
+
+        case 'vault':
+            if (this.vaultLocked) {
+                response = `<span class="access-denied">[ACCESS DENIED]</span>\nSystem is currently LOCKED.\nType 'unlock [key]' to proceed.`;
+            } else {
+                response = `
+                <span style="color:#a445ff;">┌───────────────── SOVEREIGN VAULT ────────────────┐</span>
+                <span style="color:#888;">FILE ID          CLASSIFICATION    CONTENT</span>
+                ───────          ──────────────    ───────
+                SEC-01           TOP SECRET        Investor Allotment: EPOS 2025
+                SEC-02           RESTRICTED        Initial Allotment: Verified
+                SEC-03           INTERNAL          Baseline: 5GB Allocation
+                <span style="color:#a445ff;">└──────────────────────────────────────────────────┘</span>`;
+            }
+            break;
+
         case 'matrix':
-            // FIX: Removed 'const' redeclaration. Using termBody from top of function.
             if (termBody) {
                 this.initMatrix(termBody);
                 response = "Sovereign Overlay Initialized...";
@@ -359,7 +387,7 @@ class TLC_Kernel {
             break;
 
         case 'help':
-            response = "Available: status, allotment, clear, whoami, neofetch, matrix";
+            response = "Available: status, allotment, clear, whoami, neofetch, matrix, v-pos, vault, unlock [key]";
             break;
 
         case 'status':
@@ -374,8 +402,19 @@ class TLC_Kernel {
             response = "User: Verified Member\nRole: Sovereign Access";
             break;
 
+        case 'v-pos':
+            response = `
+            <span style="color:#a445ff;">┌──────────────── ALLOTMENT LEDGER ────────────────┐</span>
+            <span style="color:#888;">ENTITY           ROLE            ALLOTMENT STATUS</span>
+            ───────          ────            ────────────────
+            EPOS             System          <span style="color:#00ff41;">INITIALIZED</span>
+            INVESTORS        Founders        <span style="color:#00ff41;">CONFIRMED</span>
+            GENESIS HUB      Core            <span style="color:#00ff41;">ACTIVE (5GB)</span>
+            <span style="color:#a445ff;">└──────────────────────────────────────────────────┘</span>
+            Temporal Stamp: 2025-12-26 | Phase: 1.0`;
+            break;
+
         case 'clear':
-            // FIX: Added 'this.' to reference the class variable
             output.innerHTML = `<span style="color:#a445ff;">${this.vpuLogo}</span>\n`;
             return; 
 
@@ -385,7 +424,7 @@ class TLC_Kernel {
 
     output.innerHTML += `\n<span style="color:#888;">> ${cmd}</span>\n${response}\n`;
     output.scrollTop = output.scrollHeight;
-    }
+}
     makeDraggable(el) {
         const header = el.querySelector('.window-header');
         const dragStart = (e) => {

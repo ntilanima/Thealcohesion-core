@@ -189,3 +189,16 @@ body, html {
 #vpu-terminal {
     animation: terminal-flicker 0.2s infinite;
 }
+
+/* --- MATRIX CODE EFFECT STYLING --- */
+/* Make terminal text sit "above" the falling matrix code */
+#vpu-terminal #term-output, 
+#vpu-terminal .input-line {
+    position: relative;
+    z-index: 2; /* Sits on top of the canvas */
+    background: transparent;
+}
+
+#vpu-terminal canvas {
+    pointer-events: none; /* Allows you to click the input "through" the code */
+}
