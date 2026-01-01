@@ -169,35 +169,37 @@ class TLC_Kernel {
 
     makeDraggable(el) {
     const header = el.querySelector('.window-header');
-    let p1 = 0, p2 = 0, p3 = 0, p4 = 0;
+    if (!header) return;
 
     header.onmousedown = (e) => {
-        // Don't drag if we are clicking a button or if maximized
         if (e.target.closest('.win-btn') || el.classList.contains('maximized')) return;
         
-        e.preventDefault();
-        // Get initial mouse position
-        p3 = e.clientX;
-        p4 = e.clientY;
+        // Bring to front on click
+        this.focusWindow(el.id);
 
-        // Use document listeners so mouse doesn't "slip off" the header
-        document.onmousemove = (e) => {
-            e.preventDefault();
-            // Calculate movement
-            p1 = p3 - e.clientX;
-            p2 = p4 - e.clientY;
-            p3 = e.clientX;
-            p4 = e.clientY;
+        let startX = e.clientX;
+        let startY = e.clientY;
+        let startTop = parseInt(window.getComputedStyle(el).top);
+        let startLeft = parseInt(window.getComputedStyle(el).left);
 
-            // Apply new position
-            el.style.top = (el.offsetTop - p2) + "px";
-            el.style.left = (el.offsetLeft - p1) + "px";
+        console.log("Drag Started at:", startLeft, startTop);
+
+        const onMouseMove = (e) => {
+            const deltaX = e.clientX - startX;
+            const deltaY = e.clientY - startY;
+            
+            el.style.top = (startTop + deltaY) + "px";
+            el.style.left = (startLeft + deltaX) + "px";
         };
 
-        document.onmouseup = () => {
-            document.onmousemove = null;
-            document.onmouseup = null;
+        const onMouseUp = () => {
+            document.removeEventListener('mousemove', onMouseMove);
+            document.removeEventListener('mouseup', onMouseUp);
+            console.log("Drag Ended.");
         };
+
+        document.addEventListener('mousemove', onMouseMove);
+        document.addEventListener('mouseup', onMouseUp);
     };
     }
 }
