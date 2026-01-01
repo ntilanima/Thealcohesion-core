@@ -6,7 +6,8 @@ class TLC_Kernel {
         this.runningApps = new Set(); 
         
         console.log("Kernel: Initializing Sovereign Core...");
-        window.addEventListener('DOMContentLoaded', () => this.init());
+        // In modules, we initialize immediately instead of waiting for DOMContentLoaded
+        this.init();
     }
 
     init() {
@@ -14,31 +15,30 @@ class TLC_Kernel {
         if (loginBtn) {
             loginBtn.onclick = (e) => {
                 e.preventDefault();
-                this.verifyIdentity();
+                console.log("Kernel: Identity Verified.");
+                this.transitionToShell();
             };
+        } else {
+            // Fallback for debugging: if button isn't found, try again in 100ms
+            setTimeout(() => this.init(), 100);
         }
     }
 
-    verifyIdentity() {
-        this.transitionToShell();
-    }
-
     transitionToShell() {
-    const gate = document.getElementById('login-gate');
-    const root = document.getElementById('os-root');
-    const top = document.getElementById('top-bar');
+        const gate = document.getElementById('login-gate');
+        const root = document.getElementById('os-root');
+        const top = document.getElementById('top-bar');
 
-    if (gate) gate.style.display = 'none';
-
-    // IMPORTANT: Remove 'hidden' class from both
-    if (top) top.classList.remove('hidden');
-    if (root) {
-        root.classList.remove('hidden');
-        // Force the flex layout so the dock sits on the left
-        root.style.display = 'flex'; 
-    }
-    
-    this.bootShell();
+        if (gate) gate.style.display = 'none';
+        if (top) top.classList.remove('hidden');
+        
+        if (root) {
+            root.classList.remove('hidden');
+            // Overriding the inline style="display: none" from your HTML
+            root.style.display = 'flex'; 
+        }
+        
+        this.bootShell();
     }
 
     bootShell() {
@@ -49,7 +49,10 @@ class TLC_Kernel {
         this.pinnedApps.forEach((appId) => {
             const app = registry.find(a => a.id === appId);
             const dItem = document.createElement('div');
+            // Relative position is needed for the Ubuntu running dot
+            dItem.style.position = 'relative';
             dItem.className = `dock-item ${this.runningApps.has(appId) ? 'running' : ''}`;
+            
             if (app) {
                 dItem.innerHTML = `<span>${app.icon}</span>`;
                 dItem.onclick = () => this.launchApp(appId);
@@ -61,11 +64,13 @@ class TLC_Kernel {
 
         const menuBtn = document.createElement('div');
         menuBtn.className = 'dock-bottom-trigger';
-        menuBtn.innerHTML = `
-            <div class="menu-dot"></div><div class="menu-dot"></div><div class="menu-dot"></div>
-            <div class="menu-dot"></div><div class="menu-dot"></div><div class="menu-dot"></div>
-            <div class="menu-dot"></div><div class="menu-dot"></div><div class="menu-dot"></div>
-        `;
+        // Changed to use the 9 dots logic correctly
+        menuBtn.innerHTML = '';
+        for(let i=0; i<9; i++) {
+            const dot = document.createElement('div');
+            dot.className = 'menu-dot';
+            menuBtn.appendChild(dot);
+        }
         menuBtn.onclick = () => this.openAppMenu();
         dock.appendChild(menuBtn);
     }
@@ -78,10 +83,10 @@ class TLC_Kernel {
         const winId = `win-${appId}`;
         if (this.runningApps.has(appId)) {
             const existingWin = document.getElementById(winId);
-            if (existingWin && existingWin.style.display === 'none') {
+            if (existingWin) {
                 existingWin.style.display = 'flex';
+                this.focusWindow(winId);
             }
-            this.focusWindow(winId);
             return;
         }
 
@@ -111,27 +116,26 @@ class TLC_Kernel {
 
         workspace.appendChild(win);
         
-        // --- RESTORED PROPERTIES & BINDINGS ---
+        // Manual event binding
         win.querySelector(`#hide-${winId}`).onclick = (e) => { e.stopPropagation(); this.minimizeWindow(winId); };
         win.querySelector(`#max-${winId}`).onclick = (e) => { e.stopPropagation(); this.toggleMaximize(winId); };
         win.querySelector(`#close-${winId}`).onclick = (e) => { e.stopPropagation(); this.closeApp(appId, winId); };
+        
         win.onmousedown = () => this.focusWindow(winId);
         win.ontouchstart = () => this.focusWindow(winId);
 
         this.makeDraggable(win);
 
-        // --- TEMPORE ENGINE (TIME APP) FIX ---
         const container = document.getElementById(`canvas-${appId}`);
         if (appId === 'time' && window.thealTimeApp) {
             container.innerHTML = thealTimeApp.render();
-            // Wrap in setTimeout to ensure DOM is painted
             setTimeout(() => thealTimeApp.reboot(), 10);
         } else if (appId === 'tnfi') {
             container.innerHTML = `
                 <div style="padding:20px;">
                     <h3>Bank of Sovereign</h3>
-                    <p>Investor Status: <strong>Verified</strong></p>
-                    <p>2025 Allotment: <strong>EPOS Initial Grant</strong></p>
+                    <p>Status: <strong>Verified</strong></p>
+                    <p>Investor Allotment: <strong>EPOS 2025</strong></p>
                 </div>`;
         } else {
             container.innerHTML = `<div style="padding:20px;">${app.name} system online.</div>`;
@@ -238,5 +242,6 @@ class TLC_Kernel {
         header.ontouchstart = dragStart;
     }
 }
-// Initialize the Kernel
+
+// Global exposure
 window.kernel = new TLC_Kernel();
