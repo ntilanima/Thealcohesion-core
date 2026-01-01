@@ -200,3 +200,21 @@
     transform: scale(1.2);
     background: #fff;
 }
+
+#workspace {
+    flex-grow: 1;
+    height: 100%;
+    position: relative;
+    /* Ensure windows stay above background but below top bar */
+    z-index: 10; 
+    overflow: visible; /* Allow windows to be dragged freely */
+}
+
+.os-window {
+    position: absolute !important;
+    /* High z-index ensures windows appear above workspace elements */
+    z-index: 100; 
+    display: flex;
+    flex-direction: column;
+    /* ... rest of your existing window styles ... */
+}
