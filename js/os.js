@@ -149,16 +149,19 @@ class TLC_Kernel {
 
     // 3. ENGINE TRIGGER: This is the critical part
     if (appId === 'time') {
-        const container = document.getElementById(`canvas-${appId}`);
-        // Inject the HTML
-        container.innerHTML = thealTimeApp.render();
-        // Force the engine to start its internal clocks/grids
-        setTimeout(() => {
-            thealTimeApp.startClock();
-            thealTimeApp.renderGrid(new Date());
-            thealTimeApp.renderUpcomingEvents();
-        }, 50);
-    }
+    const container = document.getElementById(`canvas-${appId}`);
+    
+    // 1. Inject the HTML Structure
+    container.innerHTML = thealTimeApp.render();
+
+    // 2. Wait for DOM ready, then bind the engine
+    requestAnimationFrame(() => {
+        thealTimeApp.reboot(`canvas-${appId}`);
+        
+        // Ensure the Top Bar also updates immediately
+        const topBarTime = document.getElementById("top-bar-time");
+        if (topBarTime) topBarTime.onclick = () => thealTimeApp.renderHUD();
+    });
     }
 
     makeDraggable(el) {

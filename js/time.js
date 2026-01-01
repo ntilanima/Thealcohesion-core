@@ -368,6 +368,24 @@ const thealTimeApp = {
 
         document.body.appendChild(overlay);
     },
+
+    // Hard Reboot Functionality
+    reboot(containerId) {
+    console.log("Temporal Engine: Hard Rebooting UI...");
+    this.startClock(); // Restarts the 1s interval
+    this.renderGrid(this.currentViewDate);
+    this.renderUpcomingEvents();
+    
+    // Force a progress bar update immediately
+    const now = new Date();
+    const theal = this.getThealDate(now);
+    if (theal.label.includes("Day")) {
+        const day = parseInt(theal.label.match(/Day (\d+)/)[1]);
+        const percent = Math.round((day / 28) * 100);
+        const bar = document.getElementById('vpu-progress-fill');
+        if (bar) bar.style.width = percent + "%";
+    }
+    }
 };
 
 // GLOBAL SCOPE FUNCTION - Re-optimized for visibility

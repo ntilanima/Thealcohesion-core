@@ -260,3 +260,17 @@
 .window-header:active {
     cursor: grabbing;
 }
+
+/* TEMPORAL ENGINE WINDOW SIZE FIX */
+.os-window {
+    width: 850px !important;
+    height: 550px !important;
+    display: flex;
+    flex-direction: column;
+}
+
+.window-content {
+    flex: 1;
+    position: relative;
+    overflow: hidden; /* Important so the calendar scrolls internally */
+}
