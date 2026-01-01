@@ -95,9 +95,11 @@ class TLC_Kernel {
     const win = document.createElement('div');
     win.className = 'os-window';
     win.id = winId;
-    win.style.zIndex = this.getTopZIndex();
+    
+    // CRITICAL: Set initial positions so the drag math works
     win.style.left = '100px';
     win.style.top = '100px';
+    win.style.zIndex = this.getTopZIndex();
 
     win.innerHTML = `
         <div class="window-header" onmousedown="kernel.focusWindow('${winId}')">
@@ -109,27 +111,32 @@ class TLC_Kernel {
             </div>
         </div>
         <div class="window-content" id="canvas-${winId}">
-            <div class="boot-loader">Syncing Sovereign Systems...</div>
+            <div class="app-loading-state">
+                <p>Initializing ${app.name}...</p>
+                <small>Connecting to Sovereign Core...</small>
+            </div>
         </div>
     `;
 
     document.getElementById('workspace').appendChild(win);
-    
-    // FIX 1: Pass the element directly to the draggable function
     this.makeDraggable(win);
 
-    // FIX 2: Target the specific dynamic ID
+    // APP ROUTING LOGIC
+    const container = document.getElementById(`canvas-${winId}`);
+    
     if (appId === 'time') {
-        const container = document.getElementById(`canvas-${winId}`);
-        if (container) {
-            container.innerHTML = thealTimeApp.render();
-            // Wait for DOM to paint before rebooting engine
-            requestAnimationFrame(() => {
-                if (typeof thealTimeApp.reboot === 'function') {
-                    thealTimeApp.reboot(`canvas-${winId}`);
-                }
-            });
-        }
+        container.innerHTML = thealTimeApp.render();
+        requestAnimationFrame(() => thealTimeApp.reboot());
+    } else {
+        // Fallback for other apps so they don't stay on "Syncing"
+        setTimeout(() => {
+            container.innerHTML = `
+                <div style="padding:20px; text-align:center;">
+                    <h2>${app.icon} ${app.name}</h2>
+                    <p>System module active. Interface coming soon.</p>
+                </div>
+            `;
+        }, 500);
     }
     }
 

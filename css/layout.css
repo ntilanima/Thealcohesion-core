@@ -43,7 +43,8 @@
 
 /* --- WINDOW SYSTEM --- */
 .os-window {
-    position: absolute;
+    position: absolute !important;
+    margin: 0 !important;
     width: 850px;
     height: 550px;
     background: rgba(30, 30, 30, 0.85);
@@ -56,10 +57,10 @@
     overflow: hidden;
     z-index: 1000;
     /* Smooth transitions for Maximize/Hide */
-    transition: width 0.3s cubic-bezier(0.165, 0.84, 0.44, 1), 
+    /*transition: width 0.3s cubic-bezier(0.165, 0.84, 0.44, 1), 
                 height 0.3s cubic-bezier(0.165, 0.84, 0.44, 1), 
                 top 0.3s ease, left 0.3s ease, 
-                opacity 0.3s ease, transform 0.3s ease;
+                opacity 0.3s ease, transform 0.3s ease; */
 }
 
 /* WINDOW STATES */
