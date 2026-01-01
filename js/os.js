@@ -6,6 +6,15 @@ class TLC_Kernel {
         this.runningApps = new Set(); 
         
         console.log("Kernel: Initializing Sovereign Core...");
+        this.vpuLogo = `
+        _   _  ____  _   _ 
+        | | | ||  _ \\| | | |
+        | | | || |_) | | | |
+        | |/ / |  __/| |_| |
+        |___/  |_|    \\___/ 
+                            
+        VIRTUAL PRAGMATIC UNIVERSE
+        --------------------------`;
         this.init();
     }
 
@@ -312,63 +321,71 @@ class TLC_Kernel {
     setTimeout(() => this.handleTerminalCommand('neofetch'), 500);
     }   
     // Terminal Command Handler
+    // Terminal Command Handler
     handleTerminalCommand(cmd) {
-        const output = document.getElementById('term-output');
-        let response = "";
-        const cleanCmd = cmd.toLowerCase().trim();
+    const output = document.getElementById('term-output');
+    const termBody = document.getElementById('vpu-terminal'); 
+    let response = "";
+    const cleanCmd = cmd.toLowerCase().trim();
 
-        switch(cleanCmd) {
-            case 'neofetch':
-                const specs = [
-                    `OS: Thealcohesion Sovereign Core`,
-                    `Kernel: VPU 3.5.2-Genesis`,
-                    `Uptime: ${Math.floor(performance.now() / 60000)} mins`,
-                    `Shell: Sovereign-Bash`,
-                    `Allotment: EPOS/Investor Confirmed`,
-                    `Status: Verified Member`
-                ];
+    switch(cleanCmd) {
+        case 'neofetch':
+            const specs = [
+                `OS: Thealcohesion Sovereign Core`,
+                `Kernel: VPU 3.5.2-Genesis`,
+                `Uptime: ${Math.floor(performance.now() / 60000)} mins`,
+                `Shell: Sovereign-Bash`,
+                `Allotment: EPOS/Investor Confirmed`,
+                `Status: Verified Member`
+            ];
+            const logo = [
+                `  _   _  ____  _   _ `,
+                ` | | | ||  _ \\| | | |`,
+                ` | | | || |_) | | | |`,
+                ` | |/ / |  __/| |_| |`,
+                ` |___/  |_|    \\___/ `
+            ];
+            response = logo.map((line, i) => 
+                `<span style="color:#a445ff;">${line}</span>   ${specs[i] || ''}`
+            ).join('\n');
+            break;
 
-                const logo = [
-                    `  _   _  ____  _   _ `,
-                    ` | | | ||  _ \\| | | |`,
-                    ` | | | || |_) | | | |`,
-                    ` | |/ / |  __/| |_| |`,
-                    ` |___/  |_|    \\___/ `
-                ];
-
-                // Combine Logo and Specs side-by-side
-                response = logo.map((line, i) => 
-                    `<span style="color:#a445ff;">${line}</span>   ${specs[i] || ''}`
-                ).join('\n');
-                break;
-            case 'matrix':
-                const termBody = document.getElementById('vpu-terminal');
+        case 'matrix':
+            // FIX: Removed 'const' redeclaration. Using termBody from top of function.
+            if (termBody) {
                 this.initMatrix(termBody);
                 response = "Sovereign Overlay Initialized...";
-                break;
-                case 'help':
-                response = "Available: status, allotment, clear, whoami";
-                break;
-            case 'status':
-                response = "System: ONLINE\nKernel: Sovereign Core v1.0\nShield: ACTIVE";
-                break;
-            case 'allotment':
-                response = "QUERY: Genesis Distribution...\nRESULT: EPOS and Investors confirmed for initial allotment.";
-                break;
-            case 'whoami':
-                response = "User: Verified Member\nRole: Sovereign Access";
-                break;
-            case 'clear':
-            // Re-inject the logo when cleared so it always stays "fancy"
-                output.innerHTML = `<span style="color:#a445ff;">${vpuLogo}</span>\n`;
-                return;
-            default:
-                response = `Command not found: ${cleanCmd}`;
-        }
+            }
+            break;
 
-        output.innerHTML += `\n<span style="color:#888;">> ${cmd}</span>\n${response}\n`;
-        output.scrollTop = output.scrollHeight;
-        }
+        case 'help':
+            response = "Available: status, allotment, clear, whoami, neofetch, matrix";
+            break;
+
+        case 'status':
+            response = "System: ONLINE\nKernel: Sovereign Core v1.0\nShield: ACTIVE";
+            break;
+
+        case 'allotment':
+            response = "QUERY: Genesis Distribution...\nRESULT: EPOS and Investors confirmed for initial allotment.";
+            break;
+
+        case 'whoami':
+            response = "User: Verified Member\nRole: Sovereign Access";
+            break;
+
+        case 'clear':
+            // FIX: Added 'this.' to reference the class variable
+            output.innerHTML = `<span style="color:#a445ff;">${this.vpuLogo}</span>\n`;
+            return; 
+
+        default:
+            response = `Command not found: ${cleanCmd}`;
+    }
+
+    output.innerHTML += `\n<span style="color:#888;">> ${cmd}</span>\n${response}\n`;
+    output.scrollTop = output.scrollHeight;
+    }
     makeDraggable(el) {
         const header = el.querySelector('.window-header');
         const dragStart = (e) => {
