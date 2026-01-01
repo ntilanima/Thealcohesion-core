@@ -181,4 +181,5 @@ class TLC_Kernel {
 }
 
 // Global instance so HTML 'onclick' can find it
-window.kernel = new TLC_Kernel();
+const kernel = new TLC_Kernel();
+window.kernel = kernel; // This is the "bridge" to your HTML
