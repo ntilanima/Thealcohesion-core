@@ -201,20 +201,22 @@
     background: #fff;
 }
 
+/* --- DESKTOP WORKSPACE (Ubuntu Grid) --- */
+
 #workspace {
     flex-grow: 1;
     height: 100%;
-    position: relative;
-    /* Ensure windows stay above background but below top bar */
-    z-index: 10; 
-    overflow: visible; /* Allow windows to be dragged freely */
+    position: relative; /* REQUIRED: Anchor for absolute windows */
+    overflow: hidden;
+    z-index: 5; /* Keep above background */
 }
 
 .os-window {
-    position: absolute !important;
-    /* High z-index ensures windows appear above workspace elements */
-    z-index: 100; 
+    position: absolute !important; /* Force absolute placement */
     display: flex;
     flex-direction: column;
-    /* ... rest of your existing window styles ... */
+    background: rgba(25, 25, 25, 0.95);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    /* Ensure the window starts with a high Z-Index */
+    z-index: 100; 
 }
