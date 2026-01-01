@@ -1,8 +1,51 @@
 import { registry } from './registry.js';
 
 class TLC_Kernel {
-    // Add these to the top of your TLC_Kernel class
-pinnedApps = ['time', 'tnfi', 'terminal', 'files', 'settings', 'browser', 'messages', 'camera']; 
+    
+// Update your class properties
+pinnedApps = [
+    'time', 'tnfi', 'terminal', 'files', 
+    'browser', 'messages', 'camera', 'settings',
+    'notes', 'music', 'maps', 'store'
+]; 
+runningApps = new Set(); // Track what is actually open
+
+bootShell() {
+    const dock = document.getElementById('side-dock');
+    if (!dock) return;
+    dock.innerHTML = ''; 
+
+    // 1. Render Pinned Apps (Up to 12)
+    this.pinnedApps.forEach(appId => {
+        this.renderDockIcon(appId, dock);
+    });
+
+    // 2. Add App Menu Trigger
+    const menuBtn = document.createElement('div');
+    menuBtn.className = 'dock-bottom-trigger';
+    menuBtn.innerHTML = '⣿';
+    menuBtn.onclick = () => this.openAppMenu();
+    dock.appendChild(menuBtn);
+}
+
+renderDockIcon(appId, container) {
+    const app = registry.find(a => a.id === appId);
+    if (!app) return;
+
+    const dItem = document.createElement('div');
+    dItem.className = `dock-item ${this.runningApps.has(appId) ? 'running' : ''}`;
+    dItem.innerHTML = `<span>${app.icon}</span>`;
+    dItem.title = app.name;
+    
+    dItem.onclick = () => {
+        if (this.runningApps.has(appId)) {
+            this.focusWindow(`win-${appId}`); // If open, just bring to front
+        } else {
+            this.launchApp(appId);
+        }
+    };
+    container.appendChild(dItem);
+}
 
 bootShell() {
     const dock = document.getElementById('side-dock');
@@ -37,6 +80,7 @@ openAppMenu() {
 
     // Launch a special window for the Menu
     const winId = 'win-app-menu';
+    if (document.getElementById(winId)) return this.closeWindow(winId);
     const win = document.createElement('div');
     win.className = 'os-window maximized'; // Open full screen like a drawer
     win.id = winId;
@@ -154,15 +198,22 @@ openAppMenu() {
     const app = registry.find(a => a.id === appId);
     if (!app) return;
 
-    const winId = `win-${appId}-${Date.now()}`;
+    this.runningApps.add(appId); // Add to running state
+    this.bootShell(); // Refresh dock to show the "running" indicator
+
+    const winId = `win-${appId}`; // Using static ID for single-instance apps
+    
+    // If window already exists, just focus it
+    if (document.getElementById(winId)) {
+        this.focusWindow(winId);
+        return;
+    }
+
     const win = document.createElement('div');
     win.className = 'os-window';
     win.id = winId;
-    
-    // CRITICAL: Set initial positions so the drag math works
-    win.style.left = '100px';
-    win.style.top = '100px';
-    win.style.zIndex = this.getTopZIndex();
+    win.style.top = "80px";
+    win.style.left = "100px";
 
     win.innerHTML = `
         <div class="window-header" onmousedown="kernel.focusWindow('${winId}')">
