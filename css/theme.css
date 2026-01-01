@@ -134,3 +134,35 @@ body, html {
 #login-gate {
     transition: opacity 0.5s ease;
 }
+
+/* --- SOVEREIGN TERMINAL UI --- */
+#vpu-terminal {
+    scrollbar-width: thin;
+    scrollbar-color: #004411 #000;
+}
+
+/* Chrome/Safari Scrollbar Styling */
+#vpu-terminal #term-output::-webkit-scrollbar {
+    width: 6px;
+}
+
+#vpu-terminal #term-output::-webkit-scrollbar-track {
+    background: #000;
+}
+
+#vpu-terminal #term-output::-webkit-scrollbar-thumb {
+    background: #004411;
+    border-radius: 3px;
+}
+
+/* Caret/Cursor Animation */
+#vpu-terminal input {
+    caret-color: #00ff41;
+}
+
+/* Optional: Subtle Glow for Terminal Text */
+#vpu-terminal .output-area, 
+#vpu-terminal span, 
+#vpu-terminal input {
+    text-shadow: 0 0 5px rgba(0, 255, 65, 0.4);
+}
