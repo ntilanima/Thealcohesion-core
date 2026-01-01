@@ -2,165 +2,102 @@ import { registry } from './registry.js';
 
 class TLC_Kernel {
     constructor() {
-        console.log("Kernel: Initializing Sovereign Environment...");
-        // Wait for the window to load so it can find the HTML elements
+        console.log("Kernel: Initializing...");
         window.addEventListener('load', () => this.init());
     }
 
     init() {
-        this.initListeners();
-        console.log("Kernel: Systems Online.");
-    }
-
-    initListeners() {
         const loginBtn = document.getElementById('login-btn');
         if (loginBtn) {
             loginBtn.addEventListener('click', () => this.verifyIdentity());
-        } else {
-            // Fallback for your current HTML button without an ID
-            const legacyBtn = document.querySelector('button[onclick="kernel.login()"]');
-            if (legacyBtn) {
-                legacyBtn.removeAttribute('onclick');
-                legacyBtn.addEventListener('click', () => this.verifyIdentity());
-            }
         }
     }
 
-    /**
-     * Authentication Logic
-     * Ensures compliance with Section 0.5.2 of the Charter
-     */
     verifyIdentity() {
-        const userField = document.getElementById('username');
-        const passField = document.getElementById('password');
+        const user = document.getElementById('username').value;
+        const pass = document.getElementById('password').value;
 
-        if (!userField || !passField) {
-            console.error("Critical: Identity fields not found in DOM.");
-            return;
-        }
-
-        const username = userField.value.trim();
-        const password = passField.value.trim();
-
-        // Basic verification (expand this using your auth.js logic later)
-        if (username !== "" && password !== "") {
-            console.log(`Identity Verified: ${username}`);
+        // Basic check - Section 0.5.2 Compliance
+        if (user.trim() !== "" && pass.trim() !== "") {
+            console.log("Identity Verified. Initiating Transition...");
             this.transitionToShell();
         } else {
-            alert("Sovereign Identity Required. Please enter credentials.");
+            alert("Sovereign Identity Required.");
         }
     }
 
     /**
-     * Transition UI from Login Gate to Desktop Shell
+     * THE TRANSITION: Logic to switch from Login to Desktop
      */
     transitionToShell() {
         const loginGate = document.getElementById('login-gate');
-        const shell = document.getElementById('sovereign-shell');
-        const status = document.getElementById('session-status');
+        const topBar = document.getElementById('top-bar');
+        const osRoot = document.getElementById('os-root');
+        const sideDock = document.getElementById('side-dock');
+        const workspace = document.getElementById('workspace');
 
-        if (loginGate) loginGate.style.display = 'none';
-        if (shell) {
-            shell.classList.remove('hidden');
-            shell.style.display = 'grid'; // Ensures grid layout triggers
+        // 1. Smoothly hide the login screen
+        if (loginGate) {
+            loginGate.style.opacity = '0';
+            setTimeout(() => {
+                loginGate.style.display = 'none';
+                
+                // 2. Reveal the Top Bar
+                if (topBar) topBar.classList.remove('hidden');
+
+                // 3. Reveal the OS Layout (Dock + Workspace)
+                if (osRoot) {
+                    osRoot.style.display = 'flex'; // Triggers the layout.css flex rule
+                    if (sideDock) sideDock.classList.remove('hidden');
+                    if (workspace) workspace.classList.remove('hidden');
+                }
+
+                // 4. Populate the Environment
+                this.bootShell();
+            }, 500); // Wait for fade-out
         }
-        if (status) status.innerText = "Identity: Verified Member";
-
-        this.bootShell();
     }
 
     /**
-     * Renders the Ubuntu-style Desktop Environment
+     * Renders Dock items and Desktop icons from registry.js
      */
     bootShell() {
-        const desktop = document.getElementById('workspace');
         const dock = document.getElementById('side-dock');
+        const desktop = document.getElementById('desktop-icons');
+        
+        if (!dock || !desktop) return;
 
-        // Clear existing content
-        if (desktop) desktop.innerHTML = '';
-        if (dock) dock.innerHTML = '';
+        // Clear existing content (except the grid-icon trigger)
+        const gridIcon = dock.querySelector('.dock-bottom-trigger');
+        dock.innerHTML = '';
+        desktop.innerHTML = '';
 
         registry.forEach(app => {
-            // 1. Create Desktop Icon
-            const dIcon = document.createElement('div');
-            dIcon.className = 'desktop-icon';
-            dIcon.innerHTML = `<span>${app.icon}</span><p>${app.name}</p>`;
-            dIcon.onclick = () => this.launchApp(app.id);
-            if (desktop) desktop.appendChild(dIcon);
+            // Create Sidebar Dock Item
+            const dockItem = document.createElement('div');
+            dockItem.className = 'dock-item';
+            dockItem.innerHTML = `<span>${app.icon}</span>`;
+            dockItem.title = app.name;
+            dockItem.onclick = () => this.launchApp(app.id);
+            dock.appendChild(dockItem);
 
-            // 2. Create Sidebar/Dock Icon
-            const sIcon = document.createElement('div');
-            sIcon.className = 'dock-item';
-            sIcon.innerHTML = `<span>${app.icon}</span>`;
-            sIcon.title = app.name;
-            sIcon.onclick = () => this.launchApp(app.id);
-            if (dock) dock.appendChild(sIcon);
+            // Create Desktop Icon Item
+            const deskIcon = document.createElement('div');
+            deskIcon.className = 'desktop-icon';
+            deskIcon.innerHTML = `<span>${app.icon}</span><p>${app.name}</p>`;
+            deskIcon.onclick = () => this.launchApp(app.id);
+            desktop.appendChild(deskIcon);
         });
 
-        console.log("UI: Desktop Environment Rendered.");
+        // Re-append the grid icon at the bottom
+        if (gridIcon) dock.appendChild(gridIcon);
+        
+        console.log("Sovereign Shell: Active.");
     }
 
     launchApp(appId) {
-    const app = registry.find(a => a.id === appId);
-    if (!app) return;
-
-    // Create the Window Shell
-    const win = document.createElement('div');
-    win.className = 'os-window';
-    win.id = `window-${app.id}`;
-    
-    // Position it randomly so windows don't stack perfectly
-    win.style.top = (100 + Math.random() * 50) + "px";
-    win.style.left = (200 + Math.random() * 50) + "px";
-
-    win.innerHTML = `
-        <div class="window-header">
-            <span class="title">${app.icon} ${app.name}</span>
-            <div class="window-controls">
-                <button class="win-btn close">×</button>
-            </div>
-        </div>
-        <div class="window-content" id="window-body-${app.id}">
-            <p>Booting ${app.name}...</p>
-        </div>
-    `;
-
-    document.getElementById('workspace').appendChild(win);
-    win.querySelector('.close').onclick = () => win.remove();
-
-    // Specific Logic for the Temporal Engine
-    if (appId === 'time') {
-        window.thealTimeApp.renderHUD(`window-body-${app.id}`);
-    } 
-    
-    // Specific Logic for TNFI / Allotments
-    if (appId === 'tnfi') {
-        this.loadFinancialData(`window-body-${app.id}`);
-    }
-
-    // LINKING THEAL TIME APP TO THE OS
-    if (appId === 'time') {
-        const body = document.getElementById(`app-body-${app.id}`);
-        // Inject the HTML from your time.js render function
-        body.innerHTML = thealTimeApp.render();
+        // ... (Existing launchApp code from previous turns)
     }
 }
 
-/**
- * Recalls EPOS and Investor data for initial allotment
- */
-loadFinancialData(containerId) {
-    const target = document.getElementById(containerId);
-    target.innerHTML = `
-        <h3>Genesis Allotment Ledger</h3>
-        <ul>
-            <li><strong>EPOS:</strong> Initial Allotment Managed</li>
-            <li><strong>Investors:</strong> Strategic Pool Allocated</li>
-        </ul>
-        <div class="loading-bar"></div>
-    `;
-}
-}
-
-// Global kernel instance
-window.kernel = new TLC_Kernel();
+const kernel = new TLC_Kernel();
