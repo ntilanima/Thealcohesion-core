@@ -24,15 +24,21 @@ class TLC_Kernel {
     }
 
     transitionToShell() {
-        const gate = document.getElementById('login-gate');
-        const root = document.getElementById('os-root');
-        const top = document.getElementById('top-bar');
+    const gate = document.getElementById('login-gate');
+    const root = document.getElementById('os-root');
+    const top = document.getElementById('top-bar');
 
-        if (gate) gate.style.display = 'none';
-        if (top) top.classList.remove('hidden');
-        if (root) root.style.display = 'flex'; 
-        
-        this.bootShell();
+    if (gate) gate.style.display = 'none';
+
+    // IMPORTANT: Remove 'hidden' class from both
+    if (top) top.classList.remove('hidden');
+    if (root) {
+        root.classList.remove('hidden');
+        // Force the flex layout so the dock sits on the left
+        root.style.display = 'flex'; 
+    }
+    
+    this.bootShell();
     }
 
     bootShell() {

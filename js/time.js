@@ -446,3 +446,4 @@ function triggerGenesisCert() {
 }
 
 setTimeout(() => { thealTimeApp.startClock(); }, 500);
+window.thealTimeApp = thealTimeApp;

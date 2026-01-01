@@ -246,3 +246,6 @@ body, html {
     background: var(--running-accent);
     border-radius: 50%;
 }
+/* --- UTILITY --- */
+
+.hidden { display: none !important; }
