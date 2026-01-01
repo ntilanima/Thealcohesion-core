@@ -155,6 +155,17 @@ body, html {
     border-radius: 3px;
 }
 
+#vpu-terminal #term-output {
+    white-space: pre; /* Essential for ASCII art alignment */
+    font-family: 'Consolas', 'Courier New', monospace; /* Ensures every char is same width */
+    line-height: 1.2;
+    overflow-x: hidden;
+}
+
+#vpu-terminal span[style*="#a445ff"] {
+    text-shadow: 0 0 8px rgba(164, 69, 255, 0.6);
+}
+
 /* Caret/Cursor Animation */
 #vpu-terminal input {
     caret-color: #00ff41;

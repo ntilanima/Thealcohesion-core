@@ -22,6 +22,46 @@ class TLC_Kernel {
         }
     }
 
+    initMatrix(container) {
+        const canvas = document.createElement('canvas');
+        canvas.style.position = 'absolute';
+        canvas.style.top = '0';
+        canvas.style.left = '0';
+        canvas.style.width = '100%';
+        canvas.style.height = '100%';
+        canvas.style.zIndex = '1';
+        canvas.style.opacity = '0.3'; // Keep it subtle so you can still see text
+        container.style.position = 'relative';
+        container.appendChild(canvas);
+
+        const ctx = canvas.getContext('2d');
+        canvas.width = container.offsetWidth;
+        canvas.height = container.offsetHeight;
+
+        const letters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789@#$%^&*";
+        const fontSize = 10;
+        const columns = canvas.width / fontSize;
+        const drops = Array(Math.floor(columns)).fill(1);
+
+        const draw = () => {
+            ctx.fillStyle = "rgba(0, 0, 0, 0.05)";
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            ctx.fillStyle = "#00ff41";
+            ctx.font = fontSize + "px monospace";
+
+            drops.forEach((y, i) => {
+                const text = letters[Math.floor(Math.random() * letters.length)];
+                ctx.fillText(text, i * fontSize, y * fontSize);
+                if (y * fontSize > canvas.height && Math.random() > 0.975) drops[i] = 0;
+                drops[i]++;
+            });
+        };
+        
+        const matrixInterval = setInterval(draw, 33);
+        // Store interval on the window element so we can stop it if closed
+        container.closest('.os-window').dataset.intervalId = matrixInterval;
+    }
+
     transitionToShell() {
         const gate = document.getElementById('login-gate');
         const root = document.getElementById('os-root');
@@ -153,19 +193,19 @@ class TLC_Kernel {
             VIRTUAL PRAGMATIC UNIVERSE
             --------------------------`;
 
-            container.innerHTML = `
-                    <div id="vpu-terminal" style="background:#000; color:#00ff41; font-family:monospace; height:100%; display:flex; flex-direction:column; padding:15px; box-sizing:border-box;">
-                        <div id="term-output" style="flex:1; overflow-y:auto; white-space:pre; margin-bottom:10px; font-size:12px; line-height:1.2; color:#a445ff;">${vpuLogo}
-            <span style="color:#00ff41;">
-            VPU Sovereign Terminal v1.0.0
-            Type 'help' for commands...</span></div>
-                        <div style="display:flex; gap:10px;">
-                            <span style="color:#a445ff; font-weight:bold;">admin@vpu:~$</span>
-                            <input type="text" id="term-input" autocomplete="off" style="background:transparent; border:none; color:#00ff41; font-family:inherit; outline:none; flex:1;">
-                        </div>
-                    </div>`;
+        container.innerHTML = `
+                <div id="vpu-terminal" style="background:#000; color:#00ff41; font-family:monospace; height:100%; display:flex; flex-direction:column; padding:15px; box-sizing:border-box;">
+                    <div id="term-output" style="flex:1; overflow-y:auto; margin-bottom:10px; font-size:12px;">
+                        System: Initializing Command Core...
+                        Success. Running neofetch...
+                    </div>
+                    <div style="display:flex; gap:10px;">
+                        <span style="color:#a445ff; font-weight:bold;">admin@vpu:~$</span>
+                        <input type="text" id="term-input" autocomplete="off" style="background:transparent; border:none; color:#00ff41; font-family:inherit; outline:none; flex:1;">
+                    </div>
+                </div>`;
                 
-            this.initTerminalLogic();
+        this.initTerminalLogic();
         } else {
             container.innerHTML = `<div style="padding:20px;">${app.name} system online.</div>`;
         }
@@ -269,7 +309,8 @@ class TLC_Kernel {
             input.value = '';
         }
     };
-}
+    setTimeout(() => this.handleTerminalCommand('neofetch'), 500);
+    }   
     // Terminal Command Handler
     handleTerminalCommand(cmd) {
         const output = document.getElementById('term-output');
@@ -277,7 +318,35 @@ class TLC_Kernel {
         const cleanCmd = cmd.toLowerCase().trim();
 
         switch(cleanCmd) {
-            case 'help':
+            case 'neofetch':
+                const specs = [
+                    `OS: Thealcohesion Sovereign Core`,
+                    `Kernel: VPU 3.5.2-Genesis`,
+                    `Uptime: ${Math.floor(performance.now() / 60000)} mins`,
+                    `Shell: Sovereign-Bash`,
+                    `Allotment: EPOS/Investor Confirmed`,
+                    `Status: Verified Member`
+                ];
+
+                const logo = [
+                    `  _   _  ____  _   _ `,
+                    ` | | | ||  _ \\| | | |`,
+                    ` | | | || |_) | | | |`,
+                    ` | |/ / |  __/| |_| |`,
+                    ` |___/  |_|    \\___/ `
+                ];
+
+                // Combine Logo and Specs side-by-side
+                response = logo.map((line, i) => 
+                    `<span style="color:#a445ff;">${line}</span>   ${specs[i] || ''}`
+                ).join('\n');
+                break;
+            case 'matrix':
+                const termBody = document.getElementById('vpu-terminal');
+                this.initMatrix(termBody);
+                response = "Sovereign Overlay Initialized...";
+                break;
+                case 'help':
                 response = "Available: status, allotment, clear, whoami";
                 break;
             case 'status':
