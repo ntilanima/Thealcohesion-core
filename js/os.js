@@ -36,27 +36,50 @@ class TLC_Kernel {
     const sideDock = document.getElementById('side-dock');
     const workspace = document.getElementById('workspace');
 
-    // 1. Kill the Login Screen
+    // 1. Hide Login
     if (loginGate) loginGate.style.display = 'none';
 
-    // 2. Force Show the Top Bar
-    if (topBar) {
-        topBar.classList.remove('hidden');
-        topBar.style.display = 'flex';
-    }
+    // 2. Reveal Top Bar
+    if (topBar) topBar.classList.remove('hidden');
 
-    // 3. Force Show the OS Root as a Flexbox
+    // 3. Reveal the Parent Container and its Children
     if (osRoot) {
-        osRoot.classList.remove('hidden');
-        osRoot.style.display = 'flex'; // This activates the Sidebar/Workspace split
+        osRoot.style.display = 'flex'; // This is the 'Master Switch'
+        
+        if (sideDock) sideDock.classList.remove('hidden');
+        if (workspace) workspace.classList.remove('hidden');
     }
 
-    // 4. Ensure Dock and Workspace are visible
-    if (sideDock) sideDock.classList.remove('hidden');
-    if (workspace) workspace.classList.remove('hidden');
-
-    console.log("Layout forced to visible. Booting Shell...");
+    // 4. Run the Boot sequence to draw icons
     this.bootShell();
+    }
+
+    bootShell() {
+    const dock = document.getElementById('side-dock');
+    const desktop = document.getElementById('desktop-icons');
+    
+    // We need to keep the ⣿ icon, so we save it first
+    const gridTrigger = dock.querySelector('.dock-bottom-trigger');
+    dock.innerHTML = ''; 
+    desktop.innerHTML = '';
+
+    registry.forEach(app => {
+        // Render Dock Item
+        const dItem = document.createElement('div');
+        dItem.className = 'dock-item';
+        dItem.innerHTML = `<span>${app.icon}</span>`;
+        dItem.onclick = () => this.launchApp(app.id);
+        dock.appendChild(dItem);
+
+        // Render Desktop Icon
+        const deskIcon = document.createElement('div');
+        deskIcon.className = 'desktop-icon';
+        deskIcon.innerHTML = `<span>${app.icon}</span><p>${app.name}</p>`;
+        deskIcon.onclick = () => this.launchApp(app.id);
+        desktop.appendChild(deskIcon);
+    });
+
+    if (gridTrigger) dock.appendChild(gridTrigger);
     }
 
     /**

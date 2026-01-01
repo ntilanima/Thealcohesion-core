@@ -1,5 +1,7 @@
 export const registry = [
     // DESKTOP APPS (The ones you see in the Ubuntu image)
+    { id: 'time', name: 'Temporal Engine', icon: '🕒', size: 'small' },
+    { id: 'tnfi', name: 'TNFI Bank', icon: '💰', size: 'small' },
     { id: 'governance', name: 'Official Records', icon: '📜', file: 'governance.js' },
     { id: 'tnfi', name: 'TNFI Banking', icon: '🏦', file: 'tnfi.js' },
     { id: 'market', name: 'TLC Mart', icon: '🛒', file: 'marketplace.js' },

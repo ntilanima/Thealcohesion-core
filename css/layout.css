@@ -202,38 +202,39 @@
 
 /* THE MASTER CONTAINER */
 #os-root {
-    display: none; /* Controlled by JS transition */
-    flex-direction: row; /* Force horizontal alignment */
+    display: none; /* JS will change this to 'flex' on login */
     width: 100vw;
-    height: calc(100vh - 35px); /* Exactly fills the space under top-bar */
-    position: relative;
+    height: calc(100vh - 35px); /* Space below Top Bar */
     overflow: hidden;
 }
 
 /* THE SIDEBAR (Dock) */
 #side-dock {
-    width: 70px !important; /* Force width */
+    width: 70px !important;
     height: 100%;
-    background: rgba(0, 0, 0, 0.85);
-    display: flex !important; /* Force flex internally */
+    background: rgba(0, 0, 0, 0.8);
+    display: flex !important;
     flex-direction: column;
     align-items: center;
     padding-top: 15px;
     gap: 15px;
-    flex-shrink: 0; /* Prevents workspace from squishing it */
+    flex-shrink: 0; /* Prevents it from being squished */
 }
 
 /* THE MAIN AREA */
 #workspace {
-    flex-grow: 1; /* Take all remaining space */
+    flex-grow: 1; /* Fills remaining width */
     height: 100%;
     position: relative;
     overflow: hidden;
-    display: block !important;
 }
 
-/* Ensure the shell inside doesn't break things */
-#sovereign-shell {
-    width: 100%;
+#desktop-icons {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, 100px);
+    grid-auto-rows: 110px;
+    grid-auto-flow: column;
+    justify-content: end; /* Keeps icons on the right */
+    padding: 20px;
     height: 100%;
 }
