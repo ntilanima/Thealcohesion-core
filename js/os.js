@@ -2,15 +2,8 @@ import { registry } from './registry.js';
 
 class TLC_Kernel {
     constructor() {
-        // App Management State
-        this.pinnedApps = [
-            'time', 'tnfi', 'terminal', 'files', 
-            'browser', 'messages', 'camera', 'settings',
-            'notes', 'music', 'maps', 'store'
-        ]; 
+        this.pinnedApps = ['time', 'tnfi', 'terminal', 'files', 'browser', 'messages', 'camera', 'settings', 'notes', 'music', 'maps', 'store']; 
         this.runningApps = new Set(); 
-
-        console.log("Kernel: Initializing Sovereign Core...");
         window.addEventListener('DOMContentLoaded', () => this.init());
     }
 
@@ -26,8 +19,7 @@ class TLC_Kernel {
 
     verifyIdentity() {
         const user = document.getElementById('username').value;
-        const pass = document.getElementById('password').value;
-        if (user.trim() !== "" && pass.trim() !== "") {
+        if (user.trim() !== "") {
             this.transitionToShell();
         } else {
             alert("Sovereign Identity Required.");
@@ -35,81 +27,53 @@ class TLC_Kernel {
     }
 
     transitionToShell() {
-        const elements = ['login-gate', 'top-bar', 'os-root', 'side-dock', 'workspace'];
-        elements.forEach(id => {
-            const el = document.getElementById(id);
-            if (!el) return;
-            if (id === 'login-gate') el.style.display = 'none';
-            else if (id === 'os-root') el.style.display = 'flex';
-            else el.classList.remove('hidden');
-        });
+        document.getElementById('login-gate').style.display = 'none';
+        document.getElementById('top-bar').classList.remove('hidden');
+        const osRoot = document.getElementById('os-root');
+        osRoot.style.display = 'flex';
+        
         this.bootShell();
     }
 
-    /**
-     * DOCK & SHELL LOGIC
-     * Handles the 8 (mobile) / 12 (desktop) split via CSS classes
-     */
     bootShell() {
         const dock = document.getElementById('side-dock');
-        const desktop = document.getElementById('desktop-icons');
-        if (!dock || !desktop) return;
+        if (!dock) return;
+        dock.innerHTML = ''; 
 
-        dock.innerHTML = '';
-        desktop.innerHTML = '';
-
-        // Render Pinned Apps
-        this.pinnedApps.forEach((appId, index) => {
+        // 1. Loop through the 12 Pinned Slots
+        this.pinnedApps.forEach((appId) => {
             const app = registry.find(a => a.id === appId);
-            if (!app) return;
-
-            // Create Dock Item
+            
             const dItem = document.createElement('div');
-            // Class 'mobile-hide' applied to apps 9-12 for A16 scale
-            dItem.className = `dock-item ${this.runningApps.has(appId) ? 'running' : ''} ${index >= 8 ? 'mobile-hide' : ''}`;
-            dItem.setAttribute('data-app-id', appId);
-            dItem.innerHTML = `<span>${app.icon}</span>`;
-            dItem.onclick = () => this.launchApp(appId);
+            dItem.className = `dock-item ${this.runningApps.has(appId) ? 'running' : ''}`;
+            
+            // If the app exists in registry, show icon; otherwise show placeholder
+            if (app) {
+                dItem.innerHTML = `<span>${app.icon}</span>`;
+                dItem.onclick = () => this.launchApp(appId);
+            } else {
+                dItem.innerHTML = `<span style="opacity:0.2">·</span>`;
+            }
             dock.appendChild(dItem);
-
-            // Create Desktop Icon
-            const deskIcon = document.createElement('div');
-            deskIcon.className = 'desktop-icon';
-            deskIcon.innerHTML = `<span>${app.icon}</span><p>${app.name}</p>`;
-            deskIcon.onclick = () => this.launchApp(appId);
-            desktop.appendChild(deskIcon);
         });
 
-        // Add App Menu Trigger (Grid)
+        // 2. FORCE the App Menu Grid Icon at the bottom
         const menuBtn = document.createElement('div');
         menuBtn.className = 'dock-bottom-trigger';
-        menuBtn.innerHTML = '⣿';
+        menuBtn.innerHTML = '⣿'; // This is your app menu button
         menuBtn.onclick = () => this.openAppMenu();
         dock.appendChild(menuBtn);
     }
-
-    // --- WINDOW CAPABILITIES ---
 
     launchApp(appId) {
         const app = registry.find(a => a.id === appId);
         if (!app) return;
 
         const winId = `win-${appId}`;
-        
-        // Focus if already open
-        if (this.runningApps.has(appId)) {
-            this.focusWindow(winId);
-            const win = document.getElementById(winId);
-            if (win && win.style.display === 'none') {
-                win.style.display = 'flex';
-                win.style.opacity = '1';
-                win.style.transform = 'scale(1)';
-            }
-            return;
-        }
+        if (this.runningApps.has(appId)) return this.focusWindow(winId);
 
         this.runningApps.add(appId);
-        this.bootShell(); // Update dock indicators
+        this.bootShell(); // Refresh indicators
 
         const win = document.createElement('div');
         win.className = 'os-window';
@@ -128,52 +92,43 @@ class TLC_Kernel {
                 </div>
             </div>
             <div class="window-content" id="canvas-${appId}">
-                <div class="app-loading-state">Initializing Sovereign Core...</div>
+                <div style="padding:20px;">Loading ${app.name}...</div>
             </div>
         `;
 
         document.getElementById('workspace').appendChild(win);
         this.makeDraggable(win);
 
-        // Content Routing
+        // App Content Routing
         const container = document.getElementById(`canvas-${appId}`);
         if (appId === 'time') {
             container.innerHTML = thealTimeApp.render();
             requestAnimationFrame(() => thealTimeApp.reboot());
         } else {
-            setTimeout(() => {
-                container.innerHTML = `
-                    <div style="padding:20px; text-align:center;">
-                        <h2>${app.icon} ${app.name}</h2>
-                        <p>Module active. Data stream synchronized.</p>
-                    </div>`;
-            }, 300);
+            container.innerHTML = `<div style="padding:20px; text-align:center;"><h2>${app.icon}</h2><p>${app.name} Module Active</p></div>`;
         }
     }
 
     openAppMenu() {
         const winId = 'win-app-menu';
-        if (document.getElementById(winId)) {
-            this.closeWindow(winId);
-            return;
-        }
+        if (document.getElementById(winId)) return this.closeWindow(winId);
 
         const win = document.createElement('div');
         win.className = 'os-window maximized'; 
         win.id = winId;
         
-        let gridHTML = '<div class="app-drawer-grid">';
+        let gridHTML = '<div class="app-drawer-grid" style="display:grid; grid-template-columns: repeat(4, 1fr); gap:20px; padding:40px;">';
         registry.forEach(app => {
             gridHTML += `
-                <div class="drawer-icon" onclick="kernel.launchApp('${app.id}'); kernel.closeWindow('win-app-menu');">
-                    <span>${app.icon}</span>
+                <div class="drawer-icon" style="text-align:center; cursor:pointer;" onclick="kernel.launchApp('${app.id}'); kernel.closeWindow('win-app-menu');">
+                    <div style="font-size:3rem; margin-bottom:10px;">${app.icon}</div>
                     <p>${app.name}</p>
                 </div>`;
         });
         gridHTML += '</div>';
 
         win.innerHTML = `
-            <div class="window-header"><span>Applications</span></div>
+            <div class="window-header"><span>System Applications</span><button onclick="kernel.closeWindow('${winId}')">×</button></div>
             <div class="window-content">${gridHTML}</div>
         `;
         document.getElementById('workspace').appendChild(win);
@@ -188,19 +143,6 @@ class TLC_Kernel {
     closeWindow(id) {
         const el = document.getElementById(id);
         if (el) el.remove();
-    }
-
-    minimizeWindow(id) {
-        const el = document.getElementById(id);
-        if (!el) return;
-        el.style.transform = "scale(0.7) translateY(200px)";
-        el.style.opacity = "0";
-        setTimeout(() => el.style.display = "none", 300);
-    }
-
-    toggleMaximize(id) {
-        const el = document.getElementById(id);
-        if (el) el.classList.toggle('maximized');
     }
 
     focusWindow(id) {
@@ -226,7 +168,6 @@ class TLC_Kernel {
             let startX = e.clientX, startY = e.clientY;
             let startTop = parseInt(window.getComputedStyle(el).top);
             let startLeft = parseInt(window.getComputedStyle(el).left);
-
             const move = (e) => {
                 el.style.top = (startTop + (e.clientY - startY)) + "px";
                 el.style.left = (startLeft + (e.clientX - startX)) + "px";
