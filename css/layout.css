@@ -276,48 +276,46 @@ body, html {
 }
 
 /* --- SEARCH BOX REFINEMENT --- */
+.search-container {
+    display: flex;
+    justify-content: center; /* Keeps bar centered in the overlay */
+    width: 100%;
+    margin-bottom: 30px;
+    padding: 0 20px; /* Prevents touching edges on mobile */
+    box-sizing: border-box;
+}
+
 .search-box {
     background: rgba(255, 255, 255, 0.15);
     border: 1px solid rgba(255, 255, 255, 0.2);
     border-radius: 12px;
-    padding: 8px 15px; /* Reduced vertical padding from 10px to 8px */
-    width: 100%;
-    max-width: 500px;
+    padding: 8px 15px;
+    
+    /* WIDTH LOGIC: Flexible but capped */
+    width: 100%; 
+    max-width: 600px; /* Optimal width for desktop/tablet */
+    
     display: flex;
     align-items: center;
-    transition: all 0.2s ease;
 }
 
 .search-box input {
     background: none;
     border: none;
     color: white;
-    font-size: 1rem; /* Reduced from 1.1rem */
+    font-size: 1rem;
     margin-left: 10px;
-    width: 100%;
+    width: 100%; /* Ensures the input field uses all box space */
     outline: none;
 }
 
-/* MOBILE SPECIFIC HEIGHT FIX */
+/* MOBILE SPECIFIC WIDTH */
 @media (max-width: 768px) {
-    .search-container {
-        margin-bottom: 25px; /* Half the desktop margin to save space */
-    }
-
     .search-box {
-        padding: 6px 12px; /* Even tighter for mobile */
-        border-radius: 8px;
-    }
-
-    .search-box input {
-        font-size: 0.9rem; /* Smaller font for mobile height reduction */
-    }
-
-    .search-icon {
-        font-size: 0.9rem;
+        max-width: 90%; /* Allows it to breathe on small screens */
+        padding: 6px 12px;
     }
 }
-
 /* App Grid */
 #app-grid-container {
     display: grid;
