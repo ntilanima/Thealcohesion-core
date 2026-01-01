@@ -239,3 +239,37 @@ body, html {
     border-radius: 2px;
     box-shadow: 0 0 5px var(--running-accent, #a445ff);
 }
+
+/* --- DOCK POSITIONING LOGIC --- */
+
+/* DEFAULT (Left) */
+#os-root[data-dock="left"] { flex-direction: row; }
+#os-root[data-dock="left"] #side-dock {
+    width: var(--dock-width);
+    height: 100%;
+    border-right: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+/* RIGHT */
+#os-root[data-dock="right"] { flex-direction: row-reverse; }
+#os-root[data-dock="right"] #side-dock {
+    width: var(--dock-width);
+    height: 100%;
+    border-left: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+/* BOTTOM */
+#os-root[data-dock="bottom"] { flex-direction: column-reverse; }
+#os-root[data-dock="bottom"] #side-dock {
+    width: 100vw;
+    height: var(--dock-width);
+    flex-direction: row; /* Icons sit side-by-side */
+    justify-content: center;
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+/* Adjust the 9-dot menu for Bottom orientation */
+#os-root[data-dock="bottom"] .dock-bottom-trigger {
+    margin-top: 0 !important;
+    margin-left: 20px; /* Space it away from apps */
+}
