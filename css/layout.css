@@ -10,7 +10,8 @@
 body, html {
     margin: 0; 
     padding: 0;
-    height: 100%; 
+    height: 100vh; 
+    height: 100dvh;
     width: 100%;
     overflow: hidden;
     background: #000;
@@ -51,19 +52,21 @@ body, html {
 }
 
 /* --- SIDE DOCK (Ubuntu Style) --- */
+/* --- UPDATED SIDE DOCK --- */
 #side-dock {
     width: var(--dock-width);
     background: rgba(10, 10, 10, 0.85);
     display: flex;
-    flex-direction: column; /* Stack icons vertically */
+    flex-direction: column;
     align-items: center;
-    padding: 10px 0;
+    padding: 10px 0 25px 0; /* Increased bottom padding to 25px */
     gap: 12px;
-    height: 100%; /* Fill the height of os-root */
-    box-sizing: border-box; /* Includes padding in height calculation */
+    height: 100%;
+    box-sizing: border-box; /* Keeps the padding inside the 100% height */
     border-right: 1px solid rgba(255, 255, 255, 0.1);
     flex-shrink: 0;
 }
+
 
 .dock-item {
     position: relative;
@@ -95,9 +98,10 @@ body, html {
 }
 
 /* 9-Dot Menu Button */
+/* --- UPDATED 9-DOT TRIGGER --- */
 .dock-bottom-trigger {
-    margin-top: auto !important; /* Forces the 9-dot menu to the very bottom */
-    margin-bottom: 10px;        /* Prevents it from touching the edge */
+    margin-top: auto !important; 
+    margin-bottom: 30px; /* Added extra space below the icon */
     width: var(--app-size);
     height: var(--app-size);
     display: grid !important;
@@ -110,6 +114,7 @@ body, html {
     background: rgba(164, 69, 255, 0.15);
     border-radius: 22%;
     transition: background 0.3s;
+    flex-shrink: 0; /* Prevents the menu from squishing on small screens */
 }
 
 .dock-bottom-trigger:hover {
