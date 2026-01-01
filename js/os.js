@@ -407,14 +407,15 @@ class TLC_Kernel {
             break;
 
         case 'v-pos':
+            // Shortened borders to prevent overflow on small screens
             response = `
-            <span style="color:#a445ff;">┌───────── ALLOTMENT LEDGER ─────────┐</span>
-            <span style="color:#888;">ENTITY      ROLE       STATUS</span>
-            ──────      ────       ──────
-            EPOS        System     <span style="color:#00ff41;">INIT</span>
-            INVESTORS   Founders   <span style="color:#00ff41;">CONFIRMED</span>
-            GENESIS     Core       <span style="color:#00ff41;">ACTIVE</span>
-            <span style="color:#a445ff;">└────────────────────────────────────┘</span>`;
+            <span style="color:#a445ff;">┌── ALLOTMENT LEDGER ──┐</span>
+            <span style="color:#888;">ENTITY    ROLE    STATUS</span>
+            ──────    ────    ──────
+            EPOS      Sys     <span style="color:#00ff41;">INIT</span>
+            INVESTOR  Fnd     <span style="color:#00ff41;">CONF</span>
+            GENESIS   Core    <span style="color:#00ff41;">5GB</span>
+            <span style="color:#a445ff;">└──────────────────────┘</span>`;
             break;
         case 'ghost':
         const winContent = termBody.closest('.window-content');

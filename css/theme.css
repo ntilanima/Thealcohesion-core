@@ -189,7 +189,7 @@ body, html {
 #vpu-terminal {
     background: #000;
     color: #00ff41;
-    font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+    font-family: 'Consolas', 'Monaco', 'Lucida Console', 'Courier New', monospace !important;
     height: 100%;
     display: flex;
     flex-direction: column;
@@ -200,20 +200,19 @@ body, html {
 }
 
 #vpu-terminal #term-output {
-    flex: 1;
-    overflow-y: auto;
-    overflow-x: hidden; /* Critical: Stops horizontal scrollbars */
-    white-space: pre-wrap; /* Wraps text while preserving ASCII spaces */
-    word-break: break-all; /* Breaks long strings (like keys) to fit */
-    font-size: clamp(10px, 1.2vw, 14px); /* Scales font based on window width */
-    line-height: 1.2;
+    /* clamp(MIN, PREFERRED, MAX) */
+    font-size: clamp(9px, 1.5vw, 14px); 
+    
+    white-space: pre; /* Keeps ASCII art aligned */
+    overflow-x: auto; /* Allows a horizontal scroll ONLY if absolutely necessary */
+    line-height: 1.1;
+    letter-spacing: -0.5px; /* Tightens characters to fit more on one line */
 }
 
-/* Ensure the input line doesn't push content out */
-#vpu-terminal .input-line {
-    display: flex;
-    width: 100%;
-    margin-top: 5px;
+/* Ensure the input line also scales so the prompt doesn't look huge */
+#vpu-terminal .input-line, 
+#vpu-terminal input {
+    font-size: clamp(10px, 1.5vw, 14px);
 }
 
 #vpu-terminal input {
