@@ -30,32 +30,33 @@ class TLC_Kernel {
      * THE TRANSITION: Logic to switch from Login to Desktop
      */
     transitionToShell() {
-        const loginGate = document.getElementById('login-gate');
-        const topBar = document.getElementById('top-bar');
-        const osRoot = document.getElementById('os-root');
-        const sideDock = document.getElementById('side-dock');
-        const workspace = document.getElementById('workspace');
+    const loginGate = document.getElementById('login-gate');
+    const topBar = document.getElementById('top-bar');
+    const osRoot = document.getElementById('os-root');
+    const sideDock = document.getElementById('side-dock');
+    const workspace = document.getElementById('workspace');
 
-        // 1. Smoothly hide the login screen
-        if (loginGate) {
-            loginGate.style.opacity = '0';
-            setTimeout(() => {
-                loginGate.style.display = 'none';
-                
-                // 2. Reveal the Top Bar
-                if (topBar) topBar.classList.remove('hidden');
+    // 1. Kill the Login Screen
+    if (loginGate) loginGate.style.display = 'none';
 
-                // 3. Reveal the OS Layout (Dock + Workspace)
-                if (osRoot) {
-                    osRoot.style.display = 'flex'; // Triggers the layout.css flex rule
-                    if (sideDock) sideDock.classList.remove('hidden');
-                    if (workspace) workspace.classList.remove('hidden');
-                }
+    // 2. Force Show the Top Bar
+    if (topBar) {
+        topBar.classList.remove('hidden');
+        topBar.style.display = 'flex';
+    }
 
-                // 4. Populate the Environment
-                this.bootShell();
-            }, 500); // Wait for fade-out
-        }
+    // 3. Force Show the OS Root as a Flexbox
+    if (osRoot) {
+        osRoot.classList.remove('hidden');
+        osRoot.style.display = 'flex'; // This activates the Sidebar/Workspace split
+    }
+
+    // 4. Ensure Dock and Workspace are visible
+    if (sideDock) sideDock.classList.remove('hidden');
+    if (workspace) workspace.classList.remove('hidden');
+
+    console.log("Layout forced to visible. Booting Shell...");
+    this.bootShell();
     }
 
     /**
