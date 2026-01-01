@@ -104,6 +104,11 @@ const thealTimeApp = {
     },
 
     startClock() {
+        // Safety: If the app window isn't open, don't try to update its internal IDs
+        const timeEl = document.getElementById("vpu-theal-time");
+        if (!timeEl) {
+            console.warn("Temporal Engine: App UI not detected. Updating Top Bar only.");
+        }
         if (this.timer) clearInterval(this.timer);
         const tick = () => {
             const now = new Date();

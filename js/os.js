@@ -123,11 +123,14 @@ class TLC_Kernel {
     const app = registry.find(a => a.id === appId);
     if (!app) return;
 
+    // 1. Create Window Wrapper
     const win = document.createElement('div');
     win.className = 'os-window';
-    win.style.left = '150px'; // Initial spawn position
+    win.id = `win-${appId}`;
+    win.style.left = '100px';
     win.style.top = '100px';
 
+    // 2. Build Structure
     win.innerHTML = `
         <div class="window-header">
             <span class="title">${app.icon} ${app.name}</span>
@@ -135,18 +138,27 @@ class TLC_Kernel {
                 <button class="win-btn close">×</button>
             </div>
         </div>
-        <div class="window-content" id="app-body-${app.id}">
-            ${appId === 'time' ? thealTimeApp.render() : `<p>Loading ${app.name}...</p>`}
+        <div class="window-content" id="canvas-${appId}">
+            <div class="boot-loader">Initializing ${app.name}...</div>
         </div>
     `;
 
     document.getElementById('workspace').appendChild(win);
-    
-    // Make Draggable
     this.makeDraggable(win);
-
-    // Close Button
     win.querySelector('.close').onclick = () => win.remove();
+
+    // 3. ENGINE TRIGGER: This is the critical part
+    if (appId === 'time') {
+        const container = document.getElementById(`canvas-${appId}`);
+        // Inject the HTML
+        container.innerHTML = thealTimeApp.render();
+        // Force the engine to start its internal clocks/grids
+        setTimeout(() => {
+            thealTimeApp.startClock();
+            thealTimeApp.renderGrid(new Date());
+            thealTimeApp.renderUpcomingEvents();
+        }, 50);
+    }
     }
 
     makeDraggable(el) {

@@ -223,6 +223,8 @@
 
 /* THE MAIN AREA */
 #workspace {
+    border: 1px solid rgba(164, 69, 255, 0.3); /* Temporary purple border to see the area */
+    min-height: 500px;
     flex-grow: 1; /* Fills remaining width */
     height: 100%;
     position: relative;
