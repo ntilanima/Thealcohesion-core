@@ -200,3 +200,31 @@ body, html {
         height: 80%;
     }
 }
+
+.os-window {
+    background: rgba(15, 15, 15, 0.85); /* Deep Obsidian */
+    backdrop-filter: blur(20px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 10px;
+    box-shadow: 0 15px 40px rgba(0,0,0,0.8);
+    overflow: hidden;
+    min-width: 400px;
+}
+
+.window-header {
+    background: #222;
+    padding: 8px 15px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px solid #333;
+}
+
+.win-btn.close {
+    background: #ff5f56; /* Red Ubuntu close button */
+    border: none;
+    border-radius: 50%;
+    width: 12px;
+    height: 12px;
+    cursor: pointer;
+}
