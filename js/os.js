@@ -78,17 +78,22 @@ class TLC_Kernel {
     }
 
     launchApp(appId) {
+    // NEW: Force close the app menu overlay whenever an app is launched/focused
+        const overlay = document.getElementById('app-menu-overlay');
+        if (overlay) {
+            overlay.classList.add('hidden');
+            overlay.style.display = 'none';
+        }
+
         const app = registry.find(a => a.id === appId);
         const workspace = document.getElementById('workspace');
         if (!app || !workspace) return;
 
         const winId = `win-${appId}`;
+        
+        // If already running, just focus it
         if (this.runningApps.has(appId)) {
-            const existingWin = document.getElementById(winId);
-            if (existingWin) {
-                existingWin.style.display = 'flex';
-                this.focusWindow(winId);
-            }
+            this.focusWindow(winId);
             return;
         }
 
@@ -140,33 +145,48 @@ class TLC_Kernel {
     }
 
     openAppMenu() {
-        const winId = 'win-app-menu';
-        if (document.getElementById(winId)) {
-            this.closeWindow(winId);
+        const overlay = document.getElementById('app-menu-overlay');
+        const grid = document.getElementById('app-grid-container');
+        const searchInput = document.getElementById('app-search');
+        
+        if (!overlay || !grid) return;
+
+        // Toggle Logic
+        if (!overlay.classList.contains('hidden')) {
+            overlay.classList.add('hidden');
+            overlay.style.display = 'none';
             return;
         }
 
-        const win = document.createElement('div');
-        win.className = 'os-window maximized'; 
-        win.id = winId;
-        win.style.zIndex = 9998;
-        
-        let gridHTML = '<div class="app-drawer-grid" style="display:grid; grid-template-columns:repeat(auto-fill, minmax(100px, 1fr)); gap:20px; padding:40px; justify-content:center;">';
-        registry.forEach(app => {
-            gridHTML += `
-                <div class="drawer-icon" style="text-align:center; cursor:pointer;" onclick="kernel.launchApp('${app.id}'); kernel.closeWindow('win-app-menu');">
-                    <div style="font-size:3rem;">${app.icon}</div>
-                    <div style="font-size:0.8rem; color:white; margin-top:5px;">${app.name}</div>
-                </div>`;
-        });
-        gridHTML += '</div>';
+        // Show Logic
+        overlay.classList.remove('hidden');
+        overlay.style.display = 'flex'; 
+        searchInput.value = ''; 
+        searchInput.focus();
 
-        win.innerHTML = `
-            <div class="window-header"><span>Sovereign Directory</span><button class="win-btn close" id="close-menu">×</button></div>
-            <div class="window-content" style="background:rgba(0,0,0,0.4); backdrop-filter:blur(20px);">${gridHTML}</div>
-        `;
-        document.getElementById('workspace').appendChild(win);
-        document.getElementById('close-menu').onclick = () => this.closeWindow(winId);
+        const renderGrid = (filter = '') => {
+            grid.innerHTML = '';
+            registry.filter(app => 
+                app.name.toLowerCase().includes(filter.toLowerCase())
+            ).forEach(app => {
+                const card = document.createElement('div');
+                card.className = 'launcher-card';
+                card.innerHTML = `
+                    <div class="icon">${app.icon}</div>
+                    <div class="name">${app.name}</div>
+                `;
+                card.onclick = () => {
+                    this.launchApp(app.id);
+                    overlay.classList.add('hidden');
+                    overlay.style.display = 'none';
+                };
+                grid.appendChild(card);
+            });
+        };
+
+        // Initial render & Search listener
+        renderGrid();
+        searchInput.oninput = (e) => renderGrid(e.target.value);
     }
 
     closeApp(appId, winId) {
