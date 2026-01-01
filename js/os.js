@@ -188,14 +188,15 @@ class TLC_Kernel {
     }
 
     getTopZIndex() {
-        const wins = document.querySelectorAll('.os-window');
-        let max = 1000;
-        wins.forEach(w => { 
-            const z = parseInt(w.style.zIndex) || 1000;
-            if (z > max) max = z; 
-        });
-        return max + 1;
-    }
+    const wins = document.querySelectorAll('.os-window');
+    // Start at 100 to stay above the workspace z-index we just set in CSS
+    let max = 100; 
+    wins.forEach(w => { 
+        const z = parseInt(w.style.zIndex) || 100;
+        if (z > max) max = z; 
+    });
+    return max + 1;
+}
 
     makeDraggable(el) {
         const header = el.querySelector('.window-header');
