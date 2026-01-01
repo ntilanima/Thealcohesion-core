@@ -8,11 +8,18 @@ class TLC_Kernel {
     }
 
     init() {
-        const loginBtn = document.getElementById('login-btn');
-        if (loginBtn) {
-            loginBtn.onclick = () => this.verifyIdentity();
-            console.log("Kernel: Identity Listeners Active.");
-        }
+    console.log("Kernel: Searching for Login Gate...");
+    const loginBtn = document.getElementById('login-btn');
+    
+    if (loginBtn) {
+        loginBtn.onclick = (e) => {
+            e.preventDefault();
+            console.log("Login Button Clicked!");
+            this.verifyIdentity();
+        };
+    } else {
+        console.error("CRITICAL: #login-btn not found in HTML!");
+    }
     }
 
     verifyIdentity() {
