@@ -135,57 +135,27 @@ body, html {
     transition: opacity 0.5s ease;
 }
 
+/* --- LAUNCH ANIMATION FOR WINDOWS --- */
+@keyframes debian-launch {
+    0% {
+        opacity: 0;
+        transform: scale(0.92) translateY(10px);
+        filter: blur(4px);
+    }
+    100% {
+        opacity: 1;
+        transform: scale(1) translateY(0);
+        filter: blur(0);
+    }
+}
+
+.os-window {
+    /* ... your existing styles ... */
+    animation: debian-launch 0.25s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    will-change: transform, opacity;
+}
+
 /* --- SOVEREIGN TERMINAL UI --- */
-#vpu-terminal {
-    scrollbar-width: thin;
-    scrollbar-color: #004411 #000;
-}
-
-/* Chrome/Safari Scrollbar Styling */
-#vpu-terminal #term-output::-webkit-scrollbar {
-    width: 6px;
-}
-
-#vpu-terminal #term-output::-webkit-scrollbar-track {
-    background: #000;
-}
-
-#vpu-terminal #term-output::-webkit-scrollbar-thumb {
-    background: #004411;
-    border-radius: 3px;
-}
-
-#vpu-terminal #term-output {
-    white-space: pre; /* Essential for ASCII art alignment */
-    font-family: 'Consolas', 'Courier New', monospace; /* Ensures every char is same width */
-    line-height: 1.2;
-    overflow-x: hidden;
-}
-
-#vpu-terminal span[style*="#a445ff"] {
-    text-shadow: 0 0 8px rgba(164, 69, 255, 0.6);
-}
-
-/* Caret/Cursor Animation */
-#vpu-terminal input {
-    caret-color: #00ff41;
-}
-
-/* Optional: Subtle Glow for Terminal Text */
-#vpu-terminal .output-area, 
-#vpu-terminal span, 
-#vpu-terminal input {
-    text-shadow: 0 0 5px rgba(0, 255, 65, 0.4);
-}
-
-
-@keyframes terminal-flicker {
-    0% { opacity: 0.9; }
-    5% { opacity: 0.7; }
-    10% { opacity: 0.9; }
-    100% { opacity: 1; }
-}
-
 #vpu-terminal {
     background: #000;
     color: #00ff41;
@@ -195,40 +165,75 @@ body, html {
     flex-direction: column;
     padding: 10px;
     box-sizing: border-box;
-    overflow: hidden; /* Prevents the container itself from scrolling */
+    overflow: hidden; 
     animation: terminal-flicker 0.2s infinite;
+    position: relative;
 }
 
 #vpu-terminal #term-output {
-    /* clamp(MIN, PREFERRED, MAX) */
+    flex: 1;
+    /* Fluid scaling + Zoom transition */
     font-size: clamp(9px, 1.5vw, 14px); 
+    transition: font-size 0.2s ease-out;
     
-    white-space: pre; /* Keeps ASCII art aligned */
-    overflow-x: auto; /* Allows a horizontal scroll ONLY if absolutely necessary */
+    /* Alignment & Fit */
+    white-space: pre; 
     line-height: 1.1;
-    letter-spacing: -0.5px; /* Tightens characters to fit more on one line */
-}
-
-/* Ensure the input line also scales so the prompt doesn't look huge */
-#vpu-terminal .input-line, 
-#vpu-terminal input {
-    font-size: clamp(10px, 1.5vw, 14px);
-}
-
-#vpu-terminal input {
-    width: 100%;
-    min-width: 0; /* Allows input to shrink below default size */
-}
-
-/* --- MATRIX CODE EFFECT STYLING --- */
-/* Make terminal text sit "above" the falling matrix code */
-#vpu-terminal #term-output, 
-#vpu-terminal .input-line {
+    letter-spacing: -0.5px;
+    
+    /* Scrolling */
+    overflow-y: auto;
+    overflow-x: auto;
+    scrollbar-width: thin;
+    scrollbar-color: #004411 #000;
+    
+    /* Layering for Matrix */
     position: relative;
-    z-index: 2; /* Sits on top of the canvas */
+    z-index: 2;
+}
+
+/* Chrome/Safari Scrollbar */
+#vpu-terminal #term-output::-webkit-scrollbar { width: 6px; }
+#vpu-terminal #term-output::-webkit-scrollbar-track { background: #000; }
+#vpu-terminal #term-output::-webkit-scrollbar-thumb { background: #004411; border-radius: 3px; }
+
+/* Input & Interaction */
+#vpu-terminal .input-line {
+    display: flex;
+    position: relative;
+    z-index: 2;
+    font-size: clamp(10px, 1.5vw, 14px);
+    gap: 10px;
+}
+
+#vpu-terminal input {
     background: transparent;
+    border: none;
+    outline: none;
+    color: #00ff41;
+    font-family: inherit;
+    font-size: inherit;
+    caret-color: #00ff41;
+    width: 100%;
+    min-width: 0;
+}
+
+/* Visual Effects: Glow & Flickers */
+#vpu-terminal span[style*="#a445ff"] { text-shadow: 0 0 8px rgba(164, 69, 255, 0.6); }
+#vpu-terminal .output-area, #vpu-terminal span, #vpu-terminal input {
+    text-shadow: 0 0 5px rgba(0, 255, 65, 0.4);
+}
+
+@keyframes terminal-flicker {
+    0% { opacity: 0.98; }
+    5% { opacity: 0.95; }
+    10% { opacity: 0.98; }
+    100% { opacity: 1; }
 }
 
 #vpu-terminal canvas {
-    pointer-events: none; /* Allows you to click the input "through" the code */
+    position: absolute;
+    top: 0; left: 0;
+    z-index: 1;
+    pointer-events: none;
 }

@@ -146,21 +146,44 @@ body, html {
 }
 
 /* --- WINDOW SYSTEM (Unified & Optimized) --- */
+/* --- DAMIANB.DEV STYLE WINDOW SYSTEM --- */
 .os-window {
-    position: absolute !important; /* Keep this to allow dragging */
-    width: 80%;
-    height: 70%;
-    min-width: 400px; /* Increased from 300px for Obsidian look */
-    min-height: 200px;
-    background: rgba(15, 15, 15, 0.85); /* Deep Obsidian */
-    backdrop-filter: blur(20px);
-    border: 1px solid rgba(255, 255, 255, 0.15);
-    border-radius: 10px;
-    box-shadow: 0 15px 40px rgba(0, 0, 0, 0.8);
+    position: absolute;
     display: flex;
     flex-direction: column;
+    background: rgba(10, 10, 12, 0.8); /* Dark Glass */
+    backdrop-filter: blur(12px) saturate(150%);
+    border: 1px solid rgba(164, 69, 255, 0.2);
+    border-radius: 12px;
+    box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.05), 0 20px 50px rgba(0, 0, 0, 0.4);
+    
+    /* Springy Damian-style Animation */
+    animation: damian-launch 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+    transform-origin: center center;
     overflow: hidden;
-    z-index: 100;
+}
+
+@keyframes damian-launch {
+    0% {
+        opacity: 0;
+        transform: scale(0.5) translateY(40px);
+    }
+    100% {
+        opacity: 1;
+        transform: scale(1) translateY(0);
+    }
+}
+
+/* Minimize (Shrink to Dock) */
+.os-window.minimizing {
+    animation: damian-minimize 0.3s cubic-bezier(0.6, -0.28, 0.735, 0.045) forwards;
+}
+
+@keyframes damian-minimize {
+    to {
+        opacity: 0;
+        transform: scale(0.2) translateY(100px);
+    }
 }
 
 /* Maximize logic */
@@ -173,15 +196,24 @@ body, html {
 }
 
 .window-header {
-    height: 38px;
-    background: #222; /* Ubuntu Dark Header */
+    height: 42px;
+    background: rgba(255, 255, 255, 0.03);
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 0 15px;
-    cursor: grab;
-    user-select: none;
-    border-bottom: 1px solid #333;
+    padding: 0 16px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.title {
+    font-size: 0.85rem;
+    font-weight: 500;
+    letter-spacing: 0.5px;
+    color: rgba(255, 255, 255, 0.9);
+}
+
+.win-btn:hover {
+    transform: scale(1.2);
 }
 
 .window-controls {
@@ -189,25 +221,31 @@ body, html {
     gap: 8px;
 }
 
+/* Industrial Style Window Buttons */
 .win-btn {
-    width: 12px;
-    height: 12px;
-    border-radius: 50%;
-    border: none;
-    cursor: pointer;
+    width: 32px;  /* Larger size as requested */
+    height: 28px;
+    border-radius: 4px; /* Industrial square-ish look */
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    color: #eee;
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 9px;
-    font-weight: bold;
-    transition: opacity 0.2s;
+    transition: all 0.2s ease;
 }
 
-.win-btn:hover { opacity: 0.8; }
+/* Specific Industrial Hover Colors */
+.win-btn.hide:hover { background: rgba(255, 255, 255, 0.15); }
+.win-btn.expand:hover { background: rgba(255, 255, 255, 0.15); }
+.win-btn.close:hover { background: #e95420; color: white; border-color: #ff6e3b; }
 
-.win-btn.close { background: #ff5f56; color: #4c0000; }
-.win-btn.hide { background: #ffbd2e; color: #4c3a00; }
-.win-btn.expand { background: #27c93f; color: #003300; }
+/* Closing Animation Class */
+.os-window.closing {
+    transform: scale(0.9);
+    opacity: 0;
+    transition: 0.3s cubic-bezier(0.6, -0.28, 0.735, 0.045);
+}
 
 .window-content {
     flex-grow: 1;
@@ -447,4 +485,92 @@ body, html {
     .launcher-card .icon {
         font-size: 2.8rem; /* Slightly larger for touch clarity */
     }
+}
+
+/* --- LOADING INDICATOR FOR APPS --- */
+.app-loading {
+    font-family: 'Consolas', monospace;
+    color: #a445ff;
+    padding: 20px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.app-loading::after {
+    content: "";
+    width: 10px;
+    height: 10px;
+    background: #00ff41;
+    border-radius: 50%;
+    animation: pulse 1s infinite;
+}
+
+@keyframes pulse {
+    0% { opacity: 1; }
+    50% { opacity: 0.3; }
+    100% { opacity: 1; }
+}
+
+/* --- DOCK TOGGLE FUNCTIONALITY --- */
+#os-root.dock-hidden #side-dock {
+    transform: translateX(-100%);
+    width: 0;
+    padding: 0;
+    border: none;
+    margin-right: calc(var(--dock-width) * -1); /* Pulls workspace to the left */
+    opacity: 0;
+}
+
+#os-root.dock-hidden #workspace {
+    margin-left: 0;
+}
+
+/* The Hover Sensor Area */
+#dock-sensor {
+    position: fixed;
+    left: 0;
+    top: var(--top-bar-h);
+    width: 6px;
+    height: 100%;
+    z-index: 10001; /* Above everything */
+    background: transparent;
+}
+
+/* Ensure smooth transition for the dock */
+#side-dock {
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Maximize snap animation */
+.os-window.maximized {
+    top: 0 !important;
+    left: 0 !important;
+    width: 100% !important;
+    height: 100% !important;
+    border-radius: 0;
+    transition: all 0.3s cubic-bezier(0.2, 1, 0.3, 1);
+}
+
+/* Snap Preview Overlay */
+#snap-preview {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(164, 69, 255, 0.1); /* Your accent color */
+    border: 2px solid var(--running-accent);
+    backdrop-filter: blur(4px);
+    z-index: 1; /* Behind the windows but in the workspace */
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.2s ease, transform 0.2s ease;
+    border-radius: 8px;
+    display: none;
+}
+
+#snap-preview.active {
+    display: block;
+    opacity: 1;
 }
