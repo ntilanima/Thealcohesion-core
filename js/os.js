@@ -328,7 +328,6 @@ class TLC_Kernel {
     const termBody = document.getElementById('vpu-terminal'); 
     let response = "";
     
-    // Split to handle commands with arguments (like 'unlock key')
     const parts = cmd.trim().split(' ');
     const cleanCmd = parts[0].toLowerCase();
     const argument = parts[1] ? parts[1].toLowerCase() : null;
@@ -364,6 +363,11 @@ class TLC_Kernel {
             }
             break;
 
+        case 'lock':
+            this.vaultLocked = true;
+            response = `<span style="color:#a445ff;">[SECURED]</span> Sovereign Vault has been re-sealed.`;
+            break;
+
         case 'vault':
             if (this.vaultLocked) {
                 response = `<span class="access-denied">[ACCESS DENIED]</span>\nSystem is currently LOCKED.\nType 'unlock [key]' to proceed.`;
@@ -387,7 +391,7 @@ class TLC_Kernel {
             break;
 
         case 'help':
-            response = "Available: status, allotment, clear, whoami, neofetch, matrix, v-pos, vault, unlock [key]";
+            response = "Available: status, allotment, clear, whoami, neofetch, matrix, v-pos, vault, unlock [key], lock";
             break;
 
         case 'status':
@@ -424,7 +428,7 @@ class TLC_Kernel {
 
     output.innerHTML += `\n<span style="color:#888;">> ${cmd}</span>\n${response}\n`;
     output.scrollTop = output.scrollHeight;
-}
+    }
     makeDraggable(el) {
         const header = el.querySelector('.window-header');
         const dragStart = (e) => {
