@@ -24,15 +24,19 @@ class TLC_Kernel {
     }
 
     transitionToShell() {
-        const gate = document.getElementById('login-gate');
-        const root = document.getElementById('os-root');
-        const top = document.getElementById('top-bar');
+    const gate = document.getElementById('login-gate');
+    const root = document.getElementById('os-root');
+    const top = document.getElementById('top-bar');
 
-        if (gate) gate.style.display = 'none';
-        if (top) top.classList.remove('hidden');
-        if (root) root.style.display = 'flex'; 
-        
-        this.bootShell();
+    if (gate) gate.style.display = 'none';
+    if (top) top.classList.remove('hidden');
+    
+    if (root) {
+        root.style.display = 'flex'; // This is the most important line
+        console.log("OS Root is now FLEX");
+    }
+    
+    this.bootShell();
     }
 
     bootShell() {
