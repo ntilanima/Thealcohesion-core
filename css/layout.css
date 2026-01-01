@@ -1,15 +1,15 @@
 /* --- CORE LAYOUT --- */
 :root {
-    --app-size: clamp(48px, 6vh, 64px); /* Scaled for Samsung A16 */
+    --app-size: clamp(48px, 6vh, 64px); 
     --running-accent: #a445ff;
     --dock-width: calc(var(--app-size) + 16px);
 }
 
 #os-root {
-    display: none; /* JS will change to 'flex' */
+    display: none; 
     flex-direction: row;
     width: 100vw;
-    height: calc(100vh - 35px);
+    height: calc(100vh - 35px); /* Matches viewport minus top-bar */
     overflow: hidden;
 }
 
@@ -27,22 +27,24 @@
     z-index: 9999;
 }
 
-/* --- SIDE DOCK (Unified) --- */
+/* --- SIDE DOCK --- */
 #side-dock {
     width: var(--dock-width) !important;
     background: rgba(10, 10, 10, 0.85);
     display: flex !important;
-    flex-direction: column; /* Stack icons vertically */
+    flex-direction: column; 
     align-items: center;
-    padding: 15px 0; /* Space at top and bottom */
+    padding: 10px 0; 
     gap: 8px;
-    height: 100vh; /* Fill entire screen height */
+    height: 100%; /* Changed from 100vh to fill parent exactly */
     border-right: 1px solid rgba(255, 255, 255, 0.1);
     box-sizing: border-box;
+    flex-shrink: 0;
 }
 
 .dock-item {
-    flex-shrink: 0; /* Prevent icons from squishing */
+    position: relative;
+    flex-shrink: 0;
     width: var(--app-size);
     height: var(--app-size);
     background: rgba(255, 255, 255, 0.05);
@@ -53,27 +55,9 @@
     cursor: pointer;
 }
 
-/* THE APP MENU BUTTON - FIXED AT FAR BOTTOM */
-.dock-bottom-trigger {
-    margin-top: auto; /* This is the "magic" line that pushes it to the bottom */
-    width: var(--app-size);
-    height: var(--app-size);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    cursor: pointer;
-    font-size: 1.8rem;
-    color: var(--running-accent);
-    background: rgba(164, 69, 255, 0.1);
-    border-radius: 22%;
-    flex-shrink: 0;
-}
+.dock-item span { font-size: calc(var(--app-size) * 0.5); }
 
-.dock-item span {
-    font-size: calc(var(--app-size) * 0.5);
-}
-
-/* RUNNING INDICATOR (Ubuntu Style) */
+/* RUNNING INDICATOR */
 .dock-item.running::before {
     content: '';
     position: absolute;
@@ -86,36 +70,54 @@
     box-shadow: 0 0 8px var(--running-accent);
 }
 
-/* --- RESPONSIVE SLOT LOGIC --- */
-
-/* Mobile: Height < 750px (Like Samsung A16) -> Show 8 Apps */
-@media (max-height: 750px) {
-    .dock-item:nth-child(n+9) {
-        display: none !important;
-    }
+/* --- THE 9-DOT MENU TRIGGER --- */
+.dock-bottom-trigger {
+    margin-top: auto !important; /* Forces to bottom */
+    width: var(--app-size);
+    height: var(--app-size);
+    display: grid !important; /* Unified to grid */
+    grid-template-columns: repeat(3, 1fr);
+    grid-template-rows: repeat(3, 1fr);
+    gap: 4px;
+    padding: 12px;
+    box-sizing: border-box;
+    cursor: pointer;
+    background: rgba(164, 69, 255, 0.15);
+    border-radius: 22%;
+    flex-shrink: 0;
+    transition: 0.3s;
 }
 
-/* Tablet/Desktop: Height > 751px -> Show 12 Apps */
+.menu-dot {
+    width: 100%;
+    height: 100%;
+    background: var(--running-accent);
+    border-radius: 50%;
+}
+
+/* --- RESPONSIVE SLOT LOGIC --- */
+@media (max-height: 750px) {
+    .dock-item:nth-child(n+9) { display: none !important; }
+}
 @media (min-height: 751px) {
-    #side-dock { gap: 12px; } /* More space on big screens */
-    .dock-item:nth-child(n+9) {
-        display: flex !important;
-    }
+    #side-dock { gap: 12px; }
+    .dock-item:nth-child(n+9) { display: flex !important; }
 }
 
 /* --- WORKSPACE & WINDOWS --- */
 #workspace {
     flex-grow: 1;
     height: 100%;
-    position: relative;
+    position: relative; 
     overflow: hidden;
+    z-index: 5;
 }
 
 .os-window {
     position: absolute !important;
-    width: 850px;
-    height: 550px;
-    background: rgba(30, 30, 30, 0.85);
+    width: 80%; /* Better default for mobile */
+    height: 70%;
+    background: rgba(30, 30, 30, 0.95);
     backdrop-filter: blur(20px);
     border: 1px solid rgba(255, 255, 255, 0.1);
     border-radius: 10px;
@@ -123,20 +125,12 @@
     display: flex;
     flex-direction: column;
     overflow: hidden;
-    z-index: 1000;
-}
-
-.os-window.maximized {
-    width: 100% !important;
-    height: 100% !important;
-    top: 0 !important;
-    left: 0 !important;
-    border-radius: 0;
+    z-index: 100;
 }
 
 .window-header {
     height: 38px;
-    background: linear-gradient(to bottom, #444, #333);
+    background: rgba(255, 255, 255, 0.05);
     display: flex;
     justify-content: space-between;
     align-items: center;
@@ -144,79 +138,13 @@
     cursor: grab;
 }
 
-.dock-bottom-trigger {
-    margin-top: auto;
-    width: var(--app-size);
-    height: var(--app-size);
-    display: flex;
-    align-items: center;
-    justify-content: center;
+.win-btn {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    border: none;
     cursor: pointer;
-    font-size: 1.5rem;
-    color: var(--running-accent);
 }
-
 .win-btn.close { background: #ff5f56; }
 .win-btn.hide { background: #ffbd2e; }
 .win-btn.expand { background: #27c93f; }
-
-/* --- DOCK BOTTOM TRIGGER (Ubuntu Style 9-Dot Menu) --- */
-.dock-bottom-trigger {
-    margin-top: auto;
-    width: var(--app-size);
-    height: var(--app-size);
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 4px;
-    padding: 12px;
-    box-sizing: border-box;
-    cursor: pointer;
-    background: rgba(164, 69, 255, 0.15);
-    border-radius: 22%;
-    transition: all 0.3s ease;
-}
-
-/* Create the 9 dots of the app menu */
-.dock-bottom-trigger::before {
-    content: '';
-    grid-column: span 3;
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 4px;
-    width: 100%;
-    height: 100%;
-}
-
-/* Alternative: Using a custom SVG or a simpler "Circle in Square" look */
-.menu-dot {
-    width: 6px;
-    height: 6px;
-    background: var(--running-accent);
-    border-radius: 50%;
-    transition: transform 0.2s ease;
-}
-
-.dock-bottom-trigger:hover .menu-dot {
-    transform: scale(1.2);
-    background: #fff;
-}
-
-/* --- DESKTOP WORKSPACE (Ubuntu Grid) --- */
-
-#workspace {
-    flex-grow: 1;
-    height: 100%;
-    position: relative; /* REQUIRED: Anchor for absolute windows */
-    overflow: hidden;
-    z-index: 5; /* Keep above background */
-}
-
-.os-window {
-    position: absolute !important; /* Force absolute placement */
-    display: flex;
-    flex-direction: column;
-    background: rgba(25, 25, 25, 0.95);
-    border: 1px solid rgba(255, 255, 255, 0.15);
-    /* Ensure the window starts with a high Z-Index */
-    z-index: 100; 
-}
