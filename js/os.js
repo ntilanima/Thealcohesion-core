@@ -162,7 +162,10 @@ class TLC_Kernel {
         overlay.classList.remove('hidden');
         overlay.style.display = 'flex'; 
         searchInput.value = ''; 
-        searchInput.focus();
+        
+        // FIX: Only focus and trigger keyboard if NOT on mobile
+        if (window.innerWidth > 768) {
+        searchInput.focus();}
 
         const renderGrid = (filter = '') => {
             grid.innerHTML = '';

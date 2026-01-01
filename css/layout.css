@@ -396,3 +396,25 @@ body, html {
         padding: 20px 15px; /* Reduce padding to give grid more room */
     }
 }
+
+/* Further mobile tweaks for very small screens */
+@media (max-width: 768px) {
+    #app-grid-container {
+        /* Force 3 columns and prevent them from shrinking */
+        grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+        gap: 20px;
+        padding: 10px;
+        width: 100%;
+        box-sizing: border-box;
+    }
+
+    .launcher-card {
+        width: 100%;
+        /* Ensure the tap area is large enough for mobile fingers */
+        padding: 10px 0; 
+    }
+
+    .launcher-card .icon {
+        font-size: 2.8rem; /* Slightly larger for touch clarity */
+    }
+}
