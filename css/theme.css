@@ -187,7 +187,38 @@ body, html {
 }
 
 #vpu-terminal {
+    background: #000;
+    color: #00ff41;
+    font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    padding: 10px;
+    box-sizing: border-box;
+    overflow: hidden; /* Prevents the container itself from scrolling */
     animation: terminal-flicker 0.2s infinite;
+}
+
+#vpu-terminal #term-output {
+    flex: 1;
+    overflow-y: auto;
+    overflow-x: hidden; /* Critical: Stops horizontal scrollbars */
+    white-space: pre-wrap; /* Wraps text while preserving ASCII spaces */
+    word-break: break-all; /* Breaks long strings (like keys) to fit */
+    font-size: clamp(10px, 1.2vw, 14px); /* Scales font based on window width */
+    line-height: 1.2;
+}
+
+/* Ensure the input line doesn't push content out */
+#vpu-terminal .input-line {
+    display: flex;
+    width: 100%;
+    margin-top: 5px;
+}
+
+#vpu-terminal input {
+    width: 100%;
+    min-width: 0; /* Allows input to shrink below default size */
 }
 
 /* --- MATRIX CODE EFFECT STYLING --- */

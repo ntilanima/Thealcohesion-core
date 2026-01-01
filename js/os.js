@@ -408,16 +408,24 @@ class TLC_Kernel {
 
         case 'v-pos':
             response = `
-            <span style="color:#a445ff;">┌──────────────── ALLOTMENT LEDGER ────────────────┐</span>
-            <span style="color:#888;">ENTITY           ROLE            ALLOTMENT STATUS</span>
-            ───────          ────            ────────────────
-            EPOS             System          <span style="color:#00ff41;">INITIALIZED</span>
-            INVESTORS        Founders        <span style="color:#00ff41;">CONFIRMED</span>
-            GENESIS HUB      Core            <span style="color:#00ff41;">ACTIVE (5GB)</span>
-            <span style="color:#a445ff;">└──────────────────────────────────────────────────┘</span>
-            Temporal Stamp: 2025-12-26 | Phase: 1.0`;
+            <span style="color:#a445ff;">┌───────── ALLOTMENT LEDGER ─────────┐</span>
+            <span style="color:#888;">ENTITY      ROLE       STATUS</span>
+            ──────      ────       ──────
+            EPOS        System     <span style="color:#00ff41;">INIT</span>
+            INVESTORS   Founders   <span style="color:#00ff41;">CONFIRMED</span>
+            GENESIS     Core       <span style="color:#00ff41;">ACTIVE</span>
+            <span style="color:#a445ff;">└────────────────────────────────────┘</span>`;
             break;
-
+        case 'ghost':
+        const winContent = termBody.closest('.window-content');
+        if (winContent.style.backgroundColor === 'rgba(0, 0, 0, 0.6)') {
+            winContent.style.backgroundColor = '#000';
+            response = "Ghost mode: DEACTIVATED";
+        } else {
+            winContent.style.backgroundColor = 'rgba(0, 0, 0, 0.6)';
+            response = "Ghost mode: ACTIVATED";
+        }
+        break;
         case 'clear':
             output.innerHTML = `<span style="color:#a445ff;">${this.vpuLogo}</span>\n`;
             return; 
