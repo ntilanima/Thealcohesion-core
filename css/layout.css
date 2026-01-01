@@ -258,7 +258,7 @@ body, html {
     background: rgba(0, 0, 0, 0.4); /* Dark tint */
     backdrop-filter: blur(25px); /* Strong glass effect */
     z-index: 9998;
-    display: flex;
+    display: none; /* JS toggles this */
     justify-content: center;
     transition: opacity 0.3s ease;
     margin: 0; /* Remove any accidental margins */
@@ -280,7 +280,7 @@ body, html {
     display: flex;
     justify-content: center; /* Keeps bar centered in the overlay */
     width: 100%;
-    margin-bottom: 30px;
+    margin-bottom: 20px;
     padding: 0 20px; /* Prevents touching edges on mobile */
     box-sizing: border-box;
 }
@@ -318,10 +318,13 @@ body, html {
 }
 /* App Grid */
 #app-grid-container {
+    flex: 1;
+    overflow-y: auto;
     display: grid;
     /* Adjusted for a cleaner Ubuntu-style grid */
     grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
-    gap: 40px;
+    gap: 20px;
+    
     margin-top: 20px;
     justify-items: center;
     overflow-y: auto;

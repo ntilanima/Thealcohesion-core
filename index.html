@@ -24,57 +24,53 @@
     </section>
 
     <header id="top-bar" class="hidden">
-        <div class="left-section">
-            <span class="activities">Thealcohesion Core</span>
-        </div>
+        <div class="left-section"><span class="activities">Activities</span></div>
         <div class="center-section">
-            <span id="top-bar-time" onclick="thealTimeApp.renderHUD()" style="cursor: pointer;">--:--:--</span>
+            <span id="top-bar-time">--:--:--</span>
         </div>
         <div class="right-section">
             <div id="system-icons">⛶ 🔊 🔋 ▾</div>
         </div>
     </header>
+
     <div id="app-menu-overlay" class="hidden">
-    <div class="overlay-content">
-        <div class="search-container">
-            <div class="search-box">
-                <span class="search-icon">🔍</span>
-                <input type="text" id="app-search" placeholder="Type to Search...">
-            </div>
-        </div>
-
-        <div id="app-grid-container">
-            </div>
-
-            <div id="app-menu-overlay" class="hidden">
         <div class="overlay-content">
             <div class="search-container">
                 <div class="search-box">
                     <span class="search-icon">🔍</span>
-                    <input type="text" id="app-search" placeholder="Type to search...">
+                    <input type="text" id="app-search" placeholder="Type to Search...">
                 </div>
             </div>
-
-            <div id="app-grid-container"></div>
-
+            <div id="app-grid-container">
+                </div>
             <div class="overlay-nav">
                 <div class="nav-links">
-                    <button class="nav-item active" id="btn-frequent">Frequent</button>
-                    <button class="nav-item" id="btn-all">All</button>
+                    <button class="nav-item active">Frequent</button>
+                    <button class="nav-item">All</button>
                 </div>
             </div>
         </div>
     </div>
-    </div>
-    <main id="os-root" style="display: none;"> <nav id="side-dock">
-            </nav>
+
+    <main id="os-root" style="display: none;"> 
+        <nav id="side-dock">
+            <div class="dock-bottom-trigger" id="launcher-btn">
+                <div class="menu-dot"></div><div class="menu-dot"></div><div class="menu-dot"></div>
+                <div class="menu-dot"></div><div class="menu-dot"></div><div class="menu-dot"></div>
+                <div class="menu-dot"></div><div class="menu-dot"></div><div class="menu-dot"></div>
+            </div>
+        </nav>
 
         <div id="workspace">
-            <div id="sovereign-shell">
-                <div id="desktop-icons"></div>
-            </div>
+            <div id="sovereign-shell"></div>
         </div>
     </main>
+
+    <div id="vpu-taskbar" class="hidden">
+        <div id="vpu-active-tasks"></div>
+        <div id="taskbar-clock">00:00:00</div>
+    </div>
+
     <script src="./js/time.js"></script>
     <script type="module" src="./js/os.js"></script>
 </body>
