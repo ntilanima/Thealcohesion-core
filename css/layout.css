@@ -55,13 +55,13 @@ body, html {
     width: var(--dock-width);
     background: rgba(10, 10, 10, 0.85);
     display: flex;
-    flex-direction: column;
+    flex-direction: column; /* Stack icons vertically */
     align-items: center;
     padding: 10px 0;
-    gap: 8px;
-    height: 100%;
+    gap: 12px;
+    height: 100%; /* Fill the height of os-root */
+    box-sizing: border-box; /* Includes padding in height calculation */
     border-right: 1px solid rgba(255, 255, 255, 0.1);
-    box-sizing: border-box;
     flex-shrink: 0;
 }
 
@@ -96,7 +96,8 @@ body, html {
 
 /* 9-Dot Menu Button */
 .dock-bottom-trigger {
-    margin-top: auto !important;
+    margin-top: auto !important; /* Forces the 9-dot menu to the very bottom */
+    margin-bottom: 10px;        /* Prevents it from touching the edge */
     width: var(--app-size);
     height: var(--app-size);
     display: grid !important;
@@ -106,9 +107,13 @@ body, html {
     padding: 12px;
     box-sizing: border-box;
     cursor: pointer;
-    background: rgba(164, 69, 255, 0.2);
+    background: rgba(164, 69, 255, 0.15);
     border-radius: 22%;
-    flex-shrink: 0;
+    transition: background 0.3s;
+}
+
+.dock-bottom-trigger:hover {
+    background: rgba(164, 69, 255, 0.4);
 }
 
 .menu-dot {
@@ -219,4 +224,18 @@ body, html {
     align-items: center;
     z-index: 10000;
     background: linear-gradient(135deg, #5E2750 0%, #2c001e 100%);
+}
+
+/* Ubuntu Running Indicator */
+.dock-item.running::before {
+    content: '';
+    position: absolute;
+    left: 2px; /* Positioned on the left edge of the icon */
+    top: 50%;
+    transform: translateY(-50%);
+    height: 10px;
+    width: 3px;
+    background: var(--running-accent, #a445ff);
+    border-radius: 2px;
+    box-shadow: 0 0 5px var(--running-accent, #a445ff);
 }

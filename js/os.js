@@ -42,37 +42,56 @@ class TLC_Kernel {
     }
 
     bootShell() {
-        const dock = document.getElementById('side-dock');
-        if (!dock) return;
-        dock.innerHTML = ''; 
+    const dock = document.getElementById('side-dock');
+    if (!dock) {
+        console.error("OS Error: #side-dock container missing.");
+        return;
+    }
+    
+    // Clear the dock for a clean re-render
+    dock.innerHTML = ''; 
 
-        this.pinnedApps.forEach((appId) => {
-            const app = registry.find(a => a.id === appId);
-            const dItem = document.createElement('div');
-            // Relative position is needed for the Ubuntu running dot
-            dItem.style.position = 'relative';
-            dItem.className = `dock-item ${this.runningApps.has(appId) ? 'running' : ''}`;
-            
-            if (app) {
-                dItem.innerHTML = `<span>${app.icon}</span>`;
-                dItem.onclick = () => this.launchApp(appId);
+    // 1. Render Pinned & Running Apps
+    this.pinnedApps.forEach((appId) => {
+        const app = registry.find(a => a.id === appId);
+        if (!app) return;
+
+        const dItem = document.createElement('div');
+        // 'running' class triggers the CSS indicator dot we defined earlier
+        const isRunning = this.runningApps.has(appId);
+        dItem.className = `dock-item ${isRunning ? 'running' : ''}`;
+        dItem.title = app.name; // Simple tooltip
+        
+        dItem.innerHTML = `<span>${app.icon}</span>`;
+        
+        // Logical click: if running, focus window; if not, launch it.
+        dItem.onclick = () => {
+            if (isRunning) {
+                this.focusWindow(appId);
             } else {
-                dItem.innerHTML = `<span style="opacity: 0.2">·</span>`;
+                this.launchApp(appId);
             }
-            dock.appendChild(dItem);
-        });
+        };
+        
+        dock.appendChild(dItem);
+    });
 
-        const menuBtn = document.createElement('div');
-        menuBtn.className = 'dock-bottom-trigger';
-        // Changed to use the 9 dots logic correctly
-        menuBtn.innerHTML = '';
-        for(let i=0; i<9; i++) {
-            const dot = document.createElement('div');
-            dot.className = 'menu-dot';
-            menuBtn.appendChild(dot);
-        }
-        menuBtn.onclick = () => this.openAppMenu();
-        dock.appendChild(menuBtn);
+    // 2. Render the 9-Dot Menu Button (Sovereign Launcher)
+    const menuBtn = document.createElement('div');
+    menuBtn.className = 'dock-bottom-trigger';
+    menuBtn.title = "Show Applications";
+    
+    // Efficiently create the 9 dots
+    for(let i = 0; i < 9; i++) {
+        const dot = document.createElement('div');
+        dot.className = 'menu-dot';
+        menuBtn.appendChild(dot);
+    }
+
+    menuBtn.onclick = () => this.toggleAppMenu();
+    dock.appendChild(menuBtn);
+    
+    console.log("UI: Sovereign Shell Synchronized.");
     }
 
     launchApp(appId) {
