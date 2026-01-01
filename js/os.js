@@ -24,35 +24,28 @@ class TLC_Kernel {
     }
 
     transitionToShell() {
-    const gate = document.getElementById('login-gate');
-    const root = document.getElementById('os-root');
-    const top = document.getElementById('top-bar');
+        const gate = document.getElementById('login-gate');
+        const root = document.getElementById('os-root');
+        const top = document.getElementById('top-bar');
 
-    if (gate) gate.style.display = 'none';
-    if (top) top.classList.remove('hidden');
-    
-    if (root) {
-        root.style.display = 'flex'; // This is the most important line
-        console.log("OS Root is now FLEX");
-    }
-    
-    this.bootShell();
+        if (gate) gate.style.display = 'none';
+        if (top) top.classList.remove('hidden');
+        if (root) root.style.display = 'flex'; 
+        
+        this.bootShell();
     }
 
     bootShell() {
         const dock = document.getElementById('side-dock');
         if (!dock) return;
-        
         dock.innerHTML = ''; 
 
         this.pinnedApps.forEach((appId) => {
             const app = registry.find(a => a.id === appId);
             const dItem = document.createElement('div');
             dItem.className = `dock-item ${this.runningApps.has(appId) ? 'running' : ''}`;
-            
             if (app) {
                 dItem.innerHTML = `<span>${app.icon}</span>`;
-                // Use addEventListener instead of string onclick to avoid scope issues
                 dItem.onclick = () => this.launchApp(appId);
             } else {
                 dItem.innerHTML = `<span style="opacity: 0.2">·</span>`;
@@ -78,6 +71,10 @@ class TLC_Kernel {
 
         const winId = `win-${appId}`;
         if (this.runningApps.has(appId)) {
+            const existingWin = document.getElementById(winId);
+            if (existingWin && existingWin.style.display === 'none') {
+                existingWin.style.display = 'flex';
+            }
             this.focusWindow(winId);
             return;
         }
@@ -88,7 +85,6 @@ class TLC_Kernel {
         const win = document.createElement('div');
         win.className = 'os-window';
         win.id = winId;
-        // Forced initial positioning to prevent NaN errors
         win.style.top = "60px";
         win.style.left = "20px";
         win.style.zIndex = this.getTopZIndex();
@@ -97,38 +93,53 @@ class TLC_Kernel {
             <div class="window-header">
                 <span class="title">${app.icon} ${app.name}</span>
                 <div class="window-controls">
+                    <button class="win-btn hide" id="hide-${winId}">─</button>
+                    <button class="win-btn expand" id="max-${winId}">▢</button>
                     <button class="win-btn close" id="close-${winId}">×</button>
                 </div>
             </div>
             <div class="window-content" id="canvas-${appId}">
-                <div class="app-loading">Connecting...</div>
+                <div class="app-loading">System: Initializing ${app.name}...</div>
             </div>
         `;
 
         workspace.appendChild(win);
         
-        // Manual event binding to bypass global scope issues
-        win.querySelector(`#close-${winId}`).onclick = () => this.closeApp(appId, winId);
+        // --- RESTORED PROPERTIES & BINDINGS ---
+        win.querySelector(`#hide-${winId}`).onclick = (e) => { e.stopPropagation(); this.minimizeWindow(winId); };
+        win.querySelector(`#max-${winId}`).onclick = (e) => { e.stopPropagation(); this.toggleMaximize(winId); };
+        win.querySelector(`#close-${winId}`).onclick = (e) => { e.stopPropagation(); this.closeApp(appId, winId); };
         win.onmousedown = () => this.focusWindow(winId);
         win.ontouchstart = () => this.focusWindow(winId);
 
         this.makeDraggable(win);
 
-        // App Content Routing
+        // --- TEMPORE ENGINE (TIME APP) FIX ---
         const container = document.getElementById(`canvas-${appId}`);
         if (appId === 'time' && window.thealTimeApp) {
             container.innerHTML = thealTimeApp.render();
-            requestAnimationFrame(() => thealTimeApp.reboot());
+            // Wrap in setTimeout to ensure DOM is painted
+            setTimeout(() => thealTimeApp.reboot(), 10);
         } else if (appId === 'tnfi') {
             container.innerHTML = `
                 <div style="padding:20px;">
                     <h3>Bank of Sovereign</h3>
                     <p>Investor Status: <strong>Verified</strong></p>
-                    <p>2025 Allotment: <strong>EPOS Initial</strong></p>
+                    <p>2025 Allotment: <strong>EPOS Initial Grant</strong></p>
                 </div>`;
         } else {
             container.innerHTML = `<div style="padding:20px;">${app.name} system online.</div>`;
         }
+    }
+
+    minimizeWindow(id) {
+        const el = document.getElementById(id);
+        if (el) el.style.display = 'none';
+    }
+
+    toggleMaximize(id) {
+        const el = document.getElementById(id);
+        if (el) el.classList.toggle('maximized');
     }
 
     openAppMenu() {
@@ -154,12 +165,11 @@ class TLC_Kernel {
         gridHTML += '</div>';
 
         win.innerHTML = `
-            <div class="window-header"><span>Sovereign Apps</span><button id="close-menu">×</button></div>
+            <div class="window-header"><span>Sovereign Apps</span><button class="win-btn close" id="close-menu">×</button></div>
             <div class="window-content">${gridHTML}</div>
         `;
         document.getElementById('workspace').appendChild(win);
 
-        // Bind grid clicks
         win.querySelector('#close-menu').onclick = () => this.closeWindow(winId);
         registry.forEach(app => {
             const btn = document.getElementById(`launch-${app.id}`);
@@ -195,40 +205,32 @@ class TLC_Kernel {
 
     makeDraggable(el) {
         const header = el.querySelector('.window-header');
-        
         const dragStart = (e) => {
             if (e.target.closest('.win-btn') || el.classList.contains('maximized')) return;
-            
             const clientX = e.type.includes('touch') ? e.touches[0].clientX : e.clientX;
             const clientY = e.type.includes('touch') ? e.touches[0].clientY : e.clientY;
-
             let startTop = parseInt(window.getComputedStyle(el).top) || 60;
             let startLeft = parseInt(window.getComputedStyle(el).left) || 20;
-            
             const move = (moveE) => {
                 const curX = moveE.type.includes('touch') ? moveE.touches[0].clientX : moveE.clientX;
                 const curY = moveE.type.includes('touch') ? moveE.touches[0].clientY : moveE.clientY;
                 el.style.top = (startTop + (curY - clientY)) + "px";
                 el.style.left = (startLeft + (curX - clientX)) + "px";
             };
-
             const stop = () => {
                 document.removeEventListener('mousemove', move);
                 document.removeEventListener('mouseup', stop);
                 document.removeEventListener('touchmove', move);
                 document.removeEventListener('touchend', stop);
             };
-
             document.addEventListener('mousemove', move);
             document.addEventListener('mouseup', stop);
             document.addEventListener('touchmove', move, { passive: false });
             document.addEventListener('touchend', stop);
         };
-
         header.onmousedown = dragStart;
         header.ontouchstart = dragStart;
     }
 }
-
-// Global exposure
+// Initialize the Kernel
 window.kernel = new TLC_Kernel();

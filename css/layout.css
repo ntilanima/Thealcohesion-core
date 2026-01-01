@@ -9,9 +9,14 @@
     display: none; 
     flex-direction: row;
     width: 100vw;
-    height: calc(100vh - 35px); /* Matches viewport minus top-bar */
+    /* Use 'fixed' to ensure it fills the available space below the top bar */
+    height: calc(100vh - 35px); 
+    position: fixed;
+    top: 35px;
+    left: 0;
     overflow: hidden;
 }
+
 
 #top-bar {
     height: 35px;
@@ -28,18 +33,20 @@
 }
 
 /* --- SIDE DOCK --- */
+
 #side-dock {
     width: var(--dock-width) !important;
     background: rgba(10, 10, 10, 0.85);
     display: flex !important;
-    flex-direction: column; 
+    flex-direction: column !important;
     align-items: center;
-    padding: 10px 0; 
+    padding: 10px 0;
     gap: 8px;
-    height: 100%; /* Changed from 100vh to fill parent exactly */
+    /* Use 100% so it never exceeds the #os-root height */
+    height: 100% !important; 
     border-right: 1px solid rgba(255, 255, 255, 0.1);
     box-sizing: border-box;
-    flex-shrink: 0;
+    flex-shrink: 0; /* Prevents the dock from collapsing */
 }
 
 .dock-item {
