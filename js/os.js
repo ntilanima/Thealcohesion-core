@@ -101,25 +101,65 @@ class TLC_Kernel {
     }
 
     launchApp(appId) {
-        const app = registry.find(a => a.id === appId);
-        if (!app) return;
+    const app = registry.find(a => a.id === appId);
+    if (!app) return;
 
-        console.log(`Launching ${app.name}...`);
+    // Create the Window Shell
+    const win = document.createElement('div');
+    win.className = 'os-window';
+    win.id = `window-${app.id}`;
+    
+    // Position it randomly so windows don't stack perfectly
+    win.style.top = (100 + Math.random() * 50) + "px";
+    win.style.left = (200 + Math.random() * 50) + "px";
 
-        const win = document.createElement('div');
-        win.className = 'os-window';
-        win.innerHTML = `
-            <div class="window-header">
-                <span class="title">${app.icon} ${app.name}</span>
-                <button class="close-btn" onclick="this.closest('.os-window').remove()">×</button>
+    win.innerHTML = `
+        <div class="window-header">
+            <span class="title">${app.icon} ${app.name}</span>
+            <div class="window-controls">
+                <button class="win-btn close">×</button>
             </div>
-            <div class="window-content">
-                <p>Accessing ${app.name} VFS...</p>
-                <div class="spinner"></div>
-            </div>
-        `;
-        document.getElementById('workspace').appendChild(win);
+        </div>
+        <div class="window-content" id="window-body-${app.id}">
+            <p>Booting ${app.name}...</p>
+        </div>
+    `;
+
+    document.getElementById('workspace').appendChild(win);
+    win.querySelector('.close').onclick = () => win.remove();
+
+    // Specific Logic for the Temporal Engine
+    if (appId === 'time') {
+        window.thealTimeApp.renderHUD(`window-body-${app.id}`);
+    } 
+    
+    // Specific Logic for TNFI / Allotments
+    if (appId === 'tnfi') {
+        this.loadFinancialData(`window-body-${app.id}`);
     }
+
+    // LINKING THEAL TIME APP TO THE OS
+    if (appId === 'time') {
+        const body = document.getElementById(`app-body-${app.id}`);
+        // Inject the HTML from your time.js render function
+        body.innerHTML = thealTimeApp.render();
+    }
+}
+
+/**
+ * Recalls EPOS and Investor data for initial allotment
+ */
+loadFinancialData(containerId) {
+    const target = document.getElementById(containerId);
+    target.innerHTML = `
+        <h3>Genesis Allotment Ledger</h3>
+        <ul>
+            <li><strong>EPOS:</strong> Initial Allotment Managed</li>
+            <li><strong>Investors:</strong> Strategic Pool Allocated</li>
+        </ul>
+        <div class="loading-bar"></div>
+    `;
+}
 }
 
 // Global kernel instance
