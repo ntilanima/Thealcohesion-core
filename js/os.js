@@ -120,7 +120,60 @@ class TLC_Kernel {
     }
 
     launchApp(appId) {
-        // ... (Existing launchApp code from previous turns)
+    const app = registry.find(a => a.id === appId);
+    if (!app) return;
+
+    const win = document.createElement('div');
+    win.className = 'os-window';
+    win.style.left = '150px'; // Initial spawn position
+    win.style.top = '100px';
+
+    win.innerHTML = `
+        <div class="window-header">
+            <span class="title">${app.icon} ${app.name}</span>
+            <div class="window-controls">
+                <button class="win-btn close">×</button>
+            </div>
+        </div>
+        <div class="window-content" id="app-body-${app.id}">
+            ${appId === 'time' ? thealTimeApp.render() : `<p>Loading ${app.name}...</p>`}
+        </div>
+    `;
+
+    document.getElementById('workspace').appendChild(win);
+    
+    // Make Draggable
+    this.makeDraggable(win);
+
+    // Close Button
+    win.querySelector('.close').onclick = () => win.remove();
+    }
+
+    makeDraggable(el) {
+    const header = el.querySelector('.window-header');
+    let pos1 = 0, pos2 = 0, pos3 = 0, pos4 = 0;
+
+    header.onmousedown = (e) => {
+        e.preventDefault();
+        // Get mouse position at startup
+        pos3 = e.clientX;
+        pos4 = e.clientY;
+        document.onmouseup = () => {
+            document.onmouseup = null;
+            document.onmousemove = null;
+        };
+        document.onmousemove = (e) => {
+            e.preventDefault();
+            // Calculate new cursor position
+            pos1 = pos3 - e.clientX;
+            pos2 = pos4 - e.clientY;
+            pos3 = e.clientX;
+            pos4 = e.clientY;
+            // Set element's new position
+            el.style.top = (el.offsetTop - pos2) + "px";
+            el.style.left = (el.offsetLeft - pos1) + "px";
+        };
+    };
     }
 }
 

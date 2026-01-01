@@ -238,3 +238,23 @@
     padding: 20px;
     height: 100%;
 }
+
+/* DRAGGABLE WINDOWS */
+.os-window {
+    position: absolute; /* Required for dragging */
+    z-index: 1000;
+    transition: box-shadow 0.3s ease;
+}
+
+.os-window:active {
+    z-index: 2000; /* Brings the current window to the front */
+    box-shadow: 0 30px 60px rgba(0, 0, 0, 0.8);
+}
+
+.window-header {
+    cursor: grab; /* Shows the user they can move it */
+}
+
+.window-header:active {
+    cursor: grabbing;
+}
