@@ -1,6 +1,12 @@
 /* --- CORE LAYOUT --- */
+:root {
+    --app-size: clamp(48px, 6vh, 64px); /* Scaled for Samsung A16 */
+    --running-accent: #a445ff;
+    --dock-width: calc(var(--app-size) + 16px);
+}
+
 #os-root {
-    display: none; /* Controlled by JS transition */
+    display: none; /* JS will change to 'flex' */
     flex-direction: row;
     width: 100vw;
     height: calc(100vh - 35px);
@@ -21,30 +27,77 @@
     z-index: 9999;
 }
 
+/* --- SIDE DOCK (Unified) --- */
 #side-dock {
-    width: 70px !important;
-    background: rgba(0, 0, 0, 0.7);
+    width: var(--dock-width) !important;
+    background: rgba(10, 10, 10, 0.85);
     display: flex !important;
     flex-direction: column;
     align-items: center;
-    padding-top: 15px;
-    gap: 12px;
+    padding: 10px 0;
+    gap: 8px; /* Tight gap for mobile */
     height: 100%;
+    border-right: 1px solid rgba(255, 255, 255, 0.1);
     flex-shrink: 0;
 }
 
+.dock-item {
+    position: relative;
+    width: var(--app-size);
+    height: var(--app-size);
+    background: linear-gradient(145deg, rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0.05));
+    border-radius: 22%; /* Ubuntu Squircle */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+.dock-item span {
+    font-size: calc(var(--app-size) * 0.5);
+}
+
+/* RUNNING INDICATOR (Ubuntu Style) */
+.dock-item.running::before {
+    content: '';
+    position: absolute;
+    left: -5px;
+    top: 25%;
+    height: 50%;
+    width: 3px;
+    background: var(--running-accent);
+    border-radius: 2px;
+    box-shadow: 0 0 8px var(--running-accent);
+}
+
+/* --- RESPONSIVE SLOT LOGIC --- */
+
+/* Mobile: Height < 750px (Like Samsung A16) -> Show 8 Apps */
+@media (max-height: 750px) {
+    .dock-item:nth-child(n+9) {
+        display: none !important;
+    }
+}
+
+/* Tablet/Desktop: Height > 751px -> Show 12 Apps */
+@media (min-height: 751px) {
+    #side-dock { gap: 12px; } /* More space on big screens */
+    .dock-item:nth-child(n+9) {
+        display: flex !important;
+    }
+}
+
+/* --- WORKSPACE & WINDOWS --- */
 #workspace {
     flex-grow: 1;
     height: 100%;
     position: relative;
     overflow: hidden;
-    background: transparent;
 }
 
-/* --- WINDOW SYSTEM --- */
 .os-window {
     position: absolute !important;
-    margin: 0 !important;
     width: 850px;
     height: 550px;
     background: rgba(30, 30, 30, 0.85);
@@ -56,24 +109,16 @@
     flex-direction: column;
     overflow: hidden;
     z-index: 1000;
-    /* Smooth transitions for Maximize/Hide */
-    /*transition: width 0.3s cubic-bezier(0.165, 0.84, 0.44, 1), 
-                height 0.3s cubic-bezier(0.165, 0.84, 0.44, 1), 
-                top 0.3s ease, left 0.3s ease, 
-                opacity 0.3s ease, transform 0.3s ease; */
 }
 
-/* WINDOW STATES */
 .os-window.maximized {
     width: 100% !important;
     height: 100% !important;
     top: 0 !important;
     left: 0 !important;
     border-radius: 0;
-    z-index: 5000;
 }
 
-/* --- HEADER & CONTROLS --- */
 .window-header {
     height: 38px;
     background: linear-gradient(to bottom, #444, #333);
@@ -82,161 +127,10 @@
     align-items: center;
     padding: 0 12px;
     cursor: grab;
-    user-select: none;
-}
-
-.window-header:active { cursor: grabbing; }
-
-.window-controls {
-    display: flex;
-    gap: 8px;
-}
-
-.win-btn {
-    width: 12px; /* Smaller Ubuntu style dots or keep your size */
-    height: 12px;
-    border-radius: 50%;
-    border: none;
-    cursor: pointer;
-    font-size: 9px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    color: transparent; /* Hide icons until hover */
-    transition: 0.2s;
-}
-
-.win-btn:hover { color: rgba(0,0,0,0.6); }
-
-.win-btn.close { background: #ff5f56; }
-.win-btn.hide { background: #ffbd2e; }
-.win-btn.expand { background: #27c93f; }
-
-/* --- CONTENT AREA --- */
-.window-content {
-    flex: 1;
-    position: relative;
-    overflow-y: auto;
-    color: #eee;
-}
-
-/* TEMPORAL ENGINE SPECIFIC OVERRIDE */
-.calendar-app-window {
-    height: 100%;
-    display: flex;
-    flex-direction: column;
-    background: #050505;
-}
-/* --- DOCK & APP MENU (Mobile Optimized) --- */
-
-:root {
-    /* Responsive sizing: Min 40px, Preferred 5vh, Max 64px */
-    --app-size: clamp(40px, 6vh, 64px);
-    --dock-width: calc(var(--app-size) + 20px);
-}
-
-#side-dock {
-    width: var(--dock-width) !important;
-    background: rgba(10, 10, 10, 0.85);
-    display: flex !important;
-    flex-direction: column;
-    align-items: center;
-    padding: 10px 0;
-    /* This gap adjusts based on the app size to fit 12 slots */
-    gap: calc(var(--app-size) * 0.15); 
-    height: 100%;
-    border-right: 1px solid rgba(255, 255, 255, 0.1);
-    transition: width 0.3s ease;
-}
-
-.dock-item {
-    width: var(--app-size);
-    height: var(--app-size);
-    background: linear-gradient(145deg, rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0.05));
-    border-radius: 22%; /* Perfect Ubuntu squircle */
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    cursor: pointer;
-    position: relative;
-    transition: all 0.2s ease;
-}
-
-/* Responsive Icon Size */
-.dock-item span {
-    font-size: calc(var(--app-size) * 0.5);
-}
-
-.dock-item:hover {
-    transform: scale(1.1) translateX(5px);
-    background: rgba(255, 255, 255, 0.2);
-}
-
-/* Indicator for "Open" apps */
-.dock-item.running::after {
-    content: '';
-    position: absolute;
-    left: -8px;
-    width: 4px;
-    height: 15px;
-    background: #a445ff;
-    border-radius: 2px;
-}
-
-:root {
-    --app-size: clamp(48px, 6vh, 64px);
-    --running-accent: #a445ff; /* Sovereign Purple */
-}
-
-#side-dock {
-    width: calc(var(--app-size) + 16px) !important;
-    background: rgba(10, 10, 10, 0.8);
-    display: flex !important;
-    flex-direction: column;
-    align-items: center;
-    padding: 10px 0;
-    gap: 10px;
-    height: 100%;
-    border-right: 1px solid rgba(255, 255, 255, 0.1);
-}
-
-/* THE RUNNING INDICATOR */
-.dock-item {
-    position: relative;
-    width: var(--app-size);
-    height: var(--app-size);
-    transition: transform 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-}
-
-/* The "Running Dot" - Ubuntu style */
-.dock-item.running::before {
-    content: '';
-    position: absolute;
-    left: -6px;
-    top: 50%;
-    transform: translateY(-50%);
-    width: 4px;
-    height: 12px;
-    background: var(--running-accent);
-    border-radius: 2px;
-    box-shadow: 0 0 8px var(--running-accent);
-}
-
-/* RESPONSIVE SLOT LOGIC */
-/* By default (Mobile/Samsung A16), we show 8 slots */
-.dock-item:nth-child(n+9) {
-    display: none; 
-}
-
-/* On Tablets/Desktops (Height > 800px), we show 12 slots */
-@media (min-height: 800px) {
-    .dock-item:nth-child(n+9) {
-        display: flex; /* Reveal apps 9 through 12 */
-    }
 }
 
 .dock-bottom-trigger {
-    margin-top: auto; /* Always stays at the bottom regardless of slot count */
+    margin-top: auto;
     width: var(--app-size);
     height: var(--app-size);
     display: flex;
@@ -247,32 +141,6 @@
     color: var(--running-accent);
 }
 
-/* Mobile View (Samsung A16 style) */
-@media (max-height: 750px) {
-    .dock-item.mobile-hide {
-        display: none !important;
-    }
-    #side-dock {
-        gap: 5px; /* Tighter gap for mobile */
-    }
-}
-
-/* Tablet/Desktop View */
-@media (min-height: 751px) {
-    .dock-item.mobile-hide {
-        display: flex !important;
-    }
-}
-
-/* Indicators */
-.dock-item.running::before {
-    content: '';
-    position: absolute;
-    left: -5px;
-    top: 25%;
-    height: 50%;
-    width: 3px;
-    background: #a445ff;
-    border-radius: 2px;
-    box-shadow: 0 0 5px #a445ff;
-}
+.win-btn.close { background: #ff5f56; }
+.win-btn.hide { background: #ffbd2e; }
+.win-btn.expand { background: #27c93f; }
