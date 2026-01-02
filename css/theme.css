@@ -237,3 +237,17 @@ body, html {
     z-index: 1;
     pointer-events: none;
 }
+
+/* --- RESPONSIVE ADJUSTMENTS FOR SMALL SCREENS --- */
+@media (max-width: 768px) {
+    #term-output {
+        font-size: 11px !important;
+        white-space: pre-wrap !important; /* Forces text to wrap instead of stretching window */
+        word-break: break-all;
+    }
+    
+    .os-window {
+        /* Prevents the window from expanding beyond its boundaries */
+        max-width: calc(100vw - 95px) !important; 
+    }
+}
