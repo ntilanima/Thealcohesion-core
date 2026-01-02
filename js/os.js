@@ -2,6 +2,7 @@ import { registry } from './registry.js';
 
 class TLC_Kernel {
     constructor() {
+        this.DOCK_WIDTH = 70; // Width in pixels
         this.pinnedApps = ['time', 'tnfi', 'terminal', 'files', 'browser', 'messages', 'camera', 'settings']; 
         this.runningApps = new Set(); 
         
@@ -292,14 +293,31 @@ class TLC_Kernel {
 
     closeApp(appId, winId) {
     const el = document.getElementById(winId);
+    const root = document.getElementById('os-root');
+    const dock = document.getElementById('side-dock');
+
     if (el) {
-        // Play closing animation
-        el.classList.add('closing'); 
+        el.classList.add('closing');
+        
+        // --- DOCK RECOVERY LOGIC ---
+        // If we are closing a maximized window or a window touching the dock
+        const rect = el.getBoundingClientRect();
+        if (el.classList.contains('maximized') || rect.left < this.DOCK_WIDTH) {
+            // Wait slightly so the window starts fading before the dock slides back
+            setTimeout(() => {
+                dock.classList.add('smooth-return');
+                dock.style.transform = `translateX(0%)`;
+                dock.style.opacity = "1";
+                root.classList.remove('dock-hidden');
+            }, 100);
+        }
+
         setTimeout(() => {
             el.remove();
             this.runningApps.delete(appId);
             this.bootShell();
-        }, 300); // Matches the CSS transition time
+            this.updateDockSafety();
+        }, 300);
     }
     }
 
@@ -315,13 +333,61 @@ class TLC_Kernel {
             setTimeout(() => {
                 el.style.display = 'none';
                 el.classList.remove('minimizing');
-            }, 300);
+                this.updateDockSafety();
+            }, 400);
+            
         }
     }
 
     toggleMaximize(id) {
-        const el = document.getElementById(id);
-        if (el) el.classList.toggle('maximized');
+    const el = document.getElementById(id);
+    const root = document.getElementById('os-root');
+    const dock = document.getElementById('side-dock');
+
+    if (el) {
+        const isMaximized = el.classList.toggle('maximized');
+        
+        // Ensure dock is in smooth-return mode for the toggle
+        dock.classList.add('smooth-return');
+
+        if (isMaximized) {
+            dock.style.transform = `translateX(-100%)`;
+            dock.style.opacity = "0";
+            root.classList.add('dock-hidden');
+        } else {
+            // Restore only if the window isn't currently sitting on the dock
+            const rect = el.getBoundingClientRect();
+            if (rect.left >= this.DOCK_WIDTH) {
+                dock.style.transform = `translateX(0%)`;
+                dock.style.opacity = "1";
+                root.classList.remove('dock-hidden');
+            }
+        }
+    }
+    this.updateDockSafety();
+    }
+
+    updateDockSafety() {
+    const root = document.getElementById('os-root');
+    const dock = document.getElementById('side-dock');
+    const windows = document.querySelectorAll('.os-window:not(.closing):not(.minimizing)');
+    
+    let shouldHide = false;
+
+    windows.forEach(win => {
+        const rect = win.getBoundingClientRect();
+        // If any window is maximized OR touching the dock zone
+        if (win.classList.contains('maximized') || (rect.left < this.DOCK_WIDTH && win.style.display !== 'none')) {
+            shouldHide = true;
+        }
+    });
+
+    if (!shouldHide) {
+        dock.classList.add('smooth-return');
+        dock.style.transform = `translateX(0%)`;
+        dock.style.opacity = "1";
+        root.classList.remove('dock-hidden');
+    }
     }
 
     focusWindow(id) {
@@ -332,6 +398,10 @@ class TLC_Kernel {
             // Trigger spring-back if it was minimized
             requestAnimationFrame(() => el.classList.add('visible'));
         }
+        // Brief delay to ensure display:flex is registered before removing classes
+        requestAnimationFrame(() => {
+            el.classList.remove('minimizing');
+        });
     }
 
     getTopZIndex() {
@@ -486,69 +556,111 @@ class TLC_Kernel {
     output.scrollTop = output.scrollHeight;
     }
 
+    updateDockSafety() {
+    const dock = document.getElementById('side-dock');
+    if (!dock) return;
+
+    const windows = document.querySelectorAll('.os-window:not(.closing)');
+    let activeCollision = false;
+
+    windows.forEach(win => {
+        const rect = win.getBoundingClientRect();
+        const isMax = win.classList.contains('maximized');
+        const isVisible = win.style.display !== 'none';
+        
+        if (isVisible && (isMax || rect.left < this.DOCK_WIDTH)) {
+            activeCollision = true;
+        }
+    });
+
+    dock.classList.add('smooth-return');
+    if (activeCollision) {
+        dock.style.transform = `translateX(-110%)`; // Push it slightly further
+        dock.style.opacity = "0";
+        // Prevent accidental clicks on a hidden dock
+        dock.style.pointerEvents = "none"; 
+    } else {
+        dock.style.transform = `translateX(0%)`;
+        dock.style.opacity = "1";
+        dock.style.pointerEvents = "all";
+    }
+    }
+
     makeDraggable(el) {
     const header = el.querySelector('.window-header');
     const root = document.getElementById('os-root');
+    const dock = document.getElementById('side-dock');
     const preview = document.getElementById('snap-preview');
+    // Force the width to 70 for the calculation
+    const DW = 70; 
 
     const dragStart = (e) => {
         if (e.target.closest('.win-btn')) return;
-
-        // Restore from maximized if dragging header
-        if (el.classList.contains('maximized')) {
-            el.classList.remove('maximized');
-            // Logic to snap mouse to center of restored window
-            el.style.top = "100px"; 
-        }
+        
+        // Remove smooth transitions for 1:1 "push" feel
+        dock.classList.remove('smooth-return');
 
         const clientX = e.type.includes('touch') ? e.touches[0].clientX : e.clientX;
         const clientY = e.type.includes('touch') ? e.touches[0].clientY : e.clientY;
-        let startTop = parseInt(window.getComputedStyle(el).top);
-        let startLeft = parseInt(window.getComputedStyle(el).left);
+        
+        let startTop = parseInt(window.getComputedStyle(el).top) || 0;
+        let startLeft = parseInt(window.getComputedStyle(el).left) || 0;
 
-        const move = (moveE) => {
-            const curX = moveE.type.includes('touch') ? moveE.touches[0].clientX : moveE.clientX;
-            const curY = moveE.type.includes('touch') ? moveE.touches[0].clientY : moveE.clientY;
+    // Inside TLC_Kernel -> makeDraggable(el)
+const move = (moveE) => {
+    const curX = moveE.type.includes('touch') ? moveE.touches[0].clientX : moveE.clientX;
+    const curY = moveE.type.includes('touch') ? moveE.touches[0].clientY : moveE.clientY;
 
-            // 1. DOCK HIDE (Left edge)
-            if (curX < 15) {
-                root.classList.add('dock-hidden');
-            }
+    let newLeft = startLeft + (curX - clientX);
+    let newTop = startTop + (curY - clientY);
 
-            // 2. SNAP PREVIEW (Top edge)
-            if (curY < 40) {
-                preview.classList.add('active');
-            } else {
-                preview.classList.remove('active');
-            }
+    // 1. BOUNDARY: Keep window header accessible
+    const viewportW = window.innerWidth;
+    const viewportH = window.innerHeight;
+    
+    // Allow window to go mostly off-screen to the right, but keep 50px of header visible on the left
+    newLeft = Math.max(50 - el.offsetWidth, Math.min(newLeft, viewportW - 50));
+    newTop = Math.max(0, Math.min(newTop, viewportH - 40));
 
-            el.style.top = (startTop + (curY - clientY)) + "px";
-            el.style.left = (startLeft + (curX - clientX)) + "px";
-        };
+    // 2. DOCK PUSH: Calculate based on screen-absolute 'newLeft'
+    const DW = this.DOCK_WIDTH || 70; 
+    const dock = document.getElementById('side-dock');
 
+    if (newLeft < DW) {
+        // Linear mapping: as newLeft goes from 70 to 0, pushPercent goes from 0 to 100
+        const pushPercent = Math.max(0, Math.min(100, ((DW - newLeft) / DW) * 100));
+        
+        dock.style.transform = `translateX(-${pushPercent}%)`;
+        dock.style.opacity = 1 - (pushPercent / 100);
+    } else {
+        dock.style.transform = `translateX(0%)`;
+        dock.style.opacity = "1";
+    }
+
+    // Apply the position to the window
+    el.style.left = newLeft + "px";
+    el.style.top = newTop + "px";
+};
         const stop = (stopE) => {
             const finalY = stopE.type.includes('touchend') ? stopE.changedTouches[0].clientY : stopE.clientY;
             
+            dock.classList.add('smooth-return');
             preview.classList.remove('active');
 
-            if (finalY < 40) {
-                this.toggleMaximize(el.id);
-            }
+            if (finalY < 40) this.toggleMaximize(el.id);
+            
+            // Critical: Ensure the dock is in the correct state after drop
+            this.updateDockSafety();
 
             document.removeEventListener('mousemove', move);
             document.removeEventListener('mouseup', stop);
-            document.removeEventListener('touchmove', move);
-            document.removeEventListener('touchend', stop);
         };
 
         document.addEventListener('mousemove', move);
         document.addEventListener('mouseup', stop);
-        document.addEventListener('touchmove', move, { passive: false });
-        document.addEventListener('touchend', stop);
     };
 
     header.onmousedown = dragStart;
-    header.ontouchstart = dragStart;
     }
 }
 
