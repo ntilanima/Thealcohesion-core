@@ -182,14 +182,26 @@ body, html {
 }
 
 @media (max-width: 768px) {
-    .window-header {
-        padding: 0 8px; /* Tighter headers for mobile */
+    .os-window {
+        min-width: 240px; /* Minimum usable width */
+        max-width: calc(100vw - 95px); /* Ensure it stays within bounds */
     }
+    
+    .window-header {
+        padding: 0 10px;
+    }
+
     .title {
         font-size: 0.75rem;
         white-space: nowrap;
         overflow: hidden;
         text-overflow: ellipsis;
+        max-width: 120px; /* Prevents title from pushing buttons out */
+    }
+    
+    .win-btn {
+        width: 28px; /* Slightly smaller for mobile */
+        height: 24px;
     }
 }
 

@@ -189,6 +189,8 @@ class TLC_Kernel {
             win.style.left = `${DW + margin + stagger}px`;
             win.style.top = `${topMargin + stagger}px`;
         }
+        win.style.zIndex = this.getTopZIndex();
+
         // Use a local count for staggering to ensure it's accurate
         const staggerIndex = this.runningApps.size - 1;
         const staggerOffset = staggerIndex * 25;
@@ -632,40 +634,48 @@ class TLC_Kernel {
         let startLeft = parseInt(window.getComputedStyle(el).left) || 0;
 
     // Inside TLC_Kernel -> makeDraggable(el)
-    const move = (moveE) => {
-        const curX = moveE.type.includes('touch') ? moveE.touches[0].clientX : moveE.clientX;
-        const curY = moveE.type.includes('touch') ? moveE.touches[0].clientY : moveE.clientY;
+        const move = (moveE) => {
+    const curX = moveE.type.includes('touch') ? moveE.touches[0].clientX : moveE.clientX;
+    const curY = moveE.type.includes('touch') ? moveE.touches[0].clientY : moveE.clientY;
 
-        let newLeft = startLeft + (curX - clientX);
-        let newTop = startTop + (curY - clientY);
+    let newLeft = startLeft + (curX - clientX);
+    let newTop = startTop + (curY - clientY);
 
-        // 1. BOUNDARY: Keep window header accessible
-        const viewportW = window.innerWidth;
-        const viewportH = window.innerHeight;
-        
-        // Allow window to go mostly off-screen to the right, but keep 50px of header visible on the left
-        newLeft = Math.max(50 - el.offsetWidth, Math.min(newLeft, viewportW - 50));
-        newTop = Math.max(0, Math.min(newTop, viewportH - 40));
+    // --- BOUNDARY CONSTRAINTS ---
+    const viewportW = window.innerWidth;
+    const viewportH = window.innerHeight;
+    const topBarH = 35; // Matches --top-bar-h
+    const dockW = 70;   // Matches --dock-width
 
-        // 2. DOCK PUSH: Calculate based on screen-absolute 'newLeft'
-        const DW = this.DOCK_WIDTH || 70; 
-        const dock = document.getElementById('side-dock');
+    // 1. Left Limit: Don't go behind the dock (stay at 75px on mobile)
+    const minLeft = (viewportW < 768) ? (dockW + 5) : 0;
+    
+    // 2. Right Limit: Window width + position cannot exceed screen width
+    const maxLeft = viewportW - el.offsetWidth;
 
-        if (newLeft < DW) {
-            // Linear mapping: as newLeft goes from 70 to 0, pushPercent goes from 0 to 100
-            const pushPercent = Math.max(0, Math.min(100, ((DW - newLeft) / DW) * 100));
-            
-            dock.style.transform = `translateX(-${pushPercent}%)`;
-            dock.style.opacity = 1 - (pushPercent / 100);
-        } else {
-            dock.style.transform = `translateX(0%)`;
-            dock.style.opacity = "1";
-        }
+    // 3. Top Limit: Cannot go above the Top Bar
+    const minTop = 0; 
 
-        // Apply the position to the window
-        el.style.left = newLeft + "px";
-        el.style.top = newTop + "px";
-    };
+    // 4. Bottom Limit: Cannot go below the screen
+    const maxTop = (viewportH - topBarH) - el.offsetHeight;
+
+    // Apply strict clamping
+    newLeft = Math.max(minLeft, Math.min(newLeft, maxLeft));
+    newTop = Math.max(minTop, Math.min(newTop, maxTop));
+
+    // --- DOCK PUSH LOGIC (Keep your existing code here) ---
+    if (newLeft < dockW) {
+        const pushPercent = Math.max(0, Math.min(100, ((dockW - newLeft) / dockW) * 100));
+        dock.style.transform = `translateX(-${pushPercent}%)`;
+        dock.style.opacity = 1 - (pushPercent / 100);
+    } else {
+        dock.style.transform = `translateX(0%)`;
+        dock.style.opacity = "1";
+    }
+
+    el.style.left = newLeft + "px";
+    el.style.top = newTop + "px";
+};
     const stop = (stopE) => {
             const finalY = stopE.type.includes('touchend') ? stopE.changedTouches[0].clientY : stopE.clientY;
             
