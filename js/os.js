@@ -138,7 +138,7 @@ class TLC_Kernel {
         menuBtn.onclick = () => this.openAppMenu();
         dock.appendChild(menuBtn);
     }
-
+    // Application Launcher
     launchApp(appId) {
     // Close overlay if open
     const overlay = document.getElementById('app-menu-overlay');
@@ -164,19 +164,44 @@ class TLC_Kernel {
     win.className = 'os-window';
     win.id = winId;
 
-    // --- STEP: STAGGERED OPENING POSITION ---
-    const wsWidth = workspace.offsetWidth;
-    const wsHeight = workspace.offsetHeight;
-    const winWidth = Math.min(750, wsWidth * 0.9); 
-    const winHeight = Math.min(500, wsHeight * 0.8);
+    // --- STEP: INDUSTRIAL FIXED POSITIONING ---
+        const DW = 70;         // Dock width
+        const margin = 5;      // Margin from dock
+        const topMargin = 10;  // Margin from top bar
+        const rightMargin = 20; // 20px from right edge
+        const isMobile = window.innerWidth < 768;
 
-    // Stagger logic: 30px offset per running app
-    const offset = (this.runningApps.size - 1) * 30;
-    win.style.width = `${winWidth}px`;
-    win.style.height = `${winHeight}px`;
-    win.style.left = `${((wsWidth - winWidth) / 2) + offset}px`;
-    win.style.top = `${((wsHeight - winHeight) / 2) + offset}px`;
-    win.style.zIndex = this.getTopZIndex();
+        const stagger = (this.runningApps.size - 1) * 20;
+
+        if (isMobile) {
+            // MOBILE: Fixed margins, dynamic width
+            win.style.top = `${topMargin + stagger}px`;
+            win.style.left = `${DW + margin + stagger}px`;
+            
+            // Instead of width, we set the right property or calc the width
+            // Width = Total Width - Dock(70) - LeftMargin(5) - RightMargin(20)
+            win.style.width = `calc(100vw - ${DW + margin + rightMargin}px)`;
+            win.style.height = `70vh`; // Adjust height for mobile visibility
+        } else {
+            // DESKTOP: Original fixed size
+            win.style.width = "750px";
+            win.style.height = "500px";
+            win.style.left = `${DW + margin + stagger}px`;
+            win.style.top = `${topMargin + stagger}px`;
+        }
+        // Use a local count for staggering to ensure it's accurate
+        const staggerIndex = this.runningApps.size - 1;
+        const staggerOffset = staggerIndex * 25;
+
+        // Apply dimensions
+        win.style.width = "750px";
+        win.style.height = "500px";
+
+        // Apply exact coordinates relative to the workspace
+        win.style.left = (DW + margin + staggerOffset) + "px";
+        win.style.top = (topMargin + staggerOffset) + "px";
+
+        // Apply Z-Index
 
     // --- STEP: INDUSTRIAL ICONS (NO TRAFFIC LIGHTS) ---
     win.innerHTML = `
@@ -242,7 +267,7 @@ class TLC_Kernel {
     }
 }
 
-// ... before makeDraggable ...
+//open App Menu (Sovereign Launcher)
     openAppMenu() {
         const overlay = document.getElementById('app-menu-overlay');
         const grid = document.getElementById('app-grid-container');
@@ -607,41 +632,41 @@ class TLC_Kernel {
         let startLeft = parseInt(window.getComputedStyle(el).left) || 0;
 
     // Inside TLC_Kernel -> makeDraggable(el)
-const move = (moveE) => {
-    const curX = moveE.type.includes('touch') ? moveE.touches[0].clientX : moveE.clientX;
-    const curY = moveE.type.includes('touch') ? moveE.touches[0].clientY : moveE.clientY;
+    const move = (moveE) => {
+        const curX = moveE.type.includes('touch') ? moveE.touches[0].clientX : moveE.clientX;
+        const curY = moveE.type.includes('touch') ? moveE.touches[0].clientY : moveE.clientY;
 
-    let newLeft = startLeft + (curX - clientX);
-    let newTop = startTop + (curY - clientY);
+        let newLeft = startLeft + (curX - clientX);
+        let newTop = startTop + (curY - clientY);
 
-    // 1. BOUNDARY: Keep window header accessible
-    const viewportW = window.innerWidth;
-    const viewportH = window.innerHeight;
-    
-    // Allow window to go mostly off-screen to the right, but keep 50px of header visible on the left
-    newLeft = Math.max(50 - el.offsetWidth, Math.min(newLeft, viewportW - 50));
-    newTop = Math.max(0, Math.min(newTop, viewportH - 40));
-
-    // 2. DOCK PUSH: Calculate based on screen-absolute 'newLeft'
-    const DW = this.DOCK_WIDTH || 70; 
-    const dock = document.getElementById('side-dock');
-
-    if (newLeft < DW) {
-        // Linear mapping: as newLeft goes from 70 to 0, pushPercent goes from 0 to 100
-        const pushPercent = Math.max(0, Math.min(100, ((DW - newLeft) / DW) * 100));
+        // 1. BOUNDARY: Keep window header accessible
+        const viewportW = window.innerWidth;
+        const viewportH = window.innerHeight;
         
-        dock.style.transform = `translateX(-${pushPercent}%)`;
-        dock.style.opacity = 1 - (pushPercent / 100);
-    } else {
-        dock.style.transform = `translateX(0%)`;
-        dock.style.opacity = "1";
-    }
+        // Allow window to go mostly off-screen to the right, but keep 50px of header visible on the left
+        newLeft = Math.max(50 - el.offsetWidth, Math.min(newLeft, viewportW - 50));
+        newTop = Math.max(0, Math.min(newTop, viewportH - 40));
 
-    // Apply the position to the window
-    el.style.left = newLeft + "px";
-    el.style.top = newTop + "px";
-};
-        const stop = (stopE) => {
+        // 2. DOCK PUSH: Calculate based on screen-absolute 'newLeft'
+        const DW = this.DOCK_WIDTH || 70; 
+        const dock = document.getElementById('side-dock');
+
+        if (newLeft < DW) {
+            // Linear mapping: as newLeft goes from 70 to 0, pushPercent goes from 0 to 100
+            const pushPercent = Math.max(0, Math.min(100, ((DW - newLeft) / DW) * 100));
+            
+            dock.style.transform = `translateX(-${pushPercent}%)`;
+            dock.style.opacity = 1 - (pushPercent / 100);
+        } else {
+            dock.style.transform = `translateX(0%)`;
+            dock.style.opacity = "1";
+        }
+
+        // Apply the position to the window
+        el.style.left = newLeft + "px";
+        el.style.top = newTop + "px";
+    };
+    const stop = (stopE) => {
             const finalY = stopE.type.includes('touchend') ? stopE.changedTouches[0].clientY : stopE.clientY;
             
             dock.classList.add('smooth-return');
