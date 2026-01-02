@@ -2,7 +2,9 @@ import { registry } from './registry.js';
 
 class TLC_Kernel {
     constructor() {
-        this.DOCK_WIDTH = 70; 
+        this.DOCK_WIDTH = parseInt(
+            getComputedStyle(document.documentElement)
+            .getPropertyValue('--dock-width')); 
         this.pinnedApps = ['time', 'tnfi', 'terminal', 'files', 'browser', 'messages', 'camera', 'settings']; 
         this.runningApps = new Set(); 
         
@@ -27,8 +29,14 @@ class TLC_Kernel {
             if (isMobile) {
                 document.querySelectorAll('.os-window').forEach(win => {
                     // Re-apply the initial 75px left / 20px right rule on orientation change
-                    win.style.left = `75px`;
-                    win.style.width = `calc(100vw - 95px)`; 
+                    window.addEventListener('resize', () => {
+                    document.querySelectorAll('.os-window').forEach(win => {
+                        if (window.innerWidth < 768 && !win.classList.contains('maximized')) {
+                            win.style.left = "8px";
+                            win.style.width = "calc(100vw - 16px)";
+                        }
+                    });
+                });
                     let currentTop = parseInt(win.style.top);
                     if (currentTop < 0 || isNaN(currentTop)) {
                         win.style.top = "10px";
@@ -148,80 +156,85 @@ class TLC_Kernel {
     }
     
     launchApp(appId) {
-        const overlay = document.getElementById('app-menu-overlay');
-        if (overlay) {
-            overlay.classList.add('hidden');
-            overlay.style.display = 'none';
-        }
-
-        const app = registry.find(a => a.id === appId);
-        const workspace = document.getElementById('workspace');
-        if (!app || !workspace) return;
-
-        const winId = `win-${appId}`;
-        if (this.runningApps.has(appId)) {
-            this.focusWindow(winId);
-            return;
-        }
-
-        this.runningApps.add(appId);
-        this.bootShell(); 
-
-        const win = document.createElement('div');
-        win.className = 'os-window';
-        win.id = winId;
-
-        const DW = 70; 
-        const margin = 5;
-        const topMargin = 10;
-        const rightMargin = 20;
-        const isMobile = window.innerWidth < 768;
-        const stagger = (this.runningApps.size - 1) * 20;
-
-        if (isMobile) {
-                // STRICT MOBILE RULE: 75px from left, 20px from right
-                win.style.left = "75px"; 
-                win.style.top = `${10 + stagger}px`;
-                // Width = Full width - (75px left + 20px right)
-                win.style.width = "calc(100vw - 95px)"; 
-                win.style.height = "60vh";
-            } else {
-                // Desktop Default
-                win.style.width = "750px";
-                win.style.height = "500px";
-                win.style.left = `${this.DOCK_WIDTH + 10 + stagger}px`;
-                win.style.top = `${10 + stagger}px`;
-            }
-
-        win.style.zIndex = this.getTopZIndex();
-
-        win.innerHTML = `
-            <div class="window-header">
-                <span class="title">${app.icon} ${app.name}</span>
-                <div class="window-controls">
-                    <button class="win-btn hide" id="hide-${winId}"><svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" fill="none" stroke-width="2.5"><line x1="5" y1="12" x2="19" y2="12"></line></svg></button>
-                    <button class="win-btn expand" id="max-${winId}"><svg viewBox="0 0 24 24" width="12" height="12" stroke="currentColor" fill="none" stroke-width="2.5"><rect x="3" y="3" width="18" height="18" rx="1"></rect></svg></button>
-                    <button class="win-btn close" id="close-${winId}"><svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" fill="none" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg></button>
-                </div>
-            </div>
-            <div class="window-content" id="canvas-${appId}">
-                <div class="app-loading">System: Initializing ${app.name}...</div>
-            </div>`;
-
-        workspace.appendChild(win);
-        requestAnimationFrame(() => win.classList.add('visible'));
-
-        win.querySelector(`#hide-${winId}`).onclick = (e) => { e.stopPropagation(); this.minimizeWindow(winId); };
-        win.querySelector(`#max-${winId}`).onclick = (e) => { e.stopPropagation(); this.toggleMaximize(winId); };
-        win.querySelector(`#close-${winId}`).onclick = (e) => { e.stopPropagation(); this.closeApp(appId, winId); };
-        
-        win.onmousedown = () => this.focusWindow(winId);
-        win.addEventListener('touchstart', () => this.focusWindow(winId), {passive: true});
-        
-        this.makeDraggable(win);
-        this.injectAppContent(appId);
+    const overlay = document.getElementById('app-menu-overlay');
+    if (overlay) {
+        overlay.classList.add('hidden');
+        overlay.style.display = 'none';
     }
 
+    const app = registry.find(a => a.id === appId);
+    const workspace = document.getElementById('workspace');
+    if (!app || !workspace) return;
+
+    const winId = `win-${appId}`;
+    if (this.runningApps.has(appId)) {
+        this.focusWindow(winId);
+        return;
+    }
+
+    this.runningApps.add(appId);
+    this.bootShell(); 
+
+    const win = document.createElement('div');
+    win.className = 'os-window';
+    win.id = winId;
+
+    const isMobile = window.innerWidth < 768;
+    // Calculate stagger based on running apps for that "stacked cards" look
+    const stagger = (this.runningApps.size - 1) * 20;
+
+    if (window.innerWidth < 768) {
+        win.style.left = "8px";
+        win.style.top = `${10 + stagger}px`;
+        win.style.width = "calc(100vw - 16px)";
+        win.style.height = "calc(100dvh - 60px)";
+    } else {
+        // DESKTOP RULES
+        win.style.width = "clamp(320px, 60vw, 900px)";
+        win.style.height = "clamp(300px, 60vh, 700px)";
+        win.style.left = `${this.DOCK_WIDTH + 20 + stagger}px`;
+        win.style.top = `${20 + stagger}px`;
+    }
+
+    win.style.zIndex = this.getTopZIndex();
+
+    win.innerHTML = `
+        <div class="window-header">
+            <span class="title">${app.icon} ${app.name}</span>
+            <div class="window-controls">
+                <button class="win-btn hide" id="hide-${winId}"><svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" fill="none" stroke-width="2.5"><line x1="5" y1="12" x2="19" y2="12"></line></svg></button>
+                <button class="win-btn expand" id="max-${winId}"><svg viewBox="0 0 24 24" width="12" height="12" stroke="currentColor" fill="none" stroke-width="2.5"><rect x="3" y="3" width="18" height="18" rx="1"></rect></svg></button>
+                <button class="win-btn close" id="close-${winId}"><svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" fill="none" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg></button>
+            </div>
+        </div>
+        <div class="window-content" id="canvas-${appId}" style="height: calc(100% - 50px); overflow: auto;">
+            <div class="app-loading">System: Initializing ${app.name}...</div>
+        </div>`;
+
+    workspace.appendChild(win);
+    
+    // Smooth entry animation
+    requestAnimationFrame(() => {
+        win.style.opacity = "0";
+        win.style.transform = "translateY(20px)";
+        setTimeout(() => {
+            win.style.transition = "all 0.3s cubic-bezier(0.165, 0.84, 0.44, 1)";
+            win.style.opacity = "1";
+            win.style.transform = "translateY(0)";
+        }, 10);
+    });
+
+    // Control bindings
+    win.querySelector(`#hide-${winId}`).onclick = (e) => { e.stopPropagation(); this.minimizeWindow(winId); };
+    win.querySelector(`#max-${winId}`).onclick = (e) => { e.stopPropagation(); this.toggleMaximize(winId); };
+    win.querySelector(`#close-${winId}`).onclick = (e) => { e.stopPropagation(); this.closeApp(appId, winId); };
+    
+    win.onmousedown = () => this.focusWindow(winId);
+    win.addEventListener('touchstart', () => this.focusWindow(winId), {passive: true});
+    
+    this.makeDraggable(win);
+    this.injectAppContent(appId);
+}
     injectAppContent(appId) {
         const container = document.getElementById(`canvas-${appId}`);
         if (!container) return;

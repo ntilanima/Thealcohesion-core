@@ -3,7 +3,7 @@
     --top-bar-h: 35px;
     --app-size: clamp(48px, 6vh, 64px); /* Optimized for mobile/desktop scaling */
     --running-accent: #a445ff;
-    --dock-width: calc(var(--app-size) + 16px);
+    --dock-width: clamp(56px, 8vw, 72px);
 }
 
 /* --- RESET & CORE --- */
@@ -151,8 +151,8 @@ body, html {
     position: relative; /* Essential for containing absolute windows */
     overflow: hidden;
     margin: 0;
+    margin-left: var(--dock-width);
     z-index: 5;
-    width: auto; /* Ensures it fills remaining space */
 }
 
 #os-root.dock-hidden #workspace {
@@ -161,86 +161,58 @@ body, html {
 
 /* --- WINDOW SYSTEM (Unified & Optimized) --- */
 /* --- OPTIMIZED WINDOW SYSTEM --- */
+/* --- UPDATED WINDOW SYSTEM --- */
 .os-window {
     position: absolute;
     display: flex;
     flex-direction: column;
-    background: rgba(10, 10, 12, 0.8);
-    backdrop-filter: blur(12px) saturate(150%);
-    border: 1px solid rgba(164, 69, 255, 0.2);
+    background: rgba(10, 10, 12, 0.85);
+    backdrop-filter: blur(20px) saturate(160%);
+    border: 1px solid rgba(164, 69, 255, 0.3);
     border-radius: 12px;
-    box-shadow: 0 20px 50px rgba(0, 0, 0, 0.4);
-    box-sizing: border-box; /* Ensures border doesn't add to width */
-    /* OFFSET: Exactly 5px from the Dock Right Border */
-    top: 10px;
-    left: 5px;
-    
-    animation: damian-launch 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
-    
-    /* DESKTOP (1024px+) */
-    width: 750px;
-    height: 500px;
-    max-width: calc(100% - 10px); /* Safety gap */
-    max-height: calc(100% - 20px);
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+    box-sizing: border-box;
+    overflow: hidden;
     z-index: 100;
+    /* Remove fixed top/left here to let JS handle stagger */
 }
 
-/* Header optimization for Dragging */
-.window-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 0 16px;
-    height: 42px;
-    cursor: move;
-    touch-action: none; /* Allows mobile dragging */
-    user-select: none;
-    background: rgba(255, 255, 255, 0.03);
-    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
-}
-
-/* TABLET (768px - 1023px) */
-@media (max-width: 1023px) {
-    .os-window {
-        /* Fills screen better while maintaining the 5px left offset */
-        width: calc(100% - 15px) !important; 
-        height: 440px;
+/* --- RESPONSIVE WINDOW ADJUSTMENTS XS (320–479) --- */
+@media (max-width: 479px) {
+    :root {
+        --app-size: 48px;
     }
-}
-
-/* MOBILE (Standard Up to 768px) */
-@media (max-width: 768px) {
-    .os-window {
-        width: calc(100% - 15px) !important; 
-        height: 400px;
-    }
-}
-
-/* SMALL PHONES (360px - 430px) */
-@media (max-width: 430px) {
-    .os-window {
-        /* On a 360px phone:
-           - Dock ends, Workspace starts.
-           - left: 5px creates the gap you want.
-           - width: calc(100% - 10px) ensures a 5px gap on the right side too.
-        */
-        width: calc(100% - 10px) !important; 
-        height: 75% !important;
-        left: 5px !important;
-        top: 10px !important;
-        border-radius: 8px;
-    }
-    
 
     .window-header {
-        height: 50px;
+        height: 52px;
     }
 
-    .win-btn {
-        width: 40px !important;
-        height: 34px !important;
+    #side-dock {
+        width: 56px;
     }
 }
+
+/* --- RESPONSIVE WINDOW ADJUSTMENTS SM (480–767) --- */
+@media (min-width: 480px) and (max-width: 767px) {
+    :root {
+        --app-size: 52px;
+    }
+}
+
+/* --- RESPONSIVE WINDOW ADJUSTMENTS MD (768–1199) --- */
+@media (min-width: 768px) and (max-width: 1199px) {
+    :root {
+        --app-size: 56px;
+    }
+}
+
+/* --- RESPONSIVE WINDOW ADJUSTMENTS LG (1200+) --- */
+@media (min-width: 1200px) {
+    :root {
+        --app-size: 64px;
+    }
+}
+
 /* Minimize (Shrink to Dock) */
 .os-window.minimizing {
 pointer-events: none;
