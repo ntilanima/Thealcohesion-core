@@ -46,6 +46,14 @@ class TLC_Kernel {
         });
     }
 
+    getDockWidth() {
+    return parseInt(
+        getComputedStyle(document.documentElement)
+            .getPropertyValue('--dock-width')
+    ) || 70;
+}
+
+
     init() {
         const loginBtn = document.getElementById('login-btn');
         if (loginBtn) {
@@ -179,22 +187,21 @@ class TLC_Kernel {
     win.className = 'os-window';
     win.id = winId;
 
-    const isMobile = window.innerWidth < 768;
-    // Calculate stagger based on running apps for that "stacked cards" look
-    const stagger = (this.runningApps.size - 1) * 20;
+   const dockWidth = this.getDockWidth();
+    const stagger = Math.min((this.runningApps.size - 1) * 20, 80); // cap stagger
 
-    if (window.innerWidth < 768) {
-        win.style.left = "8px";
-        win.style.top = `${10 + stagger}px`;
-        win.style.width = "calc(100vw - 16px)";
-        win.style.height = "calc(100dvh - 60px)";
-    } else {
-        // DESKTOP RULES
-        win.style.width = "clamp(320px, 60vw, 900px)";
-        win.style.height = "clamp(300px, 60vh, 700px)";
-        win.style.left = `${this.DOCK_WIDTH + 20 + stagger}px`;
-        win.style.top = `${20 + stagger}px`;
-    }
+
+    win.style.top = "5px";
+    win.style.left = `${dockWidth + 5}px`;
+
+    win.style.width = "clamp(320px, 65vw, 900px)";
+    win.style.height = "clamp(300px, 65vh, 720px)";
+
+    if (window.innerWidth < 480) {
+    win.style.left = "8px";
+    win.style.width = "calc(100vw - 16px)";
+}
+
 
     win.style.zIndex = this.getTopZIndex();
 
@@ -257,73 +264,62 @@ class TLC_Kernel {
     }
 
     makeDraggable(el) {
-        const header = el.querySelector('.window-header');
-        const dock = document.getElementById('side-dock');
-        const DW = 70;
+    const header = el.querySelector('.window-header');
+    const dock = document.getElementById('side-dock');
 
-        const dragStart = (e) => {
-            if (e.target.closest('.win-btn')) return;
-            dock.classList.remove('smooth-return');
+    const startDrag = (clientX, clientY, pointerId = null) => {
+        const startLeft = parseInt(el.style.left) || 0;
+        const startTop = parseInt(el.style.top) || 0;
+        const dockWidth = this.getDockWidth();
 
-            const clientX = e.type.includes('touch') ? e.touches[0].clientX : e.clientX;
-            const clientY = e.type.includes('touch') ? e.touches[0].clientY : e.clientY;
-            
-            let startTop = parseInt(window.getComputedStyle(el).top) || 0;
-            let startLeft = parseInt(window.getComputedStyle(el).left) || 0;
+        const move = (x, y) => {
+            let newLeft = startLeft + (x - clientX);
+            let newTop = startTop + (y - clientY);
 
-            const move = (moveE) => {
-                if (moveE.cancelable) moveE.preventDefault();
+            const maxLeft = window.innerWidth - el.offsetWidth;
+            const maxTop = (window.innerHeight - 35) - el.offsetHeight;
 
-                const curX = moveE.type.includes('touch') ? moveE.touches[0].clientX : moveE.clientX;
-                const curY = moveE.type.includes('touch') ? moveE.touches[0].clientY : moveE.clientY;
+            newLeft = Math.max(dockWidth + 5, Math.min(newLeft, maxLeft));
+            newTop = Math.max(0, Math.min(newTop, maxTop));
 
-                let newLeft = startLeft + (curX - clientX);
-                let newTop = startTop + (curY - clientY);
-
-                const viewportW = window.innerWidth;
-                const viewportH = window.innerHeight;
-                
-                const minLeft = 0; 
-                const maxLeft = viewportW - el.offsetWidth;
-                const maxTop = (viewportH - 35) - el.offsetHeight;
-
-                newLeft = Math.max(minLeft, Math.min(newLeft, maxLeft));
-                newTop = Math.max(0, Math.min(newTop, maxTop));
-
-                const isMobile = window.innerWidth < 768;
-
-                // --- DOCK PUSH LOGIC (Disabled on mobile to stop balloon effect) ---
-                if (!isMobile && newLeft < DW) {
-                    const pushPercent = Math.max(0, Math.min(100, ((DW - newLeft) / DW) * 100));
-                    dock.style.transform = `translateX(-${pushPercent}%)`;
-                    dock.style.opacity = 1 - (pushPercent / 100);
-                } else if (!isMobile) {
-                    dock.style.transform = `translateX(0%)`;
-                    dock.style.opacity = "1";
-                }
-
-                el.style.left = newLeft + "px";
-                el.style.top = newTop + "px";
-            };
-
-            const stop = () => {
-                dock.classList.add('smooth-return');
-                this.updateDockSafety();
-                document.removeEventListener('mousemove', move);
-                document.removeEventListener('touchmove', move);
-                document.removeEventListener('mouseup', stop);
-                document.removeEventListener('touchend', stop);
-            };
-
-            document.addEventListener('mousemove', move);
-            document.addEventListener('touchmove', move, { passive: false });
-            document.addEventListener('mouseup', stop);
-            document.addEventListener('touchend', stop);
+            el.style.left = `${newLeft}px`;
+            el.style.top = `${newTop}px`;
         };
 
-        header.onmousedown = dragStart;
-        header.addEventListener('touchstart', dragStart, { passive: false });
-    }
+        const onMove = (e) => {
+            e.preventDefault();
+            if (e.touches) {
+                move(e.touches[0].clientX, e.touches[0].clientY);
+            } else {
+                move(e.clientX, e.clientY);
+            }
+        };
+
+        const onEnd = () => {
+            document.removeEventListener('pointermove', onMove);
+            document.removeEventListener('pointerup', onEnd);
+            document.removeEventListener('touchmove', onMove);
+            document.removeEventListener('touchend', onEnd);
+        };
+
+        document.addEventListener('pointermove', onMove, { passive: false });
+        document.addEventListener('pointerup', onEnd);
+        document.addEventListener('touchmove', onMove, { passive: false });
+        document.addEventListener('touchend', onEnd);
+    };
+
+    header.addEventListener('pointerdown', (e) => {
+        if (e.target.closest('.win-btn')) return;
+        e.preventDefault();
+        startDrag(e.clientX, e.clientY, e.pointerId);
+    });
+
+    header.addEventListener('touchstart', (e) => {
+        if (e.target.closest('.win-btn')) return;
+        e.preventDefault();
+        startDrag(e.touches[0].clientX, e.touches[0].clientY);
+    }, { passive: false });
+}
 
     openAppMenu() {
         const overlay = document.getElementById('app-menu-overlay');

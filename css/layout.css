@@ -18,6 +18,11 @@ body, html {
     font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
 }
 
+html, body, #workspace { 
+    touch-action: none;
+    overscroll-behavior: none;
+}
+
 .hidden { display: none !important; }
 
 /* --- TOP BAR --- */
@@ -258,6 +263,17 @@ pointer-events: none;
     align-items: center;
     padding: 0 16px;
     border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    touch-action: none;
+    user-select: none;
+    -webkit-user-select: none;
+    cursor: grab;
+}
+.window-content {
+    touch-action: pan-y;
+}
+
+.window-header:active {
+    cursor: grabbing;
 }
 
 .title {

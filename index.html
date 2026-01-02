@@ -9,6 +9,7 @@
 </head>
 <body class="sovereign-environment">
 
+    <!-- LOGIN GATE -->
     <section id="login-gate">
         <div class="login-box">
             <img src="logo.png" alt="Thealcohesion" class="login-logo">
@@ -23,16 +24,16 @@
         </div>
     </section>
 
+    <!-- TOP BAR -->
     <header id="top-bar" class="hidden">
         <div class="left-section"><span class="activities">Activities</span></div>
-        <div class="center-section">
-            <span id="top-bar-time">--:--:--</span>
-        </div>
+        <div class="center-section"><span id="top-bar-time">--:--:--</span></div>
         <div class="right-section">
             <div id="system-icons">⛶ 🔊 🔋 ▾</div>
         </div>
     </header>
 
+    <!-- APP MENU OVERLAY -->
     <div id="app-menu-overlay" class="hidden">
         <div class="overlay-content">
             <div class="search-container">
@@ -42,7 +43,8 @@
                 </div>
             </div>
             <div id="app-grid-container">
-                </div>
+                <!-- Dynamically loaded apps go here -->
+            </div>
             <div class="overlay-nav">
                 <div class="nav-links">
                     <button class="nav-item active">Frequent</button>
@@ -52,7 +54,9 @@
         </div>
     </div>
 
+    <!-- MAIN OS ROOT -->
     <main id="os-root" style="display: none;"> 
+        <!-- SIDE DOCK -->
         <nav id="side-dock">
             <div class="dock-bottom-trigger" id="launcher-btn">
                 <div class="menu-dot"></div><div class="menu-dot"></div><div class="menu-dot"></div>
@@ -61,16 +65,36 @@
             </div>
         </nav>
 
+        <!-- WORKSPACE -->
         <div id="workspace">
-            <div id="sovereign-shell"></div>
+            <div id="sovereign-shell">
+                <!-- App windows will be injected here -->
+            </div>
         </div>
     </main>
 
+    <!-- TASKBAR -->
     <div id="vpu-taskbar" class="hidden">
         <div id="vpu-active-tasks"></div>
         <div id="taskbar-clock">00:00:00</div>
     </div>
 
+    <!-- TEMPLATES -->
+    <template id="os-window-template">
+        <div class="os-window">
+            <div class="window-header">
+                <span class="title">App</span>
+                <div class="window-controls">
+                    <button class="win-btn close">✕</button>
+                </div>
+            </div>
+            <div class="window-body">
+                App content
+            </div>
+        </div>
+    </template>
+
+    <!-- SCRIPTS -->
     <script src="./js/time.js"></script>
     <script type="module" src="./js/os.js"></script>
 </body>
