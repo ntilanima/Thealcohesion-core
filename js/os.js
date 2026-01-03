@@ -26,12 +26,11 @@ class TLC_Kernel {
     }
 
     getDockWidth() {
-    return parseInt(
-        getComputedStyle(document.documentElement)
-            .getPropertyValue('--dock-width')
-    ) || 70;
-}
-
+        return parseInt(
+            getComputedStyle(document.documentElement)
+                .getPropertyValue('--dock-width')
+        ) || 70;
+    }
 
     init() {
         const loginBtn = document.getElementById('login-btn');
@@ -84,18 +83,18 @@ class TLC_Kernel {
         container.closest('.os-window').dataset.intervalId = matrixInterval;
     }
 
-    transitionToShell() {
+    async transitionToShell() {
         const gate = document.getElementById('login-gate');
         const root = document.getElementById('os-root');
         const top = document.getElementById('top-bar');
         const workspace = document.getElementById('workspace');
 
+        // Hide login, show system UI
         if (gate) gate.style.display = 'none';
         if (top) top.classList.remove('hidden');
         
         if (root) {
             root.classList.remove('hidden');
-            // MUST be block for stable absolute positioning
             root.style.display = 'block'; 
 
             const sensor = document.createElement('div');
@@ -107,9 +106,48 @@ class TLC_Kernel {
             preview.id = 'snap-preview';
             if (workspace) workspace.appendChild(preview);
         }
+
+        // Boot Temporal Engine for the Top Bar Clock
+        try {
+            const { TimeApp } = await import('./time.js');
+            const bootClock = new TimeApp();
+            // This ignites the interval that updates #top-bar-time immediately
+            bootClock.app.startClock(); 
+        } catch (e) {
+            console.error("Temporal Engine failed to ignite on boot:", e);
+        }
         
+        // Initialize interactive elements
+        this.setupTopBarInteractions(); 
         this.bootShell();
     }
+
+    // NEW: Handle Top Bar Clock Interaction
+    setupTopBarInteractions() {
+    const topBarTime = document.getElementById('top-bar-time');
+    if (topBarTime) {
+        topBarTime.style.cursor = 'pointer';
+        topBarTime.onclick = async () => {
+            const existingHud = document.getElementById('temporal-hud');
+            
+            // Toggle: If it exists, kill it. If not, build it.
+            if (existingHud) {
+                existingHud.style.opacity = '0';
+                existingHud.style.transform = 'translateX(-50%) translateY(-10px)';
+                setTimeout(() => existingHud.remove(), 200);
+                return;
+            }
+
+            try {
+                const { TimeApp } = await import('./time.js');
+                const tempEngine = new TimeApp();
+                tempEngine.app.renderHUD(); 
+            } catch (err) {
+                console.error("HUD Ignition Failure:", err);
+            }
+        };
+    }
+}
 
     bootShell() {
         const dock = document.getElementById('side-dock');
@@ -143,89 +181,88 @@ class TLC_Kernel {
     }
     
     launchApp(appId) {
-    const overlay = document.getElementById('app-menu-overlay');
-    if (overlay) {
-        overlay.classList.add('hidden');
-        overlay.style.display = 'none';
-    }
+        const overlay = document.getElementById('app-menu-overlay');
+        if (overlay) {
+            overlay.classList.add('hidden');
+            overlay.style.display = 'none';
+        }
 
-    const app = registry.find(a => a.id === appId);
-    const workspace = document.getElementById('workspace');
-    if (!app || !workspace) return;
+        const app = registry.find(a => a.id === appId);
+        const workspace = document.getElementById('workspace');
+        if (!app || !workspace) return;
 
-    const winId = `win-${appId}`;
-    if (this.runningApps.has(appId)) {
-        this.focusWindow(winId);
-        return;
-    }
+        const winId = `win-${appId}`;
+        if (this.runningApps.has(appId)) {
+            this.focusWindow(winId);
+            return;
+        }
 
-    this.runningApps.add(appId);
-    this.bootShell(); 
+        this.runningApps.add(appId);
+        this.bootShell(); 
 
-    const win = document.createElement('div');
-    win.className = 'os-window';
-    win.id = winId;
+        const win = document.createElement('div');
+        win.className = 'os-window';
+        win.id = winId;
 
-   const dockWidth = this.getDockWidth();
-    const stagger = Math.min((this.runningApps.size - 1) * 20, 80); // cap stagger
+        win.style.top = "10px";
+        win.style.left = "5px";
+        win.style.width = "clamp(320px, 65vw, 900px)";
+        win.style.height = "clamp(300px, 65vh, 720px)";
 
+        if (window.innerWidth < 480) {
+            win.style.width = "calc(100vw - (var(--dock-width) + 10px))";
+        }
 
-    win.style.top = "10px";
-    win.style.left = "5px"
-    win.style.width = "clamp(320px, 65vw, 900px)";
-    win.style.height = "clamp(300px, 65vh, 720px)";
+        win.style.zIndex = this.getTopZIndex();
 
-    if (window.innerWidth < 480) {
-        win.style.width = "calc(100vw - (var(--dock-width) + 10px))";
-    }
-
-    win.style.zIndex = this.getTopZIndex();
-
-    win.innerHTML = `
-        <div class="window-header">
-            <span class="title">${app.icon} ${app.name}</span>
-            <div class="window-controls">
-                <button class="win-btn hide" id="hide-${winId}"><svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" fill="none" stroke-width="2.5"><line x1="5" y1="12" x2="19" y2="12"></line></svg></button>
-                <button class="win-btn expand" id="max-${winId}"><svg viewBox="0 0 24 24" width="12" height="12" stroke="currentColor" fill="none" stroke-width="2.5"><rect x="3" y="3" width="18" height="18" rx="1"></rect></svg></button>
-                <button class="win-btn close" id="close-${winId}"><svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" fill="none" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg></button>
+        win.innerHTML = `
+            <div class="window-header">
+                <span class="title">${app.icon} ${app.name}</span>
+                <div class="window-controls">
+                    <button class="win-btn hide" id="hide-${winId}"><svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" fill="none" stroke-width="2.5"><line x1="5" y1="12" x2="19" y2="12"></line></svg></button>
+                    <button class="win-btn expand" id="max-${winId}"><svg viewBox="0 0 24 24" width="12" height="12" stroke="currentColor" fill="none" stroke-width="2.5"><rect x="3" y="3" width="18" height="18" rx="1"></rect></svg></button>
+                    <button class="win-btn close" id="close-${winId}"><svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" fill="none" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg></button>
+                </div>
             </div>
-        </div>
-        <div class="window-content" id="canvas-${appId}" style="height: calc(100% - 50px); overflow: auto;">
-            <div class="app-loading">System: Initializing ${app.name}...</div>
-        </div>`;
+            <div class="window-content" id="canvas-${appId}" style="height: calc(100% - 50px); overflow: auto;">
+                <div class="app-loading">System: Initializing ${app.name}...</div>
+            </div>`;
 
-    workspace.appendChild(win);
-    
-    // Smooth entry animation
-    requestAnimationFrame(() => {
-        win.style.opacity = "0";
+        workspace.appendChild(win);
+        
         requestAnimationFrame(() => {
-            win.style.transition = "opacity 0.25s ease";
-            win.style.opacity = "1";
+            win.style.opacity = "0";
+            requestAnimationFrame(() => {
+                win.style.transition = "opacity 0.25s ease";
+                win.style.opacity = "1";
+            });
+            setTimeout(() => {
+                win.style.transition = "all 0.3s cubic-bezier(0.165, 0.84, 0.44, 1)";
+                win.style.opacity = "1";
+                win.style.transform = "translateY(0)";
+            }, 10);
         });
-        setTimeout(() => {
-            win.style.transition = "all 0.3s cubic-bezier(0.165, 0.84, 0.44, 1)";
-            win.style.opacity = "1";
-            win.style.transform = "translateY(0)";
-        }, 10);
-    });
 
-    // Control bindings
-    win.querySelector(`#hide-${winId}`).onclick = (e) => { e.stopPropagation(); this.minimizeWindow(winId); };
-    win.querySelector(`#max-${winId}`).onclick = (e) => { e.stopPropagation(); this.toggleMaximize(winId); };
-    win.querySelector(`#close-${winId}`).onclick = (e) => { e.stopPropagation(); this.closeApp(appId, winId); };
-    
-    win.onmousedown = () => this.focusWindow(winId);
-    win.addEventListener('touchstart', () => this.focusWindow(winId), {passive: true});
-    
-    this.makeDraggable(win);
-    this.injectAppContent(appId);
-}
-    injectAppContent(appId) {
+        win.querySelector(`#hide-${winId}`).onclick = (e) => { e.stopPropagation(); this.minimizeWindow(winId); };
+        win.querySelector(`#max-${winId}`).onclick = (e) => { e.stopPropagation(); this.toggleMaximize(winId); };
+        win.querySelector(`#close-${winId}`).onclick = (e) => { e.stopPropagation(); this.closeApp(appId, winId); };
+        
+        win.onmousedown = () => this.focusWindow(winId);
+        win.addEventListener('touchstart', () => this.focusWindow(winId), {passive: true});
+        
+        this.makeDraggable(win);
+        this.injectAppContent(appId);
+    }
+
+    async injectAppContent(appId) {
         const container = document.getElementById(`canvas-${appId}`);
         if (!container) return;
-
-        if (appId === 'tnfi') {
+        if (appId === 'time') {
+            const module = await import('./time.js');
+            const engine = new module.TimeApp(container);
+            engine.init();
+            container.closest('.os-window').dataset.engineInstance = engine;
+        } else if (appId === 'tnfi') {
             container.innerHTML = `<div style="padding:20px;"><h3>Bank of Sovereign</h3><p>Investor Allotment: <strong>EPOS 2025</strong></p><p>Status: <span style="color:#00ff00;">Liquid</span></p></div>`;
         } else if (appId === 'terminal') {
             container.innerHTML = `
@@ -243,71 +280,53 @@ class TLC_Kernel {
     }
 
     makeDraggable(el) {
-    const header = el.querySelector('.window-header');
-    if (!header) return;
+        const header = el.querySelector('.window-header');
+        if (!header) return;
 
-    let dragging = false;
-    let startX = 0, startY = 0;
-    let startLeft = 0, startTop = 0;
+        let dragging = false;
+        let startX = 0, startY = 0;
+        let startLeft = 0, startTop = 0;
 
-    const dockWidth = this.getDockWidth();
+        const onDown = (e) => {
+            if (e.target.closest('.win-btn')) return;
+            dragging = true;
+            this.isDraggingWindow = true;
+            el.style.transition = 'none';
+            el.style.transform = 'none';
+            startX = e.clientX;
+            startY = e.clientY;
+            startLeft = el.offsetLeft;
+            startTop  = el.offsetTop;
+            try { el.setPointerCapture(e.pointerId); } catch (_) {}
+            e.preventDefault();
+        };
 
-    const onDown = (e) => {
-    if (e.target.closest('.win-btn')) return;
+        const onMove = (e) => {
+            if (!dragging) return;
+            const dx = e.clientX - startX;
+            const dy = e.clientY - startY;
+            let newLeft = startLeft + dx;
+            let newTop = startTop + dy;
+            newLeft = Math.max(5, Math.min(newLeft, el.parentElement.clientWidth - el.offsetWidth - 5));
+            newTop = Math.max(5, Math.min(newTop, window.innerHeight - el.offsetHeight - 5));
+            el.style.left = `${newLeft}px`;
+            el.style.top = `${newTop}px`;
+            e.preventDefault();
+        };
 
-    dragging = true;
-    this.isDraggingWindow = true;
+        const onUp = () => {
+            if (!dragging) return;
+            dragging = false;
+            this.isDraggingWindow = false;
+            el.style.transition = 'all 0.25s cubic-bezier(0.2, 0.8, 0.3, 1)';
+            this.updateDockSafety(false);
+        };
 
-    el.style.transition = 'none';
-    el.style.transform = 'none';
-
-    const rect = el.getBoundingClientRect();
-    startX = e.clientX;
-    startY = e.clientY;
-    startLeft = el.offsetLeft;
-    startTop  = el.offsetTop
-
-    try { el.setPointerCapture(e.pointerId); } catch (_) {}
-    e.preventDefault();
-    };
-
-
-    const onMove = (e) => {
-        if (!dragging) return;
-
-        const dx = e.clientX - startX;
-        const dy = e.clientY - startY;
-
-        let newLeft = startLeft + dx;
-        let newTop = startTop + dy;
-
-        // Bounds
-        newLeft = Math.max(5, Math.min(
-        newLeft,
-        el.parentElement.clientWidth - el.offsetWidth - 5));
-        newTop = Math.max(5, Math.min(newTop, window.innerHeight - el.offsetHeight - 5));
-
-        el.style.left = `${newLeft}px`;
-        el.style.top = `${newTop}px`;
-
-        e.preventDefault();
-    };
-
-    const onUp = () => {
-    if (!dragging) return;
-    dragging = false;
-    this.isDraggingWindow = false;
-
-    el.style.transition = 'all 0.25s cubic-bezier(0.2, 0.8, 0.3, 1)';
-    this.updateDockSafety(false);
-    };
-
-
-    header.addEventListener('pointerdown', onDown, { passive: false });
-    el.addEventListener('pointermove', onMove, { passive: false });
-    el.addEventListener('pointerup', onUp);
-    el.addEventListener('pointercancel', onUp);
-}
+        header.addEventListener('pointerdown', onDown, { passive: false });
+        el.addEventListener('pointermove', onMove, { passive: false });
+        el.addEventListener('pointerup', onUp);
+        el.addEventListener('pointercancel', onUp);
+    }
 
     openAppMenu() {
         const overlay = document.getElementById('app-menu-overlay');
@@ -347,6 +366,15 @@ class TLC_Kernel {
     closeApp(appId, winId) {
         const el = document.getElementById(winId);
         if (el) {
+            // NEW: Kill the Temporal Engine Instance on close
+            if (el.dataset.engineInstance) {
+                try {
+                    const engine = el.dataset.engineInstance;
+                    // Check if the module has a destruct or stop timer method
+                    if (engine.destruct) engine.destruct();
+                } catch (e) { console.warn("Engine cleanup failed"); }
+            }
+
             el.classList.add('closing');
             setTimeout(() => {
                 el.remove();
@@ -370,33 +398,28 @@ class TLC_Kernel {
     }
 
     toggleMaximize(id) {
-    const el = document.getElementById(id);
-    if (!el) return;
-
-    const isMax = el.classList.toggle('maximized');
-    this.updateDockSafety();
-}
-
+        const el = document.getElementById(id);
+        if (!el) return;
+        el.classList.toggle('maximized');
+        this.updateDockSafety();
+    }
 
     updateDockSafety() {
-    const dock = document.getElementById('side-dock');
-    const osRoot = document.getElementById('os-root');
-    const windows = document.querySelectorAll('.os-window:not(.closing):not(.minimizing)');
+        const dock = document.getElementById('side-dock');
+        const osRoot = document.getElementById('os-root');
+        const windows = document.querySelectorAll('.os-window:not(.closing):not(.minimizing)');
+        const shouldHide = [...windows].some(win => win.classList.contains('maximized'));
 
-    // Hide dock if any window is maximized
-    const shouldHide = [...windows].some(win => win.classList.contains('maximized'));
-
-    if (shouldHide) {
-        osRoot.classList.add('dock-hidden'); // Workspace expands
-        dock.style.opacity = '0';
-        dock.style.pointerEvents = 'none';
-    } else {
-        osRoot.classList.remove('dock-hidden'); // Workspace back to normal
-        dock.style.opacity = '1';
-        dock.style.pointerEvents = 'auto';
+        if (shouldHide) {
+            osRoot.classList.add('dock-hidden');
+            dock.style.opacity = '0';
+            dock.style.pointerEvents = 'none';
+        } else {
+            osRoot.classList.remove('dock-hidden');
+            dock.style.opacity = '1';
+            dock.style.pointerEvents = 'auto';
+        }
     }
-}
-
 
     getTopZIndex() {
         const wins = document.querySelectorAll('.os-window');
@@ -406,6 +429,11 @@ class TLC_Kernel {
             if (z > max) max = z; 
         });
         return max + 1;
+    }
+
+    focusWindow(winId) {
+        const el = document.getElementById(winId);
+        if (el) el.style.zIndex = this.getTopZIndex();
     }
 
     initTerminalLogic() {
@@ -438,3 +466,15 @@ class TLC_Kernel {
 }
 
 window.kernel = new TLC_Kernel();
+
+window.addEventListener('resize', () => {
+    if (window.innerWidth <= 768) {
+        document.querySelectorAll('.os-window').forEach(win => {
+            win.style.top = '0';
+            win.style.left = '0';
+            win.style.width = '100vw';
+            win.style.height = '100vh';
+            win.style.borderRadius = '0';
+        });
+    }
+});
