@@ -1,6 +1,7 @@
 /**
- * VPU TERMINAL SYSTEM - SOVEREIGN EDITION
- * Compiled Module: TerminalApp (v1.0.3)
+ * VPU TERMINAL SYSTEM - SOVEREIGN UPGRADE
+ * Module: TerminalApp (v1.2.7)
+ * Status: Persistent Header + Hardware Telemetry
  */
 
 export class TerminalApp {
@@ -8,7 +9,15 @@ export class TerminalApp {
         this.container = container;
         this.output = null;
         this.input = null;
-        this.isTyping = false; // Prevents command spamming during output
+        this.isTyping = false;
+        this.liveInterval = null;
+        
+        this.history = []; 
+        this.historyIndex = -1;
+        this.tempInput = ""; 
+        this.commands = ['help', 'status', 'allotment', 'network', 'neofetch', 'matrix', 'time', 'clear'];
+        
+        this.matrixActive = false;
         this.vpuLogo = `
         _   _  ____  _   _ 
         | | | ||  _ \\| | | |
@@ -20,86 +29,208 @@ export class TerminalApp {
 
     init() {
         this.container.innerHTML = `
-            <div id="vpu-terminal" style="background:#000; color:#00ff41; font-family: 'Courier New', monospace; height:100%; display:flex; flex-direction:column; padding:15px; box-sizing:border-box; position: relative; overflow: hidden;">
-                <div id="term-output" style="flex:1; overflow-y:auto; margin-bottom:10px; font-size:13px; line-height:1.5; white-space: pre-wrap; z-index: 5;"></div>
+            <div id="vpu-terminal" style="background:#050505; color:#00ff41; font-family: 'Courier New', monospace; height:100%; display:flex; flex-direction:column; padding:15px; box-sizing:border-box; position: relative; overflow: hidden; text-shadow: 0 0 5px rgba(0, 255, 65, 0.4);">
+                <canvas id="matrix-canvas" style="position:absolute; top:0; left:0; width:100%; height:100%; z-index:1; opacity:0; transition: opacity 2s ease; pointer-events:none;"></canvas>
                 
-                <div class="input-line" style="display:flex; align-items:center; gap:10px; z-index: 5;">
-                    <span style="color:#a445ff; font-weight:bold; white-space: nowrap;">admin@vpu:~$</span>
-                    <input type="text" id="term-input" autocomplete="off" spellcheck="false" 
-                        style="background:transparent; border:none; color:#00ff41; font-family:inherit; outline:none; flex:1; font-size: 13px;">
+                <div id="term-header" style="z-index: 5; margin-bottom: 20px; border-bottom: 1px solid rgba(0, 255, 65, 0.2); padding-bottom: 10px;">
+                    <pre style="color:#a445ff; margin:0; font-size: 10px; line-height: 1.2;">${this.vpuLogo}</pre>
+                    <div style="font-size: 12px; margin-top: 5px; opacity: 0.8;">
+                        CORE: Sovereign v1.2.7 | KERNEL: 1.0.2-theal | STATUS: ONLINE
+                    </div>
                 </div>
 
-                <div style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.1) 50%); background-size: 100% 4px; pointer-events: none; opacity: 0.2; z-index: 10;"></div>
+                <div id="term-output" style="flex:1; overflow-y:auto; margin-bottom:10px; font-size:13px; line-height:1.5; white-space: pre-wrap; z-index: 5; position:relative;"></div>
+                
+                <div class="input-line" style="display:flex; align-items:center; gap:10px; z-index: 5; position:relative;">
+                    <span style="color:#a445ff; font-weight:bold; white-space: nowrap;">admin@vpu:~$</span>
+                    <input type="text" id="term-input" autocomplete="off" spellcheck="false" 
+                        style="background:transparent; border:none; color:#fff; outline:none; flex:1; font-family: inherit; font-size: 13px;">
+                </div>
+                
+                <div class="terminal-overlay" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.15) 50%); background-size: 100% 4px; pointer-events: none; z-index: 10; opacity: 0.3;"></div>
             </div>`;
         
         this.output = this.container.querySelector('#term-output');
         this.input = this.container.querySelector('#term-input');
+        this.canvas = this.container.querySelector('#matrix-canvas');
         
         setTimeout(() => this.input.focus(), 50);
-
-        this.input.onkeydown = (e) => {
-            if (e.key === 'Enter' && !this.isTyping) {
-                const commandText = this.input.value;
-                this.handleCommand(commandText);
-                this.input.value = '';
-            }
-        };
-
+        this.input.onkeydown = (e) => this.handleKeyDown(e);
         this.container.onclick = () => this.input.focus();
-        this.typeWrite("VPU SOVEREIGN TERMINAL v1.0.3\nSystem: Command Core Initialized...\nType 'help' for commands.");
-    }
 
-    async typeWrite(text, color = "#00ff41") {
-        this.isTyping = true;
-        const line = document.createElement('div');
-        line.style.color = color;
-        this.output.appendChild(line);
-
-        const chars = text.split("");
-        for (let char of chars) {
-            line.textContent += char;
-            this.output.scrollTop = this.output.scrollHeight;
-            // Adjustable typing speed (ms)
-            await new Promise(res => setTimeout(res, 5)); 
-        }
-        this.isTyping = false;
+        this.typeWrite("Hardware Telemetry Initialized...\nDirective: Awaiting Input.");
     }
 
     async handleCommand(cmd) {
-        if (!cmd.trim()) return;
-
-        // Print the user's command immediately
         const userLine = document.createElement('div');
         userLine.innerHTML = `<span style="color:rgba(255,255,255,0.4);">admin@vpu:~$ ${cmd}</span>`;
         this.output.appendChild(userLine);
 
-        let response = "";
-        const cleanCmd = cmd.trim().toLowerCase();
-        
+        const cleanCmd = cmd.toLowerCase().trim();
+        if (cleanCmd !== 'clear') await new Promise(res => setTimeout(res, 100));
+
         switch (cleanCmd) {
+            case 'neofetch':
+                const ramUsed = (Math.random() * 4 + 2).toFixed(1);
+                const cpuLoad = Math.floor(Math.random() * 15 + 5);
+                const storage = Math.floor(Math.random() * 20 + 70);
+                
+                const stats = `
+[SYSTEM TELEMETRY]
+OS:       Sovereign OS v1.2.7
+KERNEL:   1.0.2-theal-x86_64
+UPTIME:   14 days, 2 hours, 11 mins
+PACKAGES: 452 (vpu-pkg)
+SHELL:    TLC-bash 5.1
+
+[HARDWARE]
+CPU:      Alcohesion Quantum-Thread (8) @ 4.2GHz [${cpuLoad}%]
+MEMORY:   ${ramUsed}GB / 32GB [|||---------]
+STORAGE:  ${storage}GB / 512GB [|||||||-----]
+GPU:      VPU Sovereign-Integrated
+                `;
+                await this.typeWrite(stats);
+                break;
+
             case 'help':
-                response = "AVAILABLE COMMANDS:\n  status    - View system health\n  allotment - Check initial allotment strategy\n  neofetch  - System information\n  clear     - Clear terminal buffer";
+                await this.typeWrite("DIRECTIVES:\n  > time       (Live Temporal Pulse)\n  > status     (System Integrity)\n  > network    (Node Scan)\n  > allotment  (Genesis Data)\n  > neofetch   (Hardware Telemetry)\n  > matrix     (Toggle Reality Override)\n  > clear      (Flush Buffer)");
                 break;
             case 'status':
-                response = "SYSTEM: ONLINE\nKERNEL: V1.0.2 [SOVEREIGN]\nSHIELD: ACTIVE";
+                await this.typeWrite("SYSTEM: ONLINE\nINTEGRITY: 98.4%\nENCRYPTION: ACTIVE");
                 break;
-            case 'neofetch':
-                response = this.vpuLogo + "\nOS: VPU Sovereign OS\nKernel: 1.0.2-theal";
+            case 'network':
+                await this.typeWrite("SCANNING VPU NODES...\n[NODE_01]: ONLINE\n[EPOS_RELAY]: SECURE");
                 break;
             case 'allotment':
-                response = "QUERY: Allotment Genesis Strategy...\nRESULT: [EPOS] and [Investors] confirmed.\nDATE: December 26, 2025";
+                await this.typeWrite("EPOS & Investors Allotment Confirmed.\nTarget Date: 2025-12-26\nStatus: LOCKED");
+                break;
+            case 'time':
+                this.startLiveTime();
+                break;
+            case 'matrix':
+                this.toggleMatrix();
+                await this.typeWrite("Visual override toggled.");
                 break;
             case 'clear':
                 this.output.innerHTML = '';
-                return;
+                break;
             default:
-                response = `Command not recognized: ${cleanCmd}`;
+                await this.typeWrite(`ERR: Directive '${cmd}' unknown.`);
         }
-
-        await this.typeWrite(response);
     }
 
-    destruct() {
-        console.log("Terminal: Shutdown sequence initiated.");
+    // ... (Keep existing getTemporalData, startLiveTime, handleKeyDown, typeWrite, and matrix methods) ...
+    // Note: Use the same helper methods from v1.2.6 for the time pulse and keyboard logic.
+
+    getTemporalData() {
+        const now = new Date();
+        const start = new Date(now.getFullYear(), 0, 0);
+        const diff = now - start;
+        const dayOfYear = Math.floor(diff / (1000 * 60 * 60 * 24));
+        const cycle = Math.floor(dayOfYear / 91) + 1;
+        const endOfYear = new Date(now.getFullYear(), 11, 31, 23, 59, 59);
+        const timeLeft = endOfYear - now;
+        const d = Math.floor(timeLeft / (1000 * 60 * 60 * 24));
+        const h = Math.floor((timeLeft / (1000 * 60 * 60)) % 24);
+        const m = Math.floor((timeLeft / (1000 * 60)) % 60);
+        const s = Math.floor((timeLeft / 1000) % 60);
+        return {
+            normal: now.toLocaleTimeString(),
+            date: now.toLocaleDateString(),
+            alco: `TLC-${now.getHours().toString().padStart(2,'0')}:${now.getMinutes().toString().padStart(2,'0')}:${now.getSeconds().toString().padStart(2,'0')}`,
+            cycle: `Phase 0${cycle}`,
+            countdown: `${d}d ${h}h ${m}m ${s}s`,
+            unix: Math.floor(now.getTime() / 1000)
+        };
     }
+
+    startLiveTime() {
+        if (this.liveInterval) return;
+        const liveEl = document.createElement('div');
+        liveEl.style.padding = "10px";
+        liveEl.style.border = "1px solid #00ff41";
+        liveEl.style.margin = "10px 0";
+        liveEl.style.background = "rgba(0, 255, 65, 0.05)";
+        this.output.appendChild(liveEl);
+        this.isTyping = true;
+        this.input.placeholder = "Press ENTER to stop pulse...";
+        this.liveInterval = setInterval(() => {
+            const t = this.getTemporalData();
+            liveEl.innerHTML = `[LIVE TEMPORAL PULSE]\nStandard:    ${t.normal} | ${t.date}\nAlcohesion:  ${t.alco}\nYear Cycle:  ${t.cycle}\nRemaining:   ${t.countdown}\nUnix Epoch:  ${t.unix}\n------------------------------------\nSTATUS: SYNCHRONIZED`;
+            this.output.scrollTop = this.output.scrollHeight;
+        }, 1000);
+    }
+
+    handleKeyDown(e) {
+        if (this.liveInterval && (e.key === 'Enter' || e.key === 'Escape')) {
+            e.preventDefault();
+            clearInterval(this.liveInterval);
+            this.liveInterval = null;
+            this.isTyping = false;
+            this.input.placeholder = "";
+            this.output.innerHTML += `\nPulse severed.\n`;
+            return;
+        }
+        if (this.isTyping && e.key === 'Enter') { e.preventDefault(); return; }
+        if (e.key === 'Enter') {
+            const val = this.input.value.trim();
+            if (val) { this.history.unshift(val); this.historyIndex = -1; this.handleCommand(val); }
+            this.input.value = '';
+        } else if (e.key === 'Tab') {
+            e.preventDefault();
+            const val = this.input.value.toLowerCase().trim();
+            const match = this.commands.find(c => c.startsWith(val));
+            if (match) this.input.value = match;
+        } else if (e.key === 'ArrowUp') {
+            e.preventDefault();
+            if (this.historyIndex < this.history.length - 1) {
+                if (this.historyIndex === -1) this.tempInput = this.input.value;
+                this.historyIndex++; this.input.value = this.history[this.historyIndex];
+            }
+        } else if (e.key === 'ArrowDown') {
+            e.preventDefault();
+            if (this.historyIndex > -1) {
+                this.historyIndex--;
+                this.input.value = (this.historyIndex === -1) ? this.tempInput : this.history[this.historyIndex];
+            }
+        }
+    }
+
+    async typeWrite(text) {
+        this.isTyping = true;
+        const line = document.createElement('div');
+        this.output.appendChild(line);
+        for (const char of text.split("")) {
+            line.textContent += char;
+            this.output.scrollTop = this.output.scrollHeight;
+            await new Promise(res => setTimeout(res, 5));
+        }
+        this.isTyping = false;
+    }
+
+    toggleMatrix() {
+        this.matrixActive = !this.matrixActive;
+        this.canvas.style.opacity = this.matrixActive ? "0.25" : "0";
+        if (this.matrixActive) this.runMatrix();
+    }
+
+    runMatrix() {
+        const ctx = this.canvas.getContext('2d');
+        const w = this.canvas.width = this.container.offsetWidth;
+        const h = this.canvas.height = this.container.offsetHeight;
+        const columns = Math.floor(w / 20) + 1;
+        const ypos = Array(columns).fill(0);
+        const matrix = () => {
+            if (!this.matrixActive) return;
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.05)'; ctx.fillRect(0, 0, w, h);
+            ctx.fillStyle = '#0f0'; ctx.font = '15pt monospace';
+            ypos.forEach((y, i) => {
+                ctx.fillText(String.fromCharCode(Math.random() * 128), i * 20, y);
+                if (y > 100 + Math.random() * 10000) ypos[i] = 0; else ypos[i] = y + 20;
+            });
+        };
+        const interval = setInterval(() => { if (!this.matrixActive) clearInterval(interval); matrix(); }, 50);
+    }
+
+    destruct() { this.matrixActive = false; clearInterval(this.liveInterval); }
 }
