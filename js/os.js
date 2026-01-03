@@ -5,11 +5,12 @@
  */
 
 import { registry } from './registry.js';
-
+import { SovereignVFS } from './apps/vfs.js'; // Ensure VFS is imported for secure file handling
 class TLC_Kernel {
     constructor() {
         this.isDraggingWindow = false;
         this.runningApps = new Set(); 
+        this.sessionKey = null; // <--- Store the derived AES key here
         this.pinnedApps = ['time', 'tnfi', 'terminal', 'files', 'browser', 'messages', 'camera', 'settings']; 
         
         console.log("Kernel: Initializing Sovereign Core...");
@@ -65,39 +66,135 @@ class TLC_Kernel {
     }
 
     async transitionToShell() {
+        console.log("Kernel: Initiating Security Handshake...");
+        
+        // 1. DOM REFERENCE CHECK
         const gate = document.getElementById('login-gate');
         const root = document.getElementById('os-root');
         const top = document.getElementById('top-bar');
         const workspace = document.getElementById('workspace');
+        const passInput = document.getElementById('pass-input');
 
+        const password = passInput ? passInput.value : "default_gateway";
+        const memberId = document.getElementById('username')?.value || "GUEST";
+
+        try {
+            // 2. CRYPTOGRAPHIC KEY DERIVATION
+            // We use PBKDF2 to turn the password into a raw AES-GCM key
+            this.sessionKey = await SovereignVFS.deriveKey(password, memberId);
+            
+            if (!this.sessionKey) throw new Error("Key Derivation Failed");
+
+            // 3. ENCLAVE PROVISIONING
+            // Critical: Ensure Investor Allotment (2025-12-26) is written to IndexedDB
+            await this.provisionInitialFiles();
+            
+            console.log("Kernel: Sovereign Enclave Unlocked. Validating Genesis Block...");
+        } catch (e) {
+            console.error("VFS CRITICAL ERROR:", e);
+            alert("SECURITY PROTOCOL FAILURE: Handshake Denied.");
+            return; // STOP: Do not transition to shell if key is invalid
+        }
+
+        // 4. UI TRANSITION (Only occurs on success)
         if (gate) gate.style.display = 'none';
-        if (top) top.classList.remove('hidden');
         
         if (root) {
             root.classList.remove('hidden');
             root.style.display = 'block'; 
 
-            const sensor = document.createElement('div');
-            sensor.id = 'dock-sensor';
-            sensor.onmouseenter = () => root.classList.remove('dock-hidden');
-            document.body.appendChild(sensor);
+            // Initialize Dock Auto-Hide Sensor
+            if (!document.getElementById('dock-sensor')) {
+                const sensor = document.createElement('div');
+                sensor.id = 'dock-sensor';
+                sensor.onmouseenter = () => root.classList.remove('dock-hidden');
+                document.body.appendChild(sensor);
+            }
 
-            const preview = document.createElement('div');
-            preview.id = 'snap-preview';
-            if (workspace) workspace.appendChild(preview);
+            // Snap Preview Layer
+            if (workspace && !document.getElementById('snap-preview')) {
+                const preview = document.createElement('div');
+                preview.id = 'snap-preview';
+                workspace.appendChild(preview);
+            }
         }
 
-        // Boot Top Bar Clock
+        if (top) top.classList.remove('hidden');
+
+        // 5. SUBSYSTEM IGNITION
         try {
+            // Boot Clock Engine
             const { TimeApp } = await import('./time.js');
             const bootClock = new TimeApp();
-            bootClock.app.startClock(); 
+            if (bootClock.app && bootClock.app.startClock) {
+                bootClock.app.startClock(); 
+            }
         } catch (e) {
-            console.error("Temporal Engine failed to ignite:", e);
+            console.warn("Temporal Engine: Secondary ignition failed, but system remains stable.");
         }
         
         this.setupTopBarInteractions(); 
         this.bootShell();
+        
+        console.log("Kernel: Sovereign OS Shell Online.");
+    }
+
+    async provisionInitialFiles() {
+        try {
+            // Check if the drive is already provisioned by trying to read the readme
+            const check = await SovereignVFS.read("home/readme.txt", this.sessionKey);
+            
+            if (!check) {
+                console.log("Kernel: Genesis Boot. Provisioning encrypted volumes...");
+                
+                // Write the 2025-12-26 Investor Allotment Data
+                await SovereignVFS.write(
+                    "home/documents/investors.txt", 
+                    "OFFICIAL RECORD: EPOS 2025-12-26\n--------------------------------\nAllotment: 15,000,000 VPU\nStatus: Verified & Locked\nTrust Tier: Root", 
+                    this.sessionKey
+                );
+
+                await SovereignVFS.write(
+                    "home/readme.txt", 
+                    "Welcome to Sovereign OS. Your data is encrypted locally using AES-GCM.", 
+                    this.sessionKey
+                );
+            }
+        } catch (err) {
+            console.warn("Provisioning skipped or drive already exists.");
+        }
+    }
+
+    /**
+     * SECURE FILE BRIDGE
+     * This allows any app to request a decrypted file content
+     */
+    async openSecureFile(path) {
+        // 1. SAFETY CHECK: If no key, don't even try the VFS
+        if (!this.sessionKey) {
+            console.error("Kernel: Access Denied. No Session Key found.");
+            alert("Security Error: System Enclave is locked.");
+            return;
+        }
+
+        try {
+            console.log(`Kernel: Decrypting ${path}...`);
+            
+            // 2. USE THE IMPORTED VFS:
+            // Ensure 'SovereignVFS' is correctly imported at the top of kernel.js
+            const content = await SovereignVFS.read(path, this.sessionKey);
+            
+            if (content) {
+                // SUCCESS: Data is now plain text
+                alert(`[SECURE_VIEW] - ${path}\n\n${content}`);
+            } else {
+                console.warn("Kernel: File is empty or does not exist.");
+            }
+        } catch (e) {
+            // This usually triggers if the password/key is wrong
+            console.error("Decryption failed. Key mismatch or Corrupted Block.", e);
+            alert("VFS Error: Decryption failed. Possible data corruption.");
+        }
     }
 
     setupTopBarInteractions() {
@@ -261,46 +358,46 @@ launchApp(appId) {
         if (!container) return;
         const win = container.closest('.os-window');
 
-        // 1. Check Hardcoded Routes First
-        // This uses the 'get APP_ROUTES()' you defined at the top
+        // 1. Check Hardcoded Routes
         const route = this.APP_ROUTES[appId];
-        
         if (route) {
-            console.log(`Kernel: Routing ${appId} via hardcoded internal path.`);
             try {
                 const instance = await route(container);
                 if (instance) win.dataset.engineInstance = instance;
-                return; // SUCCESS: Exit early
+                return; 
             } catch (err) {
-                console.error(`Kernel: Internal route failed for ${appId}:`, err);
+                console.error(`Kernel: Route failed for ${appId}:`, err);
             }
         }
 
-        // 2. Fallback to Dynamic Registry Loading (for other 20+ apps)
+        // 2. Dynamic Registry Loading (Security-Aware)
         const appData = registry.find(a => a.id === appId);
         if (appData && appData.file) {
             try {
-                // Ensure the path is clean. If registry says 'tnfi.js', we use './tnfi.js'
                 const filePath = appData.file.startsWith('./') ? appData.file : `./${appData.file}`;
                 const module = await import(filePath);
                 
+                // Construct class name (e.g., "FilesApp")
                 const className = appId.charAt(0).toUpperCase() + appId.slice(1) + "App";
+                
                 if (module[className]) {
-                    const instance = new module[className](container);
-                    if (instance.init) instance.init();
+                    // CRITICAL: Pass the sessionKey here so the app can decrypt files
+                    const instance = new module[className](container, this.sessionKey);
+                    
+                    // We MUST await init() or the "initializing" div won't be replaced
+                    if (instance.init) {
+                        await instance.init(); 
+                    }
+                    
                     win.dataset.engineInstance = instance;
                 }
             } catch (err) {
-                console.error(`Kernel: Dynamic load failed for ${appId}:`, err);
-                container.innerHTML = `<div style="padding:20px; color:#ff4444;">[SYS_ERR]: Source '${appData.file}' not found.</div>`;
+                console.error(`Kernel: Handshake failed for ${appId}:`, err);
+                container.innerHTML = `<div style="padding:20px; color:#ff4444;">[SYS_ERR]: Handshake Failed. Verify VFS Key.</div>`;
             }
         } else {
-            // 3. Last Resort: Default UI
-            if (appId === 'tnfi') {
-                this.renderTNFIDashboard(container);
-            } else {
-                container.innerHTML = `<div style="padding:20px; color:#00ff41;">${appId.toUpperCase()} online. Awaiting module deployment.</div>`;
-            }
+            // 3. Last Resort
+            container.innerHTML = `<div style="padding:20px; color:#00ff41;">${appId.toUpperCase()} online. Awaiting module deployment.</div>`;
         }
     }
     renderTNFIDashboard(container) {
