@@ -11,9 +11,14 @@ export class TimeApp {
     init() {
         if (this.container) {
             this.container.innerHTML = this.app.render();
+            // Start clock first
             this.app.startClock();
+            // Then draw the grid
             this.app.renderGrid(this.app.currentViewDate);
-            this.app.renderUpcomingEvents();
+            // Finally, force the reminders to draw
+            setTimeout(() => {
+                this.app.renderReminders();
+            }, 10); 
         }
     }
 
@@ -44,6 +49,122 @@ const thealTimeApp = {
         { name: "13th Cycle", start: "23/10", end: "19/11" }
     ],
 
+    //reminders storage
+    userReminders: JSON.parse(localStorage.getItem('vpu_reminders')) || [],
+    systemReminders: [
+        { name: "Genesis Allotment", date: "26/12", type: "system-gold" },
+        { name: "Special Day", date: "29/2", type: "system-blue" },
+        { name: "End Year Holiday", date: "20/11", type: "system-blue" }
+    ],
+
+
+    // reminder management
+    addReminder() {
+        const name = prompt("Enter Reminder Name:");
+        if (!name) return;
+        const date = prompt("Enter Date (DD/MM):", "03/01");
+        if (!date) return;
+
+        this.userReminders.push({ name, date, type: 'user' });
+        this.saveReminders();
+    },
+
+    deleteReminder(index) {
+        this.userReminders.splice(index, 1);
+        this.saveReminders();
+    },
+
+    saveReminders() {
+        localStorage.setItem('vpu_reminders', JSON.stringify(this.userReminders));
+        this.renderReminders();
+    },
+
+    getReminderColor(type) {
+        const colors = {
+            'system-gold': '#ffd700',
+            'system-info': '#a445ff',
+            'system-blue': '#00d4ff',
+            'user': '#555'
+        };
+        return colors[type] || '#444';
+    },
+    
+    renderReminders() {
+        const list = document.getElementById('vpu-reminder-list');
+        if (!list) return;
+
+        const now = new Date();
+        const theal = this.getThealDate(now);
+        
+        // 1. Calculate Cycle Countdown
+        const dayMatch = theal.label.match(/Day (\d+)/);
+        const daysLeftInCycle = dayMatch ? (28 - parseInt(dayMatch[1])) : 0;
+        
+        const cycleReminder = { 
+            name: `Next Cycle Transition`, 
+            date: daysLeftInCycle === 0 ? "TODAY" : `In ${daysLeftInCycle} Days`, 
+            type: 'system-info', 
+            category: 'CHRONOS' 
+        };
+
+        // 2. Safely Combine (Ensuring data exists)
+        const sys = (this.systemReminders || []).map(r => ({ ...r, category: 'CORE' }));
+        const usr = (this.userReminders || []).map((r, i) => ({ ...r, category: 'USER', id: i }));
+
+        const allReminders = [cycleReminder, ...sys, ...usr];
+
+        // 3. Render with Visibility Check
+        if (allReminders.length === 0) {
+            list.innerHTML = `<div style="color:#444; font-size:10px; text-align:center; padding:20px;">No Active Feed</div>`;
+            return;
+        }
+
+        list.innerHTML = allReminders.map(r => {
+            const isGenesis = r.name === "Genesis Allotment";
+            let statusColor = "#444";
+            let statusLabel = "";
+            let countdownText = "";
+
+            // Date Calculation
+            if (r.date && r.date.includes('/')) {
+                const [d, m] = r.date.split('/').map(Number);
+                const eventDate = new Date(now.getFullYear(), m - 1, d);
+                if (now > eventDate && now.toDateString() !== eventDate.toDateString()) {
+                    eventDate.setFullYear(now.getFullYear() + 1);
+                }
+                const diffDays = Math.ceil((eventDate - now) / (1000 * 60 * 60 * 24));
+
+                if (now.toDateString() === eventDate.toDateString()) {
+                    statusColor = "#ffd700"; statusLabel = "TODAY"; countdownText = "NOW";
+                } else {
+                    statusColor = "#00ff88"; statusLabel = "ACTIVE"; countdownText = `In ${diffDays}d`;
+                }
+            } else {
+                statusColor = "#a445ff"; statusLabel = "LIVE"; countdownText = r.date;
+            }
+
+            return `
+                <div ${isGenesis ? 'onclick="window.triggerGenesisCert()"' : ''} 
+                     style="background: rgba(255,255,255,0.03); border-left: 3px solid ${this.getReminderColor(r.type)}; 
+                     padding: 12px; border-radius: 6px; position: relative; margin-bottom: 8px;
+                     ${isGenesis ? 'cursor: pointer; border: 1px solid rgba(255, 215, 0, 0.2);' : ''}">
+                    
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+                        <span style="font-size: 8px; color: #666; letter-spacing: 0.5px;">${r.category} • ${r.date}</span>
+                        <div style="display: flex; gap: 8px; align-items: center;">
+                            <span style="font-size: 8px; color: #aaa; font-family: monospace;">${countdownText}</span>
+                            <span style="font-size: 7px; color: ${statusColor}; font-weight: bold;">● ${statusLabel}</span>
+                        </div>
+                    </div>
+
+                    <div style="font-size: var(--text-sub); color: #fff; font-weight: 500; display: flex; justify-content: space-between; align-items: center;">
+                        ${r.name}
+                        ${isGenesis ? '<span style="font-size: 9px; color:#ffd700; font-weight:bold;">YES ↗</span>' : ''}
+                    </div>
+                </div>
+            `;
+        }).join('');
+    },
     render() {
     return `
         <div class="calendar-app-window" style="height:100%; display:flex; flex-direction:column; background:#000; overflow-y: auto; overflow-x: hidden;
@@ -66,26 +187,23 @@ const thealTimeApp = {
                 <div id="vpu-calendar-grid" style="flex: 1 1 600px; display:grid; grid-template-columns:repeat(7, 1fr); gap:2px; padding:10px; background:#111; min-height: 400px;">
                 </div>
                 
-                <div class="calendar-info-sidebar" style="flex: 1 0 280px; background:#0a0a1a; border-left:1px solid #333; padding:25px; display: flex; flex-direction: column; gap: 25px; box-sizing: border-box;">
-                    <div class="clock-widget">
-                        <div id="vpu-theal-time" style="font-size: var(--text-title); font-weight:bold; color:#a445ff; margin-bottom: 8px;">--:--:--</div>
-                        <div id="vpu-theal-date" style="color:#aaa; font-size: var(--text-main); margin-bottom:15px;">Loading...</div>
-                        
-                        <div style="text-align: left;">
-                            <div style="display:flex; justify-content:space-between; font-size: var(--text-sub); color:#888; margin-bottom:8px;">
-                                <span>Cycle Progress</span>
-                                <span id="vpu-progress-percent">0%</span>
-                            </div>
-                            <div style="width:100%; height:10px; background:#222; border-radius:5px; overflow:hidden;">
-                                <div id="vpu-progress-fill" style="width:0%; height:100%; background:linear-gradient(90deg, #a445ff, #d586ff); transition: width 0.5s ease;"></div>
-                            </div>
-                        </div>
-                    </div>
+            <div class="calendar-info-sidebar" style="flex: 1 0 280px; background:#0a0a1a; border-left:1px solid #333; padding:25px; display: flex; flex-direction: column; gap: 20px; box-sizing: border-box;">
+    
+            <div style="display:flex; justify-content:space-between; align-items:center; border-bottom: 1px solid #222; padding-bottom: 15px;">
+                <h4 style="font-size: var(--text-sub); color:#a445ff; letter-spacing:1px; text-transform:uppercase; margin: 0;">
+                    Temporal Feed
+                </h4>
+                <button onclick="thealTimeApp.addReminder()" 
+                    style="background:#a445ff; border:none; color:#000; width:28px; height:28px; border-radius:6px; cursor:pointer; font-weight: bold;">
+                    +
+                </button>
+            </div>
 
-                    <div class="next-events-vpu" style="text-align:left; border-top:1px solid #333; padding-top:20px;">
-                        <h4 style="font-size: var(--text-sub); color:#a445ff; margin-bottom:15px; letter-spacing: 1px; text-transform: uppercase;">Charter Events</h4>
-                        <div id="vpu-event-list" style="display: flex; flex-direction: column; gap: 15px;"></div>
-                    </div>
+            <div id="vpu-reminder-list" style="display:flex; flex-direction:column; flex: 1; overflow-y: auto;">
+                </div>
+
+        </div>
+
                 </div>
             </div>
         </div>
