@@ -172,14 +172,15 @@ const thealTimeApp = {
             --text-sub: clamp(10px, 0.8vw, 13px);
             --text-title: clamp(22px, 2.2vw, 32px);">
             
-            <div class="calendar-header" style="display:flex; flex-wrap: wrap; justify-content:space-between; align-items:center; padding:15px; background:#1a1a2e; border-bottom:1px solid #444; gap: 10px;">
+            <div class="calendar-header" style="display:flex; flex-wrap: wrap; justify-content:space-between; align-items:center; padding:10px; background:#1a1a2e; border-bottom:1px solid #444; gap: 10px;">
                 <div class="nav-controls" style="display:flex; gap:8px;">
                     <button class="vpu-btn" onclick="thealTimeApp.changeMonth(-1)">←</button>
                     <button class="vpu-btn" onclick="thealTimeApp.goToToday()" style="font-size: var(--text-sub); min-width:80px;">Today</button>
                     <button class="vpu-btn" onclick="thealTimeApp.changeMonth(1)">→</button>
                 </div>
                 <h2 id="vpu-month-label" style="margin:0; font-size: var(--text-main); color:#fff; flex: 1; text-align: center;">Loading...</h2>
-                <input type="date" id="vpu-date-picker" onchange="thealTimeApp.jumpToDate(this.value)" style="background:#000; color:#fff; border:1px solid #a445ff; font-size: var(--text-sub); padding:5px;">
+                <input type="date" id="vpu-date-picker" onchange="thealTimeApp.jumpToDate(this.value)" style="background:#000; color:#fff; border:1px solid #a445ff; font-size: var(--text-sub); padding:8px; border-radius: 4px; flex: 1 0 80%; /* Default to full width for mobile */
+            max-width: 100%;">
             </div>
 
             <div class="calendar-body-container" style="display:flex; flex-wrap: wrap; flex: 1;">

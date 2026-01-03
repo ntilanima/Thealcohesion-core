@@ -785,3 +785,11 @@ pointer-events: none;
 .grid-label {
     font-size: var(--small-font);
 }
+
+@media (min-width: 600px) {
+    #vpu-date-picker {
+        flex: 0 1 auto !important;
+        width: auto !important;
+    }
+}
+
