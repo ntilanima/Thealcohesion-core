@@ -18,12 +18,19 @@ body, html {
     font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
 }
 
-html, body, #workspace { 
-    touch-action: none;
+html, body{ 
     overscroll-behavior: none;
 }
 
-.hidden { display: none !important; }
+
+.window-header {
+    cursor: grab;
+}
+
+.window-header:active {
+    cursor: grabbing;
+}
+
 
 /* --- TOP BAR --- */
 #top-bar {
@@ -66,7 +73,7 @@ html, body, #workspace {
     top: var(--top-bar-h);
     width: var(--dock-width);
     height: calc(100vh - var(--top-bar-h));
-    background: rgba(10, 10, 10, 0.6); 
+    background: rgba(255, 255, 255, 0.02); 
     backdrop-filter: blur(20px) saturate(180%);
     border-right: 1px solid rgba(255, 255, 255, 0.1);
     display: flex;
@@ -76,6 +83,7 @@ html, body, #workspace {
     z-index: 2000;
     will-change: transform;
     gap: 10px;
+    transition: transform 0.4s cubic-bezier(0.165, 0.84, 0.44, 1), opacity 0.3s;
     pointer-events: none; /* FIX: Allows window dragging 'through' the dock */
 }
 
@@ -165,8 +173,6 @@ html, body, #workspace {
 }
 
 /* --- WINDOW SYSTEM (Unified & Optimized) --- */
-/* --- OPTIMIZED WINDOW SYSTEM --- */
-/* --- UPDATED WINDOW SYSTEM --- */
 .os-window {
     position: absolute;
     display: flex;
@@ -179,6 +185,10 @@ html, body, #workspace {
     box-sizing: border-box;
     overflow: hidden;
     z-index: 100;
+    user-select: none;  /* Prevents text selection while dragging */
+    -webkit-user-select: none;
+    touch-action: none;
+    will-change: left, top; /* Optimizes for mobile GPU */
     /* Remove fixed top/left here to let JS handle stagger */
 }
 
@@ -267,9 +277,6 @@ pointer-events: none;
     user-select: none;
     -webkit-user-select: none;
     cursor: grab;
-}
-.window-content {
-    touch-action: pan-y;
 }
 
 .window-header:active {
@@ -613,7 +620,7 @@ pointer-events: none;
 /* Ensure smooth transition for the dock */
 #side-dock {
     /* Transition everything EXCEPT transform during the drag for 'zero-lag' feel */
-    background: rgba(20, 20, 20, 0.6); /* Semi-transparent dark base */
+    background: rgba(10, 10, 10, 0.6); /* Semi-transparent dark base */
     backdrop-filter: blur(15px) saturate(180%);
     border-right: 1px solid rgba(255, 255, 255, 0.1);
     box-shadow: 10px 0 30px rgba(0, 0, 0, 0.5);

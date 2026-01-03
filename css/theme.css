@@ -91,9 +91,9 @@ body, html {
     gap: 15px;
     padding: 20px;
     height: 100vh;
+    position: relative;
+    overflow: hidden;
     display: flex;             /* Enable Flexbox */
-    justify-content: center;   /* Center horizontally */
-    align-items: center;       /* Center vertically */
     background: linear-gradient(135deg, #5E2750 0%, #2c001e 100%); /* Ubuntu Purple */
 }
 
@@ -150,9 +150,13 @@ body, html {
 }
 
 .os-window {
-    /* ... your existing styles ... */
-    animation: debian-launch 0.25s cubic-bezier(0.16, 1, 0.3, 1) forwards;
-    will-change: transform, opacity;
+    will-change: left, top, opacity;
+    animation: fade-in 0.2s ease forwards;
+}
+
+@keyframes fade-in {
+    from { opacity: 0; }
+    to { opacity: 1; }
 }
 
 /* --- SOVEREIGN TERMINAL UI --- */
@@ -257,32 +261,21 @@ body, html {
     .os-window {
         width: 100% !important;
         height: calc(100% - 40px) !important; /* Leave room for top bar */
-        left: 0 !important;
         border-radius: 20px 20px 0 0 !important; /* Rounded tops like mobile apps */
         box-shadow: 0 -5px 15px rgba(0,0,0,0.5);
         transition: transform 0.3s cubic-bezier(0.1, 0.7, 1.0, 0.1), z-index 0s;
-        bottom: 0 !important;
-        top: auto !important; /* Anchor to bottom */
+        max-width: calc(100vw - 10px);
+        max-height: calc(100vh - 40px);
+        border-radius: 14px;
     }
-
-    /* Stack offset: Each new window sits slightly lower than the previous */
-    .os-window:nth-last-child(2) { transform: translateY(15px) scale(0.98); opacity: 0.8; }
-    .os-window:nth-last-child(3) { transform: translateY(30px) scale(0.96); opacity: 0.6; }
 }
 
 @media (max-width: 430px) {
     .os-window {
         width: 100% !important;
         height: calc(100% - 40px) !important; /* Leave room for top bar */
-        left: 0 !important;
         border-radius: 20px 20px 0 0 !important; /* Rounded tops like mobile apps */
         box-shadow: 0 -5px 15px rgba(0,0,0,0.5);
         transition: transform 0.3s cubic-bezier(0.1, 0.7, 1.0, 0.1), z-index 0s;
-        bottom: 0 !important;
-        top: auto !important; /* Anchor to bottom */
     }
-
-    /* Stack offset: Each new window sits slightly lower than the previous */
-    .os-window:nth-last-child(2) { transform: translateY(15px) scale(0.98); opacity: 0.8; }
-    .os-window:nth-last-child(3) { transform: translateY(30px) scale(0.96); opacity: 0.6; }
 }

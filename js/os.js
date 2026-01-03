@@ -22,28 +22,6 @@ class TLC_Kernel {
         --------------------------`;
         
         this.init();
-
-        // --- MOBILE ORIENTATION & RESIZE AUTO-FIT ---
-        window.addEventListener('resize', () => {
-            const isMobile = window.innerWidth < 768;
-            if (isMobile) {
-                document.querySelectorAll('.os-window').forEach(win => {
-                    // Re-apply the initial 75px left / 20px right rule on orientation change
-                    window.addEventListener('resize', () => {
-                    document.querySelectorAll('.os-window').forEach(win => {
-                        if (window.innerWidth < 768 && !win.classList.contains('maximized')) {
-                            win.style.left = "8px";
-                            win.style.width = "calc(100vw - 16px)";
-                        }
-                    });
-                });
-                    let currentTop = parseInt(win.style.top);
-                    if (currentTop < 0 || isNaN(currentTop)) {
-                        win.style.top = "10px";
-                    }
-                });
-            }
-        });
     }
 
     getDockWidth() {
@@ -223,7 +201,10 @@ class TLC_Kernel {
     // Smooth entry animation
     requestAnimationFrame(() => {
         win.style.opacity = "0";
-        win.style.transform = "translateY(20px)";
+        requestAnimationFrame(() => {
+            win.style.transition = "opacity 0.25s ease";
+            win.style.opacity = "1";
+        });
         setTimeout(() => {
             win.style.transition = "all 0.3s cubic-bezier(0.165, 0.84, 0.44, 1)";
             win.style.opacity = "1";
@@ -265,60 +246,68 @@ class TLC_Kernel {
 
     makeDraggable(el) {
     const header = el.querySelector('.window-header');
-    const dock = document.getElementById('side-dock');
+    if (!header) return;
 
-    const startDrag = (clientX, clientY, pointerId = null) => {
-        const startLeft = parseInt(el.style.left) || 0;
-        const startTop = parseInt(el.style.top) || 0;
-        const dockWidth = this.getDockWidth();
+    let dragging = false;
+    let startX = 0, startY = 0;
+    let startLeft = 0, startTop = 0;
 
-        const move = (x, y) => {
-            let newLeft = startLeft + (x - clientX);
-            let newTop = startTop + (y - clientY);
+    const dockWidth = this.getDockWidth();
 
-            const maxLeft = window.innerWidth - el.offsetWidth;
-            const maxTop = (window.innerHeight - 35) - el.offsetHeight;
+    const onDown = (e) => {
+        if (e.target.closest('.win-btn')) return;
 
-            newLeft = Math.max(dockWidth + 5, Math.min(newLeft, maxLeft));
-            newTop = Math.max(0, Math.min(newTop, maxTop));
+        dragging = true;
 
-            el.style.left = `${newLeft}px`;
-            el.style.top = `${newTop}px`;
-        };
+        // IMPORTANT: kill transforms
+        el.style.transition = 'none';
+        el.style.transform = 'none';
 
-        const onMove = (e) => {
-            e.preventDefault();
-            if (e.touches) {
-                move(e.touches[0].clientX, e.touches[0].clientY);
-            } else {
-                move(e.clientX, e.clientY);
-            }
-        };
+        const rect = el.getBoundingClientRect();
+        startX = e.clientX;
+        startY = e.clientY;
+        startLeft = rect.left;
+        startTop = rect.top;
 
-        const onEnd = () => {
-            document.removeEventListener('pointermove', onMove);
-            document.removeEventListener('pointerup', onEnd);
-            document.removeEventListener('touchmove', onMove);
-            document.removeEventListener('touchend', onEnd);
-        };
+        // Safari-safe pointer capture
+        try {
+            el.setPointerCapture(e.pointerId);
+        } catch (_) {}
 
-        document.addEventListener('pointermove', onMove, { passive: false });
-        document.addEventListener('pointerup', onEnd);
-        document.addEventListener('touchmove', onMove, { passive: false });
-        document.addEventListener('touchend', onEnd);
+        e.preventDefault();
     };
 
-    header.addEventListener('pointerdown', (e) => {
-        if (e.target.closest('.win-btn')) return;
-        e.preventDefault();
-        startDrag(e.clientX, e.clientY, e.pointerId);
-    });
+    const onMove = (e) => {
+        if (!dragging) return;
 
-    header.addEventListener('touchstart', (e) => {
-        if (e.target.closest('.win-btn')) return;
+        const dx = e.clientX - startX;
+        const dy = e.clientY - startY;
+
+        let newLeft = startLeft + dx;
+        let newTop = startTop + dy;
+
+        // Bounds
+        newLeft = Math.max(dockWidth + 5, Math.min(newLeft, window.innerWidth - el.offsetWidth - 5));
+        newTop = Math.max(5, Math.min(newTop, window.innerHeight - el.offsetHeight - 5));
+
+        el.style.left = `${newLeft}px`;
+        el.style.top = `${newTop}px`;
+
         e.preventDefault();
-        startDrag(e.touches[0].clientX, e.touches[0].clientY);
-    }, { passive: false });
+    };
+
+    const onUp = () => {
+        if (!dragging) return;
+        dragging = false;
+
+        el.style.transition = 'all 0.25s cubic-bezier(0.2, 0.8, 0.3, 1)';
+        this.updateDockSafety();
+    };
+
+    header.addEventListener('pointerdown', onDown, { passive: false });
+    el.addEventListener('pointermove', onMove, { passive: false });
+    el.addEventListener('pointerup', onUp);
+    el.addEventListener('pointercancel', onUp);
 }
 
     openAppMenu() {
@@ -397,28 +386,30 @@ class TLC_Kernel {
     }
 
     updateDockSafety() {
-        const dock = document.getElementById('side-dock');
-        const windows = document.querySelectorAll('.os-window:not(.closing):not(.minimizing)');
-        let hide = false;
-        windows.forEach(win => {
-            const rect = win.getBoundingClientRect();
-            if (win.classList.contains('maximized') || (rect.left < this.DOCK_WIDTH && win.style.display !== 'none')) {
-                hide = true;
-            }
-        });
-        dock.style.transform = hide ? `translateX(-110%)` : `translateX(0%)`;
-        dock.style.opacity = hide ? "0" : "1";
-        dock.style.pointerEvents = hide ? "none" : "all";
-    }
+    const dock = document.getElementById('side-dock');
+    const dockWidth = this.getDockWidth();
+    const windows = document.querySelectorAll('.os-window:not(.closing):not(.minimizing)');
+    
+    let shouldHide = false;
+    windows.forEach(win => {
+        const leftVal = parseInt(win.style.left) || 0;
+        if (win.classList.contains('maximized') || (leftVal < dockWidth && win.style.display !== 'none')) {
+            shouldHide = true;
+        }
+    });
+    
+    dock.style.transform = shouldHide ? `translateX(-110%)` : `translateX(0%)`;
+    dock.style.opacity = shouldHide ? "0" : "1";
+}
 
     focusWindow(id) {
-        const el = document.getElementById(id);
-        if (el) {
-            el.style.display = 'flex'; 
-            el.style.zIndex = this.getTopZIndex();
-            requestAnimationFrame(() => el.classList.add('visible'));
-        }
+    const el = document.getElementById(id);
+    if (el) {
+        el.style.zIndex = this.getTopZIndex();
+        // Re-run the safety check to update the dock based on this window's position
+        this.updateDockSafety();
     }
+}
 
     getTopZIndex() {
         const wins = document.querySelectorAll('.os-window');
