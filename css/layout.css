@@ -163,8 +163,6 @@ html, body{
     height: 100%;
     position: relative; /* Essential for containing absolute windows */
     overflow: hidden;
-    margin: 0;
-    margin-left: var(--dock-width);
     z-index: 5;
 }
 

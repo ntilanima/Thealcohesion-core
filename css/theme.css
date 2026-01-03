@@ -5,6 +5,7 @@
     --ubuntu-dark-aubergine: #2c001e;
     --glass-bg: rgba(255, 255, 255, 0.05);
     --font-ubuntu: 'Ubuntu', 'Cantarell', sans-serif;
+    --dock-width: 65px;
 }
 
 /* --- BASE LAYOUT --- */
@@ -36,7 +37,6 @@ body, html {
     left: 0;
     top: 30px;
     bottom: 0;
-    width: 65px;
     background: rgba(0, 0, 0, 0.4);
     backdrop-filter: blur(10px);
     display: flex;
@@ -45,6 +45,10 @@ body, html {
     padding-top: 15px;
     border-right: 1px solid rgba(255,255,255,0.05);
     z-index: 999;
+    width: var(--dock-width);
+    transition: width 0.3s cubic-bezier(0.2, 0.8, 0.3, 1),
+                transform 0.3s cubic-bezier(0.2, 0.8, 0.3, 1),
+                opacity 0.2s ease;
 }
 
 .dock-icon {
@@ -82,9 +86,9 @@ body, html {
 
 /* --- DESKTOP WORKSPACE (Ubuntu Grid) --- */
 #workspace {
-    margin-left: 65px; /* Pushes content past side-dock */
+    margin-left: var(--dock-width);
+    transition: margin-left 0.3s cubic-bezier(0.2, 0.8, 0.3, 1);
     height: calc(100vh - 30px);
-    display: grid;
     grid-template-columns: repeat(auto-fill, 100px);
     grid-template-rows: repeat(auto-fill, 110px);
     grid-auto-flow: column; /* Desktop icons stack vertically first */
@@ -93,6 +97,8 @@ body, html {
     height: 100vh;
     position: relative;
     overflow: hidden;
+    justify-content: center;
+    align-items: center;
     display: flex;             /* Enable Flexbox */
     background: linear-gradient(135deg, #5E2750 0%, #2c001e 100%); /* Ubuntu Purple */
 }

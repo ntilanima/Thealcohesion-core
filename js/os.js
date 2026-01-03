@@ -2,6 +2,7 @@ import { registry } from './registry.js';
 
 class TLC_Kernel {
     constructor() {
+        this.isDraggingWindow = false;
         this.DOCK_WIDTH = parseInt(
             getComputedStyle(document.documentElement)
             .getPropertyValue('--dock-width')); 
@@ -169,17 +170,14 @@ class TLC_Kernel {
     const stagger = Math.min((this.runningApps.size - 1) * 20, 80); // cap stagger
 
 
-    win.style.top = "5px";
-    win.style.left = `${dockWidth + 5}px`;
-
+    win.style.top = "10px";
+    win.style.left = "5px"
     win.style.width = "clamp(320px, 65vw, 900px)";
     win.style.height = "clamp(300px, 65vh, 720px)";
 
     if (window.innerWidth < 480) {
-    win.style.left = "8px";
-    win.style.width = "calc(100vw - 16px)";
-}
-
+        win.style.width = "calc(100vw - (var(--dock-width) + 10px))";
+    }
 
     win.style.zIndex = this.getTopZIndex();
 
@@ -255,27 +253,24 @@ class TLC_Kernel {
     const dockWidth = this.getDockWidth();
 
     const onDown = (e) => {
-        if (e.target.closest('.win-btn')) return;
+    if (e.target.closest('.win-btn')) return;
 
-        dragging = true;
+    dragging = true;
+    this.isDraggingWindow = true;
 
-        // IMPORTANT: kill transforms
-        el.style.transition = 'none';
-        el.style.transform = 'none';
+    el.style.transition = 'none';
+    el.style.transform = 'none';
 
-        const rect = el.getBoundingClientRect();
-        startX = e.clientX;
-        startY = e.clientY;
-        startLeft = rect.left;
-        startTop = rect.top;
+    const rect = el.getBoundingClientRect();
+    startX = e.clientX;
+    startY = e.clientY;
+    startLeft = el.offsetLeft;
+    startTop  = el.offsetTop
 
-        // Safari-safe pointer capture
-        try {
-            el.setPointerCapture(e.pointerId);
-        } catch (_) {}
-
-        e.preventDefault();
+    try { el.setPointerCapture(e.pointerId); } catch (_) {}
+    e.preventDefault();
     };
+
 
     const onMove = (e) => {
         if (!dragging) return;
@@ -287,7 +282,9 @@ class TLC_Kernel {
         let newTop = startTop + dy;
 
         // Bounds
-        newLeft = Math.max(dockWidth + 5, Math.min(newLeft, window.innerWidth - el.offsetWidth - 5));
+        newLeft = Math.max(5, Math.min(
+        newLeft,
+        el.parentElement.clientWidth - el.offsetWidth - 5));
         newTop = Math.max(5, Math.min(newTop, window.innerHeight - el.offsetHeight - 5));
 
         el.style.left = `${newLeft}px`;
@@ -297,12 +294,14 @@ class TLC_Kernel {
     };
 
     const onUp = () => {
-        if (!dragging) return;
-        dragging = false;
+    if (!dragging) return;
+    dragging = false;
+    this.isDraggingWindow = false;
 
-        el.style.transition = 'all 0.25s cubic-bezier(0.2, 0.8, 0.3, 1)';
-        this.updateDockSafety();
+    el.style.transition = 'all 0.25s cubic-bezier(0.2, 0.8, 0.3, 1)';
+    this.updateDockSafety(false);
     };
+
 
     header.addEventListener('pointerdown', onDown, { passive: false });
     el.addEventListener('pointermove', onMove, { passive: false });
@@ -371,45 +370,33 @@ class TLC_Kernel {
     }
 
     toggleMaximize(id) {
-        const el = document.getElementById(id);
-        const dock = document.getElementById('side-dock');
-        if (el) {
-            const isMax = el.classList.toggle('maximized');
-            dock.classList.add('smooth-return');
-            if (isMax) {
-                dock.style.transform = `translateX(-110%)`;
-                dock.style.opacity = "0";
-            } else {
-                this.updateDockSafety();
-            }
-        }
-    }
+    const el = document.getElementById(id);
+    if (!el) return;
+
+    const isMax = el.classList.toggle('maximized');
+    this.updateDockSafety();
+}
+
 
     updateDockSafety() {
     const dock = document.getElementById('side-dock');
-    const dockWidth = this.getDockWidth();
+    const osRoot = document.getElementById('os-root');
     const windows = document.querySelectorAll('.os-window:not(.closing):not(.minimizing)');
-    
-    let shouldHide = false;
-    windows.forEach(win => {
-        const leftVal = parseInt(win.style.left) || 0;
-        if (win.classList.contains('maximized') || (leftVal < dockWidth && win.style.display !== 'none')) {
-            shouldHide = true;
-        }
-    });
-    
-    dock.style.transform = shouldHide ? `translateX(-110%)` : `translateX(0%)`;
-    dock.style.opacity = shouldHide ? "0" : "1";
-}
 
-    focusWindow(id) {
-    const el = document.getElementById(id);
-    if (el) {
-        el.style.zIndex = this.getTopZIndex();
-        // Re-run the safety check to update the dock based on this window's position
-        this.updateDockSafety();
+    // Hide dock if any window is maximized
+    const shouldHide = [...windows].some(win => win.classList.contains('maximized'));
+
+    if (shouldHide) {
+        osRoot.classList.add('dock-hidden'); // Workspace expands
+        dock.style.opacity = '0';
+        dock.style.pointerEvents = 'none';
+    } else {
+        osRoot.classList.remove('dock-hidden'); // Workspace back to normal
+        dock.style.opacity = '1';
+        dock.style.pointerEvents = 'auto';
     }
 }
+
 
     getTopZIndex() {
         const wins = document.querySelectorAll('.os-window');
