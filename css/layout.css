@@ -328,7 +328,7 @@ pointer-events: none;
     flex-grow: 1;
     overflow: auto;
     color: #fff;
-    padding: 20px; /* Added padding for content readability */
+    padding: 5px; /* Added padding for content readability */
 }
 
 /* --- RESPONSIVE ADJUSTMENTS --- */
