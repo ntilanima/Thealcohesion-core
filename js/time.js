@@ -88,7 +88,7 @@ const thealTimeApp = {
         };
         return colors[type] || '#444';
     },
-    
+
     renderReminders() {
         const list = document.getElementById('vpu-reminder-list');
         if (!list) return;
@@ -375,6 +375,8 @@ const thealTimeApp = {
     
     // Header Days (Sat, Sun, etc.) - Scaling font
     ['Sat', 'Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri'].forEach(d => {
+        // Apply color to the Friday header specifically
+            const color = d === 'Fri' ? '#ff4444' : '#a445ff';
         grid.innerHTML += `
             <div style="font-size: var(--text-sub); color:#a445ff; text-align:center; padding: 10px; font-weight:bold; text-transform: uppercase;">
                 ${d}
@@ -392,9 +394,13 @@ const thealTimeApp = {
         const theal = this.getThealDate(d);
         const cell = document.createElement("div");
         
+        // CHECK FOR FRIDAY (Friday is 5 in JS Date, but we check d.getDay())
+            const isFriday = d.getDay() === 5;
         // Ensure min-height grows to accommodate larger font
         cell.style.cssText = `
             background:#161625; border:1px solid #222; 
+            background: ${isFriday ? 'rgba(24, 87, 114, 0.05)' : '#161625'}; 
+            border: 1px solid ${isFriday ? 'rgba(255, 68, 68, 0.3)' : '#222'};
             min-height: clamp(80px, 10vh, 140px);
             padding: 8px; color:#fff;
             display: flex; flex-direction: column; 
@@ -531,18 +537,61 @@ window.triggerGenesisCert = function() {
     const serial = `VPU-GEN-${Date.now().toString().slice(-6)}`;
     const overlay = document.createElement('div');
     overlay.id = "cert-overlay";
-    overlay.style.cssText = `position:fixed; top:0; left:0; width:100vw; height:100vh; background:rgba(0,0,0,0.95); backdrop-filter:blur(20px); display:flex; justify-content:center; align-items:center; z-index:20000;`;
+    
+    overlay.style.cssText = `
+        position:fixed; top:0; left:0; width:100vw; height:100vh; 
+        background:rgba(0,0,0,0.95); backdrop-filter:blur(20px); 
+        display:flex; justify-content:center; align-items:center; 
+        z-index:20000; padding: 20px; box-sizing: border-box;
+    `;
+
     overlay.innerHTML = `
-        <div style="width:400px; padding:40px; background:#0a0a12; border:2px solid #a445ff; border-radius:15px; text-align:center; color:white; box-shadow:0 0 50px #a445ff55;">
-            <h1 style="color:#a445ff; font-size:20px;">ALLOTMENT RECORD</h1>
-            <p style="font-size:12px; color:#888; margin-bottom:20px;">GENESIS PHASE 2025</p>
-            <div style="border:1px solid #222; padding:20px; border-radius:10px;">
-                <p style="font-size:10px; color:#555;">BENEFICIARIES</p>
-                <h2 style="font-size:1.5rem;">EPOS & INVESTORS</h2>
-                <p style="color:#d586ff; margin-top:10px;">DECEMBER 26, 2025</p>
+        <div id="genesis-cert-body" style="
+            width: 100%;
+            max-width: 450px; 
+            padding: clamp(20px, 5vw, 40px); 
+            background: #0a0a12; 
+            border: 2px solid #803ca5ff; 
+            border-radius: 15px; 
+            text-align: center; 
+            color: white; 
+            box-shadow: 0 0 50px rgba(255, 215, 0, 0.15);
+            box-sizing: border-box;
+            position: relative;
+        ">
+            <div style="position: absolute; top: 10px; right: 15px; font-size: 8px; color: #4f13beff; letter-spacing: 2px;">AUTHENTICATED</div>
+            
+            <h1 style="color:#ffd700; font-size: clamp(16px, 4vw, 22px); margin-bottom: 5px; letter-spacing: 2px;">
+                ALLOTMENT RECORD
+            </h1>
+            <p style="font-size: clamp(10px, 2.5vw, 12px); color:#666; margin-bottom: 25px;">
+                GENESIS PHASE 2025
+            </p>
+            
+            <div style="border:1px solid rgba(255,215,0,0.3); padding: clamp(15px, 4vw, 25px); border-radius: 10px; background: rgba(255,215,0,0.02);">
+                <p style="font-size: 9px; color: #888; margin-bottom: 10px; letter-spacing: 1px;">BENEFICIARIES</p>
+                <h2 style="font-size: clamp(18px, 5vw, 26px); margin: 0; color: #fff;">EPOS & INVESTORS</h2>
+                <p style="color:#ffd700; margin-top: 15px; font-size: clamp(12px, 3vw, 14px); font-family: monospace;">
+                    DECEMBER 26, 2025
+                </p>
             </div>
-            <p style="font-size:9px; color:#333; margin-top:20px;">ID: ${serial}</p>
-            <button onclick="document.getElementById('cert-overlay').remove()" style="margin-top:20px; background:#a445ff; color:white; border:none; padding:10px 20px; cursor:pointer; border-radius:5px;">CLOSE</button>
+            
+            <p style="font-size: 9px; color: #444; font-family: monospace; margin-top: 20px;">SERIAL: ${serial}</p>
+
+            <div style="margin-top: 30px; display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                <button onclick="window.print()" 
+                    style="background: #222; color: #fff; border: 1px solid #444; padding: 10px; cursor: pointer; border-radius: 6px; font-size: 11px;">
+                    DOWNLOAD PDF
+                </button>
+                <button onclick="navigator.share({title: 'Genesis Allotment', text: 'Auth Serial: ${serial}'})" 
+                    style="background: #222; color: #fff; border: 1px solid #444; padding: 10px; cursor: pointer; border-radius: 6px; font-size: 11px;">
+                    SHARE ACCESS
+                </button>
+                <button onclick="document.getElementById('cert-overlay').remove()" 
+                    style="grid-column: span 2; background: #5d139eff; color: #000; border: none; padding: 12px; cursor: pointer; border-radius: 6px; font-weight: bold; margin-top: 5px;">
+                    CLOSE
+                </button>
+            </div>
         </div>`;
     document.body.appendChild(overlay);
 };
