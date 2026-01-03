@@ -328,7 +328,7 @@ pointer-events: none;
     flex-grow: 1;
     overflow: auto;
     color: #fff;
-    padding: 5px; /* Added padding for content readability */
+    padding: 0; /* Added padding for content readability */
 }
 
 /* --- RESPONSIVE ADJUSTMENTS --- */
@@ -762,9 +762,13 @@ pointer-events: none;
 
 /* Apply to the main calendar container */
 .calendar-app-window {
+    height: 100%;
     --base-font: clamp(12px, 1vw, 16px);
     --small-font: clamp(10px, 0.8vw, 13px);
     --header-font: clamp(18px, 2vw, 24px);
+    --text-main: clamp(12px, 1vw, 16px); 
+    --text-sub: clamp(9px, 0.7vw, 11px);
+    --text-title: clamp(18px, 1.5vw, 24px)
 }
 
 .calendar-app-window div {

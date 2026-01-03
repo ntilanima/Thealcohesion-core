@@ -184,7 +184,7 @@ const thealTimeApp = {
 
             <div class="calendar-body-container" style="display:flex; flex-wrap: wrap; flex: 1;">
                 
-                <div id="vpu-calendar-grid" style="flex: 1 1 600px; display:grid; grid-template-columns:repeat(7, 1fr); gap:2px; padding:10px; background:#111; min-height: 400px;">
+                <div id="vpu-calendar-grid" style="flex: 1 1 600px; display:grid; grid-template-columns:repeat(7, 1fr); gap:2px; padding:5px; background:#111; min-height: 400px;">
                 </div>
                 
             <div class="calendar-info-sidebar" style="flex: 1 0 280px; background:#0a0a1a; border-left:1px solid #333; padding:25px; display: flex; flex-direction: column; gap: 20px; box-sizing: border-box;">
@@ -398,16 +398,18 @@ const thealTimeApp = {
             const isFriday = d.getDay() === 5;
         // Ensure min-height grows to accommodate larger font
         cell.style.cssText = `
-            background:#161625; border:1px solid #222; 
-            background: ${isFriday ? 'rgba(24, 87, 114, 0.05)' : '#161625'}; 
-            border: 1px solid ${isFriday ? 'rgba(255, 68, 68, 0.3)' : '#222'};
-            min-height: clamp(80px, 10vh, 140px);
-            padding: 8px; color:#fff;
-            display: flex; flex-direction: column; 
-            min-width: 0; /* Forces the cell to shrink */
-            overflow: hidden; /* Prevents text from pushing width */
-            box-sizing: border-box;
-        `;
+        background: ${isFriday ? 'rgba(255, 68, 68, 0.05)' : '#161625'}; 
+        border: 0.5px solid ${isFriday ? 'rgba(255, 68, 68, 0.3)' : '#222'}; 
+        /* Reduced min-height to allow 6 rows to fit comfortably */
+        min-height: clamp(50px, 7vh, 85px); 
+        padding: 4px 6px; 
+        color:#fff;
+        display: flex; 
+        flex-direction: column; 
+        justify-content: flex-start;
+        overflow: hidden;
+        box-sizing: border-box;
+    `;
 
         // Highlight Today
         if (d.toDateString() === new Date().toDateString()) {
