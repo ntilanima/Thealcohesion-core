@@ -12,15 +12,6 @@ class TLC_Kernel {
         console.log("Kernel: Initializing Sovereign Core...");
         this.currentZoom = 1.0; 
         this.vaultLocked = true; 
-        this.vpuLogo = `
-        _   _  ____  _   _ 
-        | | | ||  _ \\| | | |
-        | | | || |_) | | | |
-        | |/ / |  __/| |_| |
-        |___/  |_|    \\___/ 
-                            
-        VIRTUAL PRAGMATIC UNIVERSE
-        --------------------------`;
         
         this.init();
     }
@@ -265,16 +256,22 @@ class TLC_Kernel {
         } else if (appId === 'tnfi') {
             container.innerHTML = `<div style="padding:20px;"><h3>Bank of Sovereign</h3><p>Investor Allotment: <strong>EPOS 2025</strong></p><p>Status: <span style="color:#00ff00;">Liquid</span></p></div>`;
         } else if (appId === 'terminal') {
-            container.innerHTML = `
-                <div id="vpu-terminal" style="background:#000; color:#00ff41; font-family:monospace; height:100%; display:flex; flex-direction:column; padding:15px; box-sizing:border-box;">
-                    <div id="term-output" style="flex:1; overflow-y:auto; margin-bottom:10px; font-size:12px; white-space:pre-wrap;">System: Initializing Command Core...</div>
-                    <div style="display:flex; gap:10px;">
-                        <span style="color:#a445ff; font-weight:bold;">admin@vpu:~$</span>
-                        <input type="text" id="term-input" autocomplete="off" style="background:transparent; border:none; color:#00ff41; font-family:inherit; outline:none; flex:1;">
-                    </div>
-                </div>`;
-            this.initTerminalLogic();
-        } else {
+    import('./apps/terminal.js')
+        .then(m => {
+            console.log("Kernel: Terminal module loaded successfully.");
+            const terminal = new m.TerminalApp(container);
+            terminal.init();
+            container.closest('.os-window').dataset.engineInstance = terminal;
+        })
+        .catch(err => {
+            console.error("CRITICAL BOOT ERROR:", err);
+            container.innerHTML = `<div style="padding:20px; color:#ff4444; font-family:monospace;">
+                [BOOT_FAILURE]<br>
+                REASON: ${err.message}<br>
+                PATH: ./terminal.js
+            </div>`;
+        });
+} else {
             container.innerHTML = `<div style="padding:20px;">${appId.toUpperCase()} system online. Ready for Sovereign input.</div>`;
         }
     }
@@ -434,34 +431,6 @@ class TLC_Kernel {
     focusWindow(winId) {
         const el = document.getElementById(winId);
         if (el) el.style.zIndex = this.getTopZIndex();
-    }
-
-    initTerminalLogic() {
-        const input = document.getElementById('term-input');
-        if (input) {
-            input.focus();
-            input.onkeydown = (e) => {
-                if (e.key === 'Enter') {
-                    this.handleTerminalCommand(input.value);
-                    input.value = '';
-                }
-            };
-        }
-    }
-
-    handleTerminalCommand(cmd) {
-        const output = document.getElementById('term-output');
-        let response = "";
-        const cleanCmd = cmd.trim().toLowerCase();
-        
-        if (cleanCmd === 'help') response = "status, clear, neofetch, allotment";
-        else if (cleanCmd === 'neofetch') response = `<pre style="color:#a445ff;">${this.vpuLogo}</pre>`;
-        else if (cleanCmd === 'allotment') response = "Investor Allotment: EPOS 2025 Confirmed.";
-        else if (cleanCmd === 'clear') { output.innerHTML = ''; return; }
-        else response = `Command not found: ${cleanCmd}`;
-
-        output.innerHTML += `\n<span style="color:#888;">> ${cmd}</span>\n${response}\n`;
-        output.scrollTop = output.scrollHeight;
     }
 }
 

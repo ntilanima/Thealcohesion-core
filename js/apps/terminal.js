@@ -1,87 +1,105 @@
-const terminalApp = {
-    id: "vpu-terminal",
-    name: "Terminal Core",
-    
-    // ISOLATED CSS: Scoped specifically to #vpu-terminal
-    css: `
-        #vpu-terminal {
-            background: #000;
-            color: #00ff41;
-            font-family: 'Courier New', monospace;
-            height: 100%;
-            display: flex;
-            flex-direction: column;
-            padding: 15px;
-            box-sizing: border-box;
-        }
-        #vpu-terminal .output-area {
-            flex: 1;
-            overflow-y: auto;
-            margin-bottom: 10px;
-            font-size: 14px;
-            line-height: 1.5;
-            white-space: pre-wrap;
-        }
-        #vpu-terminal .input-line {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-        }
-        #vpu-terminal .prompt { color: #a445ff; font-weight: bold; }
-        #vpu-terminal input {
-            background: transparent;
-            border: none;
-            color: #00ff41;
-            font-family: inherit;
-            font-size: 14px;
-            outline: none;
-            flex: 1;
-        }
-    `,
+/**
+ * VPU TERMINAL SYSTEM - SOVEREIGN EDITION
+ * Compiled Module: TerminalApp (v1.0.3)
+ */
 
-    render() {
-        // Inject CSS once
-        if (!document.getElementById(`css-${this.id}`)) {
-            const style = document.createElement('style');
-            style.id = `css-${this.id}`;
-            style.innerHTML = this.css;
-            document.head.appendChild(style);
-        }
-
-        // Return HTML
-        return `
-            <div id="${this.id}">
-                <div class="output-area" id="term-output">VPU Sovereign Terminal v1.0.0\nType 'help' for commands...</div>
-                <div class="input-line">
-                    <span class="prompt">admin@vpu:~$</span>
-                    <input type="text" id="term-input" autocomplete="off" autofocus>
-                </div>
-            </div>
-        `;
-    },
-
-    // Add this inside the terminalApp object
-    handleCommand(cmd) {
-    const output = document.getElementById('term-output');
-    let response = "";
-
-        const command = cmd.toLowerCase().trim();
-    if (command === 'help') {
-        response = "Available: status, allotment, clear, whoami, exit";
-    } else if (command === 'status') {
-        response = "System: ONLINE\nKernel: V1.0.2\nSovereign Shield: ACTIVE";
-    } else if (command === 'allotment') {
-        response = "QUERY: Initial Allotment Strategy...\nRESULT: EPOS and Investors confirmed for Phase 1 distribution.";
-    } else if (command === 'whoami') {
-        response = `Current User: ${kernel.member ? kernel.member.username : 'Unauthorized'}\nRole: ${kernel.member ? kernel.member.role : 'None'}`;
-    } else if (command === 'clear') {
-        output.innerHTML = "";
-        return;
-    } else {
-        response = `Command not recognized: ${command}`;
+export class TerminalApp {
+    constructor(container) {
+        this.container = container;
+        this.output = null;
+        this.input = null;
+        this.isTyping = false; // Prevents command spamming during output
+        this.vpuLogo = `
+        _   _  ____  _   _ 
+        | | | ||  _ \\| | | |
+        | | | || |_) | | | |
+        | |/ / |  __/| |_| |
+        |___/  |_|    \\___/ 
+        VIRTUAL PRAGMATIC UNIVERSE`;
     }
 
-    output.innerHTML += `\n<span style="color:#888;">> ${cmd}</span>\n${response}\n`;
-    output.scrollTop = output.scrollHeight;
+    init() {
+        this.container.innerHTML = `
+            <div id="vpu-terminal" style="background:#000; color:#00ff41; font-family: 'Courier New', monospace; height:100%; display:flex; flex-direction:column; padding:15px; box-sizing:border-box; position: relative; overflow: hidden;">
+                <div id="term-output" style="flex:1; overflow-y:auto; margin-bottom:10px; font-size:13px; line-height:1.5; white-space: pre-wrap; z-index: 5;"></div>
+                
+                <div class="input-line" style="display:flex; align-items:center; gap:10px; z-index: 5;">
+                    <span style="color:#a445ff; font-weight:bold; white-space: nowrap;">admin@vpu:~$</span>
+                    <input type="text" id="term-input" autocomplete="off" spellcheck="false" 
+                        style="background:transparent; border:none; color:#00ff41; font-family:inherit; outline:none; flex:1; font-size: 13px;">
+                </div>
+
+                <div style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.1) 50%); background-size: 100% 4px; pointer-events: none; opacity: 0.2; z-index: 10;"></div>
+            </div>`;
+        
+        this.output = this.container.querySelector('#term-output');
+        this.input = this.container.querySelector('#term-input');
+        
+        setTimeout(() => this.input.focus(), 50);
+
+        this.input.onkeydown = (e) => {
+            if (e.key === 'Enter' && !this.isTyping) {
+                const commandText = this.input.value;
+                this.handleCommand(commandText);
+                this.input.value = '';
+            }
+        };
+
+        this.container.onclick = () => this.input.focus();
+        this.typeWrite("VPU SOVEREIGN TERMINAL v1.0.3\nSystem: Command Core Initialized...\nType 'help' for commands.");
+    }
+
+    async typeWrite(text, color = "#00ff41") {
+        this.isTyping = true;
+        const line = document.createElement('div');
+        line.style.color = color;
+        this.output.appendChild(line);
+
+        const chars = text.split("");
+        for (let char of chars) {
+            line.textContent += char;
+            this.output.scrollTop = this.output.scrollHeight;
+            // Adjustable typing speed (ms)
+            await new Promise(res => setTimeout(res, 5)); 
+        }
+        this.isTyping = false;
+    }
+
+    async handleCommand(cmd) {
+        if (!cmd.trim()) return;
+
+        // Print the user's command immediately
+        const userLine = document.createElement('div');
+        userLine.innerHTML = `<span style="color:rgba(255,255,255,0.4);">admin@vpu:~$ ${cmd}</span>`;
+        this.output.appendChild(userLine);
+
+        let response = "";
+        const cleanCmd = cmd.trim().toLowerCase();
+        
+        switch (cleanCmd) {
+            case 'help':
+                response = "AVAILABLE COMMANDS:\n  status    - View system health\n  allotment - Check initial allotment strategy\n  neofetch  - System information\n  clear     - Clear terminal buffer";
+                break;
+            case 'status':
+                response = "SYSTEM: ONLINE\nKERNEL: V1.0.2 [SOVEREIGN]\nSHIELD: ACTIVE";
+                break;
+            case 'neofetch':
+                response = this.vpuLogo + "\nOS: VPU Sovereign OS\nKernel: 1.0.2-theal";
+                break;
+            case 'allotment':
+                response = "QUERY: Allotment Genesis Strategy...\nRESULT: [EPOS] and [Investors] confirmed.\nDATE: December 26, 2025";
+                break;
+            case 'clear':
+                this.output.innerHTML = '';
+                return;
+            default:
+                response = `Command not recognized: ${cleanCmd}`;
+        }
+
+        await this.typeWrite(response);
+    }
+
+    destruct() {
+        console.log("Terminal: Shutdown sequence initiated.");
+    }
 }
-};
