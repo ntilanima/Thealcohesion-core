@@ -1,26 +1,55 @@
+/**
+ * VPU KERNEL - SOVEREIGN OS (v1.2.8)
+ * Core: TLC_Kernel
+ * Logic: Window Management & Advanced App Routing
+ */
+
 import { registry } from './registry.js';
 
 class TLC_Kernel {
     constructor() {
         this.isDraggingWindow = false;
-        this.DOCK_WIDTH = parseInt(
-            getComputedStyle(document.documentElement)
-            .getPropertyValue('--dock-width')); 
-        this.pinnedApps = ['time', 'tnfi', 'terminal', 'files', 'browser', 'messages', 'camera', 'settings']; 
         this.runningApps = new Set(); 
+        this.pinnedApps = ['time', 'tnfi', 'terminal', 'files', 'browser', 'messages', 'camera', 'settings']; 
         
         console.log("Kernel: Initializing Sovereign Core...");
-        this.currentZoom = 1.0; 
-        this.vaultLocked = true; 
         
+        // GLOBAL ROUTING LISTENER
+        // Catches 'open' commands from the Terminal or click events
+        window.addEventListener('launchApp', (e) => {
+            const appId = e.detail.appId;
+            if (this.runningApps.has(appId)) {
+                this.focusWindow(`win-${appId}`);
+            } else {
+                this.launchApp(appId);
+            }
+        });
+
         this.init();
     }
 
-    getDockWidth() {
-        return parseInt(
-            getComputedStyle(document.documentElement)
-                .getPropertyValue('--dock-width')
-        ) || 70;
+    /**
+     * ADVANCED ROUTING TABLE
+     * Centralized definitions for app initialization.
+     */
+    get APP_ROUTES() {
+        return {
+            'terminal': async (container) => {
+                const m = await import('./apps/terminal.js');
+                const instance = new m.TerminalApp(container);
+                instance.init();
+                return instance;
+            },
+            'time': async (container) => {
+                const m = await import('./time.js');
+                const instance = new m.TimeApp(container);
+                instance.init();
+                return instance;
+            },
+            'tnfi': (container) => {
+                return this.renderTNFIDashboard(container);
+            }
+        };
     }
 
     init() {
@@ -35,52 +64,12 @@ class TLC_Kernel {
         }
     }
 
-    initMatrix(container) {
-        const canvas = document.createElement('canvas');
-        canvas.style.position = 'absolute';
-        canvas.style.top = '0';
-        canvas.style.left = '0';
-        canvas.style.width = '100%';
-        canvas.style.height = '100%';
-        canvas.style.zIndex = '1';
-        canvas.style.opacity = '0.3'; 
-        container.style.position = 'relative';
-        container.appendChild(canvas);
-
-        const ctx = canvas.getContext('2d');
-        canvas.width = container.offsetWidth;
-        canvas.height = container.offsetHeight;
-
-        const letters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789@#$%^&*";
-        const fontSize = 10;
-        const columns = canvas.width / fontSize;
-        const drops = Array(Math.floor(columns)).fill(1);
-
-        const draw = () => {
-            ctx.fillStyle = "rgba(0, 0, 0, 0.05)";
-            ctx.fillRect(0, 0, canvas.width, canvas.height);
-            ctx.fillStyle = "#00ff41";
-            ctx.font = fontSize + "px monospace";
-
-            drops.forEach((y, i) => {
-                const text = letters[Math.floor(Math.random() * letters.length)];
-                ctx.fillText(text, i * fontSize, y * fontSize);
-                if (y * fontSize > canvas.height && Math.random() > 0.975) drops[i] = 0;
-                drops[i]++;
-            });
-        };
-        
-        const matrixInterval = setInterval(draw, 33);
-        container.closest('.os-window').dataset.intervalId = matrixInterval;
-    }
-
     async transitionToShell() {
         const gate = document.getElementById('login-gate');
         const root = document.getElementById('os-root');
         const top = document.getElementById('top-bar');
         const workspace = document.getElementById('workspace');
 
-        // Hide login, show system UI
         if (gate) gate.style.display = 'none';
         if (top) top.classList.remove('hidden');
         
@@ -98,80 +87,85 @@ class TLC_Kernel {
             if (workspace) workspace.appendChild(preview);
         }
 
-        // Boot Temporal Engine for the Top Bar Clock
+        // Boot Top Bar Clock
         try {
             const { TimeApp } = await import('./time.js');
             const bootClock = new TimeApp();
-            // This ignites the interval that updates #top-bar-time immediately
             bootClock.app.startClock(); 
         } catch (e) {
-            console.error("Temporal Engine failed to ignite on boot:", e);
+            console.error("Temporal Engine failed to ignite:", e);
         }
         
-        // Initialize interactive elements
         this.setupTopBarInteractions(); 
         this.bootShell();
     }
 
-    // NEW: Handle Top Bar Clock Interaction
     setupTopBarInteractions() {
-    const topBarTime = document.getElementById('top-bar-time');
-    if (topBarTime) {
-        topBarTime.style.cursor = 'pointer';
-        topBarTime.onclick = async () => {
-            const existingHud = document.getElementById('temporal-hud');
-            
-            // Toggle: If it exists, kill it. If not, build it.
-            if (existingHud) {
-                existingHud.style.opacity = '0';
-                existingHud.style.transform = 'translateX(-50%) translateY(-10px)';
-                setTimeout(() => existingHud.remove(), 200);
-                return;
-            }
-
-            try {
+        const topBarTime = document.getElementById('top-bar-time');
+        if (topBarTime) {
+            topBarTime.style.cursor = 'pointer';
+            topBarTime.onclick = async () => {
+                const existingHud = document.getElementById('temporal-hud');
+                if (existingHud) {
+                    existingHud.style.opacity = '0';
+                    setTimeout(() => existingHud.remove(), 200);
+                    return;
+                }
                 const { TimeApp } = await import('./time.js');
-                const tempEngine = new TimeApp();
-                tempEngine.app.renderHUD(); 
-            } catch (err) {
-                console.error("HUD Ignition Failure:", err);
-            }
-        };
+                new TimeApp().app.renderHUD(); 
+            };
+        }
     }
-}
 
     bootShell() {
-        const dock = document.getElementById('side-dock');
-        if (!dock) return;
-        dock.innerHTML = ''; 
+    const dock = document.getElementById('side-dock');
+    if (!dock) return;
+    dock.innerHTML = ''; 
 
-        this.pinnedApps.forEach((appId) => {
-            const app = registry.find(a => a.id === appId);
-            if (!app) return;
+    this.pinnedApps.forEach((appId) => {
+        const app = registry.find(a => a.id === appId);
+        if (!app) return;
 
-            const dItem = document.createElement('div');
-            const isRunning = this.runningApps.has(appId);
-            dItem.className = `dock-item ${isRunning ? 'running' : ''}`;
-            dItem.title = app.name;
-            dItem.innerHTML = `<span>${app.icon}</span>`;
-            dItem.onclick = () => {
-                isRunning ? this.focusWindow(`win-${appId}`) : this.launchApp(appId);
-            };
-            dock.appendChild(dItem);
-        });
+        const dItem = document.createElement('div');
+        const isRunning = this.runningApps.has(appId);
+        dItem.className = `dock-item ${isRunning ? 'running' : ''}`;
+        dItem.title = app.name;
+        dItem.innerHTML = `<span>${app.icon}</span>`;
+        
+        dItem.onclick = () => {
+            // 1. Handle the Menu Overlay (Close it if it's open)
+            const overlay = document.getElementById('app-menu-overlay');
+            if (overlay) {
+                overlay.classList.add('hidden');
+                overlay.style.display = 'none';
+            }
 
-        const menuBtn = document.createElement('div');
-        menuBtn.className = 'dock-bottom-trigger';
-        for(let i = 0; i < 9; i++) {
-            const dot = document.createElement('div');
-            dot.className = 'menu-dot';
-            menuBtn.appendChild(dot);
-        }
-        menuBtn.onclick = () => this.openAppMenu();
-        dock.appendChild(menuBtn);
+            // 2. Handle the App Logic
+            if (isRunning) {
+                // This calls focusWindow which now includes display: block
+                this.focusWindow(`win-${appId}`);
+            } else {
+                this.launchApp(appId);
+            }
+        };
+        
+        dock.appendChild(dItem);
+    });
+
+    // App Menu Dot Trigger
+    const menuBtn = document.createElement('div');
+    menuBtn.className = 'dock-bottom-trigger';
+    for(let i = 0; i < 9; i++) {
+        const dot = document.createElement('div');
+        dot.className = 'menu-dot';
+        menuBtn.appendChild(dot);
     }
-    
-    launchApp(appId) {
+    menuBtn.onclick = () => this.openAppMenu();
+    dock.appendChild(menuBtn);
+}
+
+launchApp(appId) {
+        // 1. Close the overlay menu immediately
         const overlay = document.getElementById('app-menu-overlay');
         if (overlay) {
             overlay.classList.add('hidden');
@@ -183,36 +177,50 @@ class TLC_Kernel {
         if (!app || !workspace) return;
 
         const winId = `win-${appId}`;
+        
+        // Prevent duplicate windows
         if (this.runningApps.has(appId)) {
             this.focusWindow(winId);
             return;
         }
 
         this.runningApps.add(appId);
-        this.bootShell(); 
+        this.bootShell(); // Refresh dock icons to show "running" state
 
         const win = document.createElement('div');
         win.className = 'os-window';
         win.id = winId;
 
+        // --- RESTORED GOLD GEOMETRY ---
+        win.style.position = "absolute"; 
         win.style.top = "10px";
         win.style.left = "5px";
+        
+        // Use clamp to ensure windows don't get too small or too large
         win.style.width = "clamp(320px, 65vw, 900px)";
         win.style.height = "clamp(300px, 65vh, 720px)";
 
+        // Responsive mobile override
         if (window.innerWidth < 480) {
-            win.style.width = "calc(100vw - (var(--dock-width) + 10px))";
+            win.style.width = "calc(100vw - (var(--dock-width, 70px) + 10px))";
         }
 
         win.style.zIndex = this.getTopZIndex();
 
+        // Standard OS Window structure
         win.innerHTML = `
             <div class="window-header">
                 <span class="title">${app.icon} ${app.name}</span>
                 <div class="window-controls">
-                    <button class="win-btn hide" id="hide-${winId}"><svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" fill="none" stroke-width="2.5"><line x1="5" y1="12" x2="19" y2="12"></line></svg></button>
-                    <button class="win-btn expand" id="max-${winId}"><svg viewBox="0 0 24 24" width="12" height="12" stroke="currentColor" fill="none" stroke-width="2.5"><rect x="3" y="3" width="18" height="18" rx="1"></rect></svg></button>
-                    <button class="win-btn close" id="close-${winId}"><svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" fill="none" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg></button>
+                    <button class="win-btn hide" id="hide-${winId}">
+                        <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" fill="none" stroke-width="2.5"><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+                    </button>
+                    <button class="win-btn expand" id="max-${winId}">
+                        <svg viewBox="0 0 24 24" width="12" height="12" stroke="currentColor" fill="none" stroke-width="2.5"><rect x="3" y="3" width="18" height="18" rx="1"></rect></svg>
+                    </button>
+                    <button class="win-btn close" id="close-${winId}">
+                        <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" fill="none" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                    </button>
                 </div>
             </div>
             <div class="window-content" id="canvas-${appId}" style="height: calc(100% - 50px); overflow: auto;">
@@ -221,19 +229,18 @@ class TLC_Kernel {
 
         workspace.appendChild(win);
         
+        // --- RESTORED ANIMATION SEQUENCE ---
         requestAnimationFrame(() => {
             win.style.opacity = "0";
+            win.style.transform = "translateY(10px)"; // Start slightly lower
             requestAnimationFrame(() => {
-                win.style.transition = "opacity 0.25s ease";
-                win.style.opacity = "1";
-            });
-            setTimeout(() => {
                 win.style.transition = "all 0.3s cubic-bezier(0.165, 0.84, 0.44, 1)";
                 win.style.opacity = "1";
                 win.style.transform = "translateY(0)";
-            }, 10);
+            });
         });
 
+        // Controls & Interactivity
         win.querySelector(`#hide-${winId}`).onclick = (e) => { e.stopPropagation(); this.minimizeWindow(winId); };
         win.querySelector(`#max-${winId}`).onclick = (e) => { e.stopPropagation(); this.toggleMaximize(winId); };
         win.querySelector(`#close-${winId}`).onclick = (e) => { e.stopPropagation(); this.closeApp(appId, winId); };
@@ -245,35 +252,80 @@ class TLC_Kernel {
         this.injectAppContent(appId);
     }
 
+    /**
+     * UPDATED INJECTOR: This version combines hardcoded routes 
+     * with your new Dynamic Registry Loader.
+     */
     async injectAppContent(appId) {
         const container = document.getElementById(`canvas-${appId}`);
         if (!container) return;
-        if (appId === 'time') {
-            const module = await import('./time.js');
-            const engine = new module.TimeApp(container);
-            engine.init();
-            container.closest('.os-window').dataset.engineInstance = engine;
-        } else if (appId === 'tnfi') {
-            container.innerHTML = `<div style="padding:20px;"><h3>Bank of Sovereign</h3><p>Investor Allotment: <strong>EPOS 2025</strong></p><p>Status: <span style="color:#00ff00;">Liquid</span></p></div>`;
-        } else if (appId === 'terminal') {
-    import('./apps/terminal.js')
-        .then(m => {
-            console.log("Kernel: Terminal module loaded successfully.");
-            const terminal = new m.TerminalApp(container);
-            terminal.init();
-            container.closest('.os-window').dataset.engineInstance = terminal;
-        })
-        .catch(err => {
-            console.error("CRITICAL BOOT ERROR:", err);
-            container.innerHTML = `<div style="padding:20px; color:#ff4444; font-family:monospace;">
-                [BOOT_FAILURE]<br>
-                REASON: ${err.message}<br>
-                PATH: ./terminal.js
-            </div>`;
-        });
-} else {
-            container.innerHTML = `<div style="padding:20px;">${appId.toUpperCase()} system online. Ready for Sovereign input.</div>`;
+        const win = container.closest('.os-window');
+
+        // 1. Check Hardcoded Routes First
+        // This uses the 'get APP_ROUTES()' you defined at the top
+        const route = this.APP_ROUTES[appId];
+        
+        if (route) {
+            console.log(`Kernel: Routing ${appId} via hardcoded internal path.`);
+            try {
+                const instance = await route(container);
+                if (instance) win.dataset.engineInstance = instance;
+                return; // SUCCESS: Exit early
+            } catch (err) {
+                console.error(`Kernel: Internal route failed for ${appId}:`, err);
+            }
         }
+
+        // 2. Fallback to Dynamic Registry Loading (for other 20+ apps)
+        const appData = registry.find(a => a.id === appId);
+        if (appData && appData.file) {
+            try {
+                // Ensure the path is clean. If registry says 'tnfi.js', we use './tnfi.js'
+                const filePath = appData.file.startsWith('./') ? appData.file : `./${appData.file}`;
+                const module = await import(filePath);
+                
+                const className = appId.charAt(0).toUpperCase() + appId.slice(1) + "App";
+                if (module[className]) {
+                    const instance = new module[className](container);
+                    if (instance.init) instance.init();
+                    win.dataset.engineInstance = instance;
+                }
+            } catch (err) {
+                console.error(`Kernel: Dynamic load failed for ${appId}:`, err);
+                container.innerHTML = `<div style="padding:20px; color:#ff4444;">[SYS_ERR]: Source '${appData.file}' not found.</div>`;
+            }
+        } else {
+            // 3. Last Resort: Default UI
+            if (appId === 'tnfi') {
+                this.renderTNFIDashboard(container);
+            } else {
+                container.innerHTML = `<div style="padding:20px; color:#00ff41;">${appId.toUpperCase()} online. Awaiting module deployment.</div>`;
+            }
+        }
+    }
+    renderTNFIDashboard(container) {
+        container.innerHTML = `
+            <div class="tnfi-app" style="padding:25px; color:#a445ff; font-family: 'Courier New', monospace;">
+                <h2 style="margin:0; letter-spacing:2px;">BANK OF SOVEREIGN</h2>
+                <div style="font-size:12px; color:#00ff41; margin-bottom:20px;">GENESIS ALLOTMENT VERIFIED // LOCK_DATE: 2025-12-26</div>
+                
+                <div style="background:rgba(164, 69, 255, 0.05); padding:15px; border-left:3px solid #00ff41; margin-bottom:20px;">
+                    <div style="font-size:10px; opacity:0.7;">TOTAL SUPPLY</div>
+                    <div style="font-size:18px; color:#fff;">100,000,000 VPU</div>
+                </div>
+
+                <table style="width:100%; border-collapse:collapse; font-size:13px;">
+                    <thead style="color:rgba(255,255,255,0.5); text-align:left; border-bottom:1px solid #333;">
+                        <tr><th style="padding:10px 0;">ENTITY</th><th>ALLOTMENT</th><th>STATUS</th></tr>
+                    </thead>
+                    <tbody style="color:#00ff41;">
+                        <tr style="border-bottom:1px solid #222;"><td style="padding:12px 0;">EPOS CORE</td><td>50,000,000</td><td>LOCKED</td></tr>
+                        <tr style="border-bottom:1px solid #222;"><td style="padding:12px 0;">INVESTORS</td><td>15,000,000</td><td>10% TGE</td></tr>
+                        <tr><td style="padding:12px 0;">LIQUIDITY</td><td>20,000,000</td><td>UNLOCKED</td></tr>
+                    </tbody>
+                </table>
+            </div>`;
+        return { id: "TNFI_STUB" };
     }
 
     makeDraggable(el) {
@@ -299,17 +351,34 @@ class TLC_Kernel {
         };
 
         const onMove = (e) => {
-            if (!dragging) return;
-            const dx = e.clientX - startX;
-            const dy = e.clientY - startY;
-            let newLeft = startLeft + dx;
-            let newTop = startTop + dy;
-            newLeft = Math.max(5, Math.min(newLeft, el.parentElement.clientWidth - el.offsetWidth - 5));
-            newTop = Math.max(5, Math.min(newTop, window.innerHeight - el.offsetHeight - 5));
-            el.style.left = `${newLeft}px`;
-            el.style.top = `${newTop}px`;
-            e.preventDefault();
-        };
+    if (!dragging) return;
+    
+    // 1. Get the current workspace dimensions
+    const workspace = el.parentElement;
+    const workWidth = workspace.clientWidth;
+    const workHeight = workspace.clientHeight; // This is the key!
+
+    // 2. Calculate requested position
+    const dx = e.clientX - startX;
+    const dy = e.clientY - startY;
+    let newLeft = startLeft + dx;
+    let newTop = startTop + dy;
+
+    // 3. Apply strict boundaries
+    // Horizontal: 5px margin from left and right
+    newLeft = Math.max(5, Math.min(newLeft, workWidth - el.offsetWidth - 5));
+
+    // Vertical: 5px margin from top and bottom
+    // We use workHeight instead of window.innerHeight to prevent bleeding
+    const maxTop = workHeight - el.offsetHeight - 5;
+    newTop = Math.max(5, Math.min(newTop, maxTop));
+
+    // 4. Update element
+    el.style.left = `${newLeft}px`;
+    el.style.top = `${newTop}px`;
+    
+    e.preventDefault();
+};
 
         const onUp = () => {
             if (!dragging) return;
@@ -429,9 +498,16 @@ class TLC_Kernel {
     }
 
     focusWindow(winId) {
-        const el = document.getElementById(winId);
-        if (el) el.style.zIndex = this.getTopZIndex();
+    const el = document.getElementById(winId);
+    if (el) {
+        // Ensure the window is visible if it was previously minimized
+        el.style.display = 'block'; 
+        el.style.zIndex = this.getTopZIndex();
+        
+        // Optional: remove any 'minimizing' classes if you use them for animations
+        el.classList.remove('minimizing');
     }
+}
 }
 
 window.kernel = new TLC_Kernel();

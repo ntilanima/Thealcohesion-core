@@ -163,7 +163,7 @@ html, body{
     height: 100%;
     position: relative; /* Essential for containing absolute windows */
     overflow: hidden;
-    z-index: 5;
+    z-index: 5;   
 }
 
 #os-root.dock-hidden #workspace {
@@ -694,24 +694,24 @@ pointer-events: none;
 .os-window.snap-left {
     top: 0 !important;
     left: 0 !important;
-    width: 50vw !important;
-    height: 100vh !important;
+    width: 50% !important;
+    height: 100% !important;
     border-radius: 0 !important;
 }
-
+    
 .os-window.snap-right {
     top: 0 !important;
-    left: 50vw !important;
-    width: 50vw !important;
-    height: 100vh !important;
+    left: 50% !important;
+    width: 50% !important;
+    height: 100% !important;
     border-radius: 0 !important;
 }
 
 .os-window.snap-top {
-    top: 0 !important;
+    top: 50% !important;
     left: 0 !important;
-    width: 100vw !important;
-    height: 100vh !important;
+    width: 100% !important;
+    height: 100% !important;
     border-radius: 0 !important;
 }
 .os-window.snap-bottom {

@@ -1,8 +1,9 @@
 /**
  * VPU TERMINAL SYSTEM - SOVEREIGN UPGRADE
- * Module: TerminalApp (v1.2.7)
- * Status: Persistent Header + Hardware Telemetry
+ * Module: TerminalApp (v1.2.8)
  */
+
+import { registry } from '../registry.js'; // Ensure path is correct
 
 export class TerminalApp {
     constructor(container) {
@@ -11,19 +12,29 @@ export class TerminalApp {
         this.input = null;
         this.isTyping = false;
         this.liveInterval = null;
+
+        // Use the master registry as the source of truth
+        this.appRegistry = registry;
+
+        // Populate command list automatically from static commands + all app IDs
+        this.commands = [
+            'help', 'status', 'allotment', 'network', 
+            'neofetch', 'matrix', 'time', 'search', 
+            'open', 'clear', 
+            ...registry.map(a => a.id)
+        ];
         
         this.history = []; 
         this.historyIndex = -1;
         this.tempInput = ""; 
-        this.commands = ['help', 'status', 'allotment', 'network', 'neofetch', 'matrix', 'time', 'clear'];
-        
         this.matrixActive = false;
+
         this.vpuLogo = `
         _   _  ____  _   _ 
         | | | ||  _ \\| | | |
         | | | || |_) | | | |
         | |/ / |  __/| |_| |
-        |___/  |_|    \\___/ 
+        |___/  |_|    \\.../ 
         VIRTUAL PRAGMATIC UNIVERSE`;
     }
 
@@ -35,7 +46,7 @@ export class TerminalApp {
                 <div id="term-header" style="z-index: 5; margin-bottom: 20px; border-bottom: 1px solid rgba(0, 255, 65, 0.2); padding-bottom: 10px;">
                     <pre style="color:#a445ff; margin:0; font-size: 10px; line-height: 1.2;">${this.vpuLogo}</pre>
                     <div style="font-size: 12px; margin-top: 5px; opacity: 0.8;">
-                        CORE: Sovereign v1.2.7 | KERNEL: 1.0.2-theal | STATUS: ONLINE
+                        CORE: Sovereign v1.2.8 | APPS: ${this.appRegistry.length} | KERNEL: 1.0.2-theal
                     </div>
                 </div>
 
@@ -58,7 +69,7 @@ export class TerminalApp {
         this.input.onkeydown = (e) => this.handleKeyDown(e);
         this.container.onclick = () => this.input.focus();
 
-        this.typeWrite("Hardware Telemetry Initialized...\nDirective: Awaiting Input.");
+        this.typeWrite("Hardware Telemetry Initialized...\nApp Engine Online. Type 'search' for apps.");
     }
 
     async handleCommand(cmd) {
@@ -66,61 +77,79 @@ export class TerminalApp {
         userLine.innerHTML = `<span style="color:rgba(255,255,255,0.4);">admin@vpu:~$ ${cmd}</span>`;
         this.output.appendChild(userLine);
 
-        const cleanCmd = cmd.toLowerCase().trim();
+        const parts = cmd.toLowerCase().trim().split(' ');
+        const cleanCmd = parts[0];
+        const arg = parts[1];
+
         if (cleanCmd !== 'clear') await new Promise(res => setTimeout(res, 100));
 
         switch (cleanCmd) {
+            case 'search':
+            let searchOutput = "ALCOHESION APP REGISTRY:\n";
+            this.appRegistry.forEach(app => {
+                // Use || to provide a fallback if desc is missing
+                const description = app.desc || "Sovereign Module"; 
+                searchOutput += `  ${app.icon} [${app.id.padEnd(12)}] : ${app.name}\n    - ${description}\n`;
+            });
+            await this.typeWrite(searchOutput);
+            break;
+
+            case 'open':
+                if (!arg) {
+                    await this.typeWrite("ERR: Specify Application ID. Usage: open [id]");
+                } else {
+                    const target = this.appRegistry.find(a => a.id === arg);
+                    if (target) {
+                        await this.typeWrite(`Executing ${target.name} sequence...`);
+                        window.dispatchEvent(new CustomEvent('launchApp', { detail: { appId: arg } }));
+                    } else {
+                        await this.typeWrite(`ERR: App ID '${arg}' not found.`);
+                    }
+                }
+                break;
+
             case 'neofetch':
                 const ramUsed = (Math.random() * 4 + 2).toFixed(1);
                 const cpuLoad = Math.floor(Math.random() * 15 + 5);
-                const storage = Math.floor(Math.random() * 20 + 70);
-                
-                const stats = `
-[SYSTEM TELEMETRY]
-OS:       Sovereign OS v1.2.7
-KERNEL:   1.0.2-theal-x86_64
-UPTIME:   14 days, 2 hours, 11 mins
-PACKAGES: 452 (vpu-pkg)
-SHELL:    TLC-bash 5.1
-
-[HARDWARE]
-CPU:      Alcohesion Quantum-Thread (8) @ 4.2GHz [${cpuLoad}%]
-MEMORY:   ${ramUsed}GB / 32GB [|||---------]
-STORAGE:  ${storage}GB / 512GB [|||||||-----]
-GPU:      VPU Sovereign-Integrated
-                `;
+                const stats = `\n[SYSTEM TELEMETRY]\nOS:       Sovereign OS v1.2.8\nKERNEL:   1.0.2-theal-x86_64\nCPU:      Alcohesion Quantum-Thread [${cpuLoad}%]\nMEMORY:   ${ramUsed}GB / 32GB [|||---------]\nUPTIME:   14 days, 2 hours\n`;
                 await this.typeWrite(stats);
                 break;
 
             case 'help':
-                await this.typeWrite("DIRECTIVES:\n  > time       (Live Temporal Pulse)\n  > status     (System Integrity)\n  > network    (Node Scan)\n  > allotment  (Genesis Data)\n  > neofetch   (Hardware Telemetry)\n  > matrix     (Toggle Reality Override)\n  > clear      (Flush Buffer)");
+                await this.typeWrite("DIRECTIVES:\n  > search     (App Registry)\n  > open [id]  (Launch App)\n  > time       (Temporal Pulse)\n  > status     (System Integrity)\n  > network    (Node Scan)\n  > allotment  (Genesis Data)\n  > neofetch   (Hardware Info)\n  > matrix     (Toggle Reality)\n  > clear      (Flush Buffer)");
                 break;
+
             case 'status':
                 await this.typeWrite("SYSTEM: ONLINE\nINTEGRITY: 98.4%\nENCRYPTION: ACTIVE");
                 break;
+
             case 'network':
                 await this.typeWrite("SCANNING VPU NODES...\n[NODE_01]: ONLINE\n[EPOS_RELAY]: SECURE");
                 break;
+
             case 'allotment':
                 await this.typeWrite("EPOS & Investors Allotment Confirmed.\nTarget Date: 2025-12-26\nStatus: LOCKED");
                 break;
+
             case 'time':
                 this.startLiveTime();
                 break;
+
             case 'matrix':
                 this.toggleMatrix();
                 await this.typeWrite("Visual override toggled.");
                 break;
+
             case 'clear':
                 this.output.innerHTML = '';
                 break;
+
             default:
                 await this.typeWrite(`ERR: Directive '${cmd}' unknown.`);
         }
     }
 
-    // ... (Keep existing getTemporalData, startLiveTime, handleKeyDown, typeWrite, and matrix methods) ...
-    // Note: Use the same helper methods from v1.2.6 for the time pulse and keyboard logic.
+    // --- HELPER METHODS ---
 
     getTemporalData() {
         const now = new Date();
@@ -135,22 +164,17 @@ GPU:      VPU Sovereign-Integrated
         const m = Math.floor((timeLeft / (1000 * 60)) % 60);
         const s = Math.floor((timeLeft / 1000) % 60);
         return {
-            normal: now.toLocaleTimeString(),
-            date: now.toLocaleDateString(),
+            normal: now.toLocaleTimeString(), date: now.toLocaleDateString(),
             alco: `TLC-${now.getHours().toString().padStart(2,'0')}:${now.getMinutes().toString().padStart(2,'0')}:${now.getSeconds().toString().padStart(2,'0')}`,
-            cycle: `Phase 0${cycle}`,
-            countdown: `${d}d ${h}h ${m}m ${s}s`,
-            unix: Math.floor(now.getTime() / 1000)
+            cycle: `Phase 0${cycle}`, countdown: `${d}d ${h}h ${m}m ${s}s`, unix: Math.floor(now.getTime() / 1000)
         };
     }
 
     startLiveTime() {
         if (this.liveInterval) return;
         const liveEl = document.createElement('div');
-        liveEl.style.padding = "10px";
-        liveEl.style.border = "1px solid #00ff41";
-        liveEl.style.margin = "10px 0";
-        liveEl.style.background = "rgba(0, 255, 65, 0.05)";
+        liveEl.style.padding = "10px"; liveEl.style.border = "1px solid #00ff41";
+        liveEl.style.margin = "10px 0"; liveEl.style.background = "rgba(0, 255, 65, 0.05)";
         this.output.appendChild(liveEl);
         this.isTyping = true;
         this.input.placeholder = "Press ENTER to stop pulse...";
@@ -165,10 +189,8 @@ GPU:      VPU Sovereign-Integrated
         if (this.liveInterval && (e.key === 'Enter' || e.key === 'Escape')) {
             e.preventDefault();
             clearInterval(this.liveInterval);
-            this.liveInterval = null;
-            this.isTyping = false;
-            this.input.placeholder = "";
-            this.output.innerHTML += `\nPulse severed.\n`;
+            this.liveInterval = null; this.isTyping = false;
+            this.input.placeholder = ""; this.output.innerHTML += `\nPulse severed.\n`;
             return;
         }
         if (this.isTyping && e.key === 'Enter') { e.preventDefault(); return; }
