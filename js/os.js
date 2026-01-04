@@ -55,6 +55,19 @@ class TLC_Kernel {
             this.systemTray = new SystemTray(this);
             this.setupIdleLock(300000); 
         }); // 5 minutes
+
+        window.addEventListener('keydown', (e) => {
+    // Escape key to exit Overview
+    if (e.key === 'Escape' && document.body.classList.contains('task-overview-active')) {
+        this.toggleTaskOverview();
+    }
+    
+    // Ctrl + Space to open Overview (Standard Pro Shortcut)
+    if (e.ctrlKey && e.code === 'Space') {
+        e.preventDefault();
+        this.toggleTaskOverview();
+    }
+});
     }
 
     // IDLE LOCK SYSTEM
@@ -394,7 +407,14 @@ lockSystem() {
     const dock = document.getElementById('side-dock');
     if (!dock) return;
     dock.innerHTML = ''; 
-
+    // --- ADDED: TASK VIEW BUTTON (Far Left) ---
+    const taskViewBtn = document.createElement('div');
+    taskViewBtn.className = 'dock-item task-view-trigger';
+    taskViewBtn.title = "View Open Apps";
+    taskViewBtn.innerHTML = `<span><svg viewBox="0 0 24 24" width="20" height="20" stroke="#a445ff" fill="none" stroke-width="2"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg></span>`;
+    taskViewBtn.onclick = () => this.toggleTaskOverview();
+    dock.appendChild(taskViewBtn);
+    // --- END ADDITION ---
     this.pinnedApps.forEach((appId) => {
         const app = registry.find(a => a.id === appId);
         if (!app) return;
@@ -437,7 +457,83 @@ lockSystem() {
     dock.appendChild(menuBtn);
 }
 
-launchApp(appId) {
+    toggleTaskOverview() {
+    const workspace = document.getElementById('workspace');
+    const windows = document.querySelectorAll('.os-window');
+    
+    // Toggle the state
+    const isEntering = !document.body.classList.contains('task-overview-active');
+    document.body.classList.toggle('task-overview-active');
+
+    if (isEntering) {
+        // 1. Create Blur Overlay
+        const blur = document.createElement('div');
+        blur.id = 'overview-blur';
+        blur.innerHTML = `
+            <div id="overview-search-wrap"><input type="text" id="overview-search" placeholder="FILTER ENCLAVES..." autofocus></div>
+            <button id="purge-all-btn">TERMINATE ALL</button>
+            <div id="overview-grid"></div>
+        `;
+        workspace.appendChild(blur);
+
+        const grid = document.getElementById('overview-grid');
+
+        // 2. Prepare Windows for Grid
+        windows.forEach((win) => {
+            // Save current state so we can perfectly restore it
+            win.dataset.oldTransform = win.style.transform;
+            win.dataset.oldLeft = win.style.left;
+            win.dataset.oldTop = win.style.top;
+            win.dataset.oldWidth = win.style.width;
+
+            win.classList.add('in-overview');
+            grid.appendChild(win); // Move window into the grid container for auto-layout
+
+            win.onclick = (e) => {
+                e.stopPropagation();
+                this.exitOverview(win.id);
+            };
+        });
+
+        // Setup Search
+        const searchInput = document.getElementById('overview-search');
+        searchInput.oninput = (e) => {
+            const query = e.target.value.toLowerCase();
+            windows.forEach(win => {
+                const match = win.querySelector('.title').innerText.toLowerCase().includes(query);
+                win.style.display = match ? "block" : "none";
+            });
+        };
+
+    } else {
+        this.exitOverview();
+    }
+}
+
+// 3. New Helper to Restore Windows Properly
+exitOverview(focusId = null) {
+    const workspace = document.getElementById('workspace');
+    const windows = document.querySelectorAll('.os-window');
+    const blur = document.getElementById('overview-blur');
+
+    windows.forEach(win => {
+        win.classList.remove('in-overview');
+        // Restore original geometry
+        win.style.transform = win.dataset.oldTransform || "";
+        win.style.left = win.dataset.oldLeft || "50px";
+        win.style.top = win.dataset.oldTop || "50px";
+        win.style.width = win.dataset.oldWidth || "clamp(320px, 65vw, 900px)";
+        win.style.display = "block";
+        
+        workspace.appendChild(win); // Move back to main workspace
+    });
+
+    document.body.classList.remove('task-overview-active');
+    if (blur) blur.remove();
+    
+    if (focusId) this.focusWindow(focusId);
+}
+    launchApp(appId) {
         // 1. Close the overlay menu immediately
         const overlay = document.getElementById('app-menu-overlay');
         if (overlay) {
