@@ -4,6 +4,7 @@
  * Logic: Window Management & Advanced App Routing
  */
 
+import { SystemTray } from './apps/tray.js';
 import { registry } from './registry.js';
 import { SovereignVFS } from './apps/vfs.js'; // Ensure VFS is imported for secure file handling
 class TLC_Kernel {
@@ -25,8 +26,28 @@ class TLC_Kernel {
                 this.launchApp(appId);
             }
         });
-
+        this.systemTray = new SystemTray(this);
         this.init();
+        this.setupIdleLock(300000); // Trigger the timer setup
+    }
+
+    // IDLE LOCK SYSTEM
+    setupIdleLock(timeout) {
+        const resetTimer = () => {
+            clearTimeout(this.idleTimer);
+            this.idleTimer = setTimeout(() => {
+                // Ensure lockSystem exists before calling
+                if (this.lockSystem) this.lockSystem();
+            }, timeout);
+        };
+
+        // Listen for activity to reset the 5-minute clock
+        window.addEventListener('mousemove', resetTimer);
+        window.addEventListener('mousedown', resetTimer);
+        window.addEventListener('keydown', resetTimer);
+        window.addEventListener('touchstart', resetTimer);
+        
+        resetTimer(); // Start the first countdown
     }
 
     /**
@@ -63,6 +84,15 @@ class TLC_Kernel {
         } else {
             setTimeout(() => this.init(), 100);
         }
+        this.setupContextMenu();
+
+        // Quick Lock: Ctrl + L
+window.addEventListener('keydown', (e) => {
+    if (e.ctrlKey && e.key === 'l') {
+        e.preventDefault();
+        this.lockSystem(); 
+    }
+});
     }
 
     async transitionToShell() {
@@ -195,8 +225,120 @@ class TLC_Kernel {
             console.error("Decryption failed. Key mismatch or Corrupted Block.", e);
             alert("VFS Error: Decryption failed. Possible data corruption.");
         }
+
+        console.log(`Kernel: Requesting secure access to ${path}`);
+    // Logic to find the 'files' app and tell it to open this specific path
+    const event = new CustomEvent('launchApp', { detail: { appId: 'files', filePath: path } });
+    window.dispatchEvent(event);
     }
 
+    setupContextMenu() {
+    // 1. Create the Menu Element
+    const menu = document.createElement('div');
+    menu.id = 'global-context-menu';
+    menu.style.cssText = `
+        position: fixed; z-index: 10000; background: #1a1a1a; 
+        border: 1px solid #333; border-radius: 8px; width: 180px;
+        display: none; padding: 5px 0; box-shadow: 0 10px 25px rgba(0,0,0,0.5);
+        font-family: 'Inter', sans-serif; font-size: 13px; color: #eee;
+    `;
+    document.body.appendChild(menu);
+
+    // 2. Listen for Right Click
+    window.addEventListener('contextmenu', (e) => {
+        e.preventDefault(); // Stop browser menu
+        
+        const { clientX: x, clientY: y } = e;
+        menu.style.top = `${y}px`;
+        menu.style.left = `${x}px`;
+        menu.style.display = 'block';
+
+        // Dynamic Menu Content based on what was clicked
+        this.renderMenuContent(menu, e.target);
+    });
+
+    // 3. Hide menu on click elsewhere
+    window.addEventListener('click', () => {
+        menu.style.display = 'none';
+    });
+}
+
+// RENDER CONTEXT MENU ITEMS
+renderMenuContent(menu, target) {
+    // Check if we clicked on a window, a file, or the desktop
+    const isWindow = target.closest('.os-window');
+    
+    let items = [
+        { label: '📊 System Monitor', action: () => this.launchApp('monitor') },
+        { label: '📝 Task Manager', action: () => this.launchApp('taskman') },
+        { divider: true },
+        { label: '🖼️ Change Wallpaper', action: () => alert('Wallpaper settings coming soon.') }
+    ];
+
+    if (isWindow) {
+        items.unshift(
+            { label: '❌ Close Window', action: () => {
+                const appId = isWindow.id.replace('win-', '');
+                this.closeApp(appId, isWindow.id);
+            }},
+            { divider: true }
+        );
+    }
+    if (target.closest('#canvas-bank')) {
+    items.push({ label: '💳 Copy VPU Address', action: () => {
+        navigator.clipboard.writeText('0xVPU_GENESIS_2025_12_26');
+        alert('Address Copied');
+    }});
+}
+
+// security action at the end
+    items.push({ divider: true });
+items.push({ 
+    label: '🔒 Lock Enclave', 
+    action: () => this.lockSystem(),
+    style: 'color: #f87171;' // Red text for security actions
+});
+
+// Update the rendering loop to apply custom styles if they exist:
+menu.innerHTML = items.map(item => {
+    if (item.divider) return `<div style="height:1px; background:#333; margin:5px 0;"></div>`;
+    return `<div class="menu-item" style="padding: 8px 15px; cursor: pointer; transition: 0.2s; ${item.style || ''}">${item.label}</div>`;
+}).join('');
+
+    // Attach click events
+    menu.querySelectorAll('.menu-item').forEach((el, i) => {
+        const actionableItems = items.filter(item => !item.divider);
+        el.onclick = actionableItems[i].action;
+        el.onmouseenter = () => el.style.background = '#38bdf8';
+        el.onmouseleave = () => el.style.background = 'transparent';
+    });
+}
+
+// SECURITY PROTOCOL: LOCK SYSTEM
+lockSystem() {
+    console.warn("Kernel: SECURITY PROTOCOL ACTIVE. Purging Session Key...");
+
+    // 1. Wipe the sensitive AES key from memory
+    this.sessionKey = null;
+
+    // 2. Close all running applications to clear decrypted data from the DOM
+    Object.keys(this.runningApps).forEach(appId => {
+        this.killProcess(appId);
+    });
+
+    // 3. Clear the workspace and show the login gate
+    const gate = document.getElementById('login-gate');
+    const root = document.getElementById('os-root');
+    const top = document.getElementById('top-bar');
+    const passInput = document.getElementById('pass-input');
+
+    if (gate) gate.style.display = 'flex';
+    if (root) root.style.display = 'none';
+    if (top) top.classList.add('hidden');
+    if (passInput) passInput.value = ''; // Clear password field
+
+    console.log("Kernel: System Enclave Locked.");
+}
     setupTopBarInteractions() {
         const topBarTime = document.getElementById('top-bar-time');
         if (topBarTime) {
@@ -526,7 +668,36 @@ launchApp(appId) {
         searchInput.oninput = (e) => renderGrid(e.target.value);
     }
 
-    closeApp(appId, winId) {
+        killProcess(appId) {
+    console.warn(`Kernel: Force killing ${appId}...`);
+    
+    // 1. Correct Set deletion
+    this.runningApps.delete(appId);
+
+    // 2. Fix the ID mismatch (using win- instead of window-)
+    const win = document.getElementById(`win-${appId}`);
+    if (win) {
+        win.remove();
+    } else {
+        // Fallback check for the other ID format
+        const altWin = document.getElementById(`window-${appId}`);
+        if (altWin) altWin.remove();
+    }
+
+    // 3. Refresh Dock and Notify Apps
+    this.bootShell();
+    window.dispatchEvent(new CustomEvent('process-killed', { detail: { appId } }));
+}
+
+// Ensure closeWindow also uses the correct Set syntax
+closeWindow(appId) {
+    this.runningApps.delete(appId);
+    const windowElement = document.getElementById(`win-${appId}`);
+    if (windowElement) windowElement.remove();
+    this.bootShell();
+    window.dispatchEvent(new CustomEvent('process-killed', { detail: { appId } }));
+}
+        closeApp(appId, winId) {
         const el = document.getElementById(winId);
         if (el) {
             // NEW: Kill the Temporal Engine Instance on close
@@ -541,6 +712,7 @@ launchApp(appId) {
             el.classList.add('closing');
             setTimeout(() => {
                 el.remove();
+                window.dispatchEvent(new CustomEvent('process-killed', { detail: { appId } }));
                 this.runningApps.delete(appId);
                 this.bootShell();
                 this.updateDockSafety();

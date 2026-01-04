@@ -6,6 +6,8 @@ export const registry = [
     { id: 'settings', name: 'Settings', icon: '⚙️', file: 'apps/settings.js' },
     { id: 'messages', name: 'Messages', icon: '💬', file: 'apps/messages.js' },
     { id: 'camera', name: 'Camera', icon: '📸', file: 'apps/camera.js' },
+    { id: 'monitor', name: 'System Monitor', icon: '📊', file: 'apps/monitor.js' },
+    { id: 'taskman', name: 'Task Manager', icon: '📝', file: 'apps/taskman.js' },
 
     // SOVEREIGN ECOSYSTEM (Mapped to your specific files)
     { id: 'time', name: 'Temporal Engine', icon: '🕒', file: 'time.js' },

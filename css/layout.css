@@ -354,6 +354,19 @@ pointer-events: none;
     background: linear-gradient(135deg, #5E2750 0%, #2c001e 100%);
 }
 
+/* Target the logo container inside the login gate */
+#login-gate .logo {
+    width: clamp(250px, 15vw, 120px); /* Responsive sizing */
+    height: auto;
+    margin-bottom: 24px;
+    filter: drop-shadow(0 0 15px rgba(56, 189, 248, 0.3));
+    transition: transform 0.3s ease;
+}
+
+#login-gate .logo:hover {
+    transform: scale(1.05);
+}
+
 /* Ubuntu Running Indicator */
 .dock-item.running::before {
     content: '';
@@ -793,3 +806,69 @@ pointer-events: none;
     }
 }
 
+/* CRT Overlay Effect for display changes */
+.crt-effect::before {
+    content: " ";
+    display: block;
+    position: fixed;
+    top: 0; left: 0; bottom: 0; right: 0;
+    background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%), 
+                linear-gradient(90deg, rgba(255, 0, 0, 0.06), rgba(0, 255, 0, 0.02), rgba(0, 0, 255, 0.06));
+    z-index: 9999; /* Above everything */
+    background-size: 100% 4px, 3px 100%;
+    pointer-events: none; /* Allows clicking through to the OS */
+}
+
+/* Subtle Screen Flicker */
+.crt-effect {
+    animation: textShadow 1.6s infinite;
+}
+
+@keyframes textShadow {
+    0% { text-shadow: 0.43px 0 1px rgba(0,30,255,0.5), -0.43px 0 1px rgba(255,0,80,0.3), 0 0 3px; }
+    5% { text-shadow: 0.8px 0 1px rgba(0,30,255,0.5), -0.8px 0 1px rgba(255,0,80,0.3), 0 0 3px; }
+    /* ... add more steps for a jittery feel ... */
+    100% { text-shadow: 0.43px 0 1px rgba(0,30,255,0.5), -0.43px 0 1px rgba(255,0,80,0.3), 0 0 3px; }
+}
+
+/* --- GLOBAL CONTEXT MENU STYLES --- */
+#global-context-menu {
+    backdrop-filter: blur(10px);
+    animation: menuFadeIn 0.15s ease-out;
+}
+
+@keyframes menuFadeIn {
+    from { opacity: 0; transform: scale(0.95); }
+    to { opacity: 1; transform: scale(1); }
+}
+
+/* Context Menu Items */
+.tray-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px 12px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 14px;
+    transition: background 0.2s;
+}
+
+.tray-item:hover {
+    background: rgba(255, 255, 255, 0.1);
+}
+
+.tray-item span:last-child {
+    font-size: 10px;
+    color: #888;
+}
+
+@keyframes battery-pulse {
+    0% { opacity: 1; }
+    50% { opacity: 0.3; }
+    100% { opacity: 1; }
+}
+
+.battery-critical {
+    animation: battery-pulse 1s infinite;
+}
