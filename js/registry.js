@@ -3,6 +3,7 @@ export const registry = [
     { id: 'terminal', name: 'Terminal', icon: '📟', file: 'apps/terminal.js' },
     { id: 'files', name: 'Files', icon: '📁', file: 'apps/vfs.js' },
     { id: 'browser', name: 'Web', icon: '🌐', file: 'apps/browser.js' },
+    { id: 'vscode', name: 'Code Editor', icon: '💻',file: './apps/vscode.js'},
     { id: 'settings', name: 'Settings', icon: '⚙️', file: 'apps/settings.js' },
     { id: 'messages', name: 'Messages', icon: '💬', file: 'apps/messages.js' },
     { id: 'camera', name: 'Camera', icon: '📸', file: 'apps/camera.js' },

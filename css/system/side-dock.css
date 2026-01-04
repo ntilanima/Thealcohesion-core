@@ -1,0 +1,27 @@
+/* Side Dock Styles: #side-dock, #side-dock-items, dock triggers */
+#side-dock {
+    position: fixed;
+    left: 0;
+    top: 30px;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.4);
+    backdrop-filter: blur(10px);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding-top: 15px;
+    border-right: 1px solid rgba(255,255,255,0.05);
+    z-index: 999;
+    width: var(--dock-width);
+    transition: width 0.3s cubic-bezier(0.2, 0.8, 0.3, 1),
+                transform 0.3s cubic-bezier(0.2, 0.8, 0.3, 1),
+                opacity 0.2s ease;
+}
+.dock-icon {
+    width: 44px;
+    height: 44px;
+    margin-bottom: 12px;
+    cursor: pointer;
+    transition: transform 0.2s;
+}
+.dock-icon:hover { transform: scale(1.1); }

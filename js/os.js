@@ -13,7 +13,7 @@ class TLC_Kernel {
         this.isDraggingWindow = false;
         this.runningApps = new Set(); 
         this.sessionKey = null; 
-        this.pinnedApps = ['time', 'tnfi', 'terminal', 'files', 'browser', 'messages', 'camera', 'settings']; 
+        this.pinnedApps = ['time', 'tnfi', 'terminal', 'files', 'browser', 'messages', 'camera','vscode', 'settings']; 
         this.idleTimer = null;
 
         console.log("Kernel: Initializing Sovereign Core...");
@@ -745,7 +745,7 @@ exitOverview(focusId = null) {
     // 4. Update element
     el.style.left = `${newLeft}px`;
     el.style.top = `${newTop}px`;
-    
+    this.checkDockCollision(); // Call the collision logic here
     e.preventDefault();
 };
 
@@ -762,6 +762,26 @@ exitOverview(focusId = null) {
         el.addEventListener('pointerup', onUp);
         el.addEventListener('pointercancel', onUp);
     }
+
+     checkDockCollision() {
+    const windows = document.querySelectorAll('.os-window');
+    const threshold = 100; // Pixels from left edge
+    let shouldHide = false;
+
+    windows.forEach(win => {
+        const left = parseInt(win.style.left);
+        // If window is minimized, we ignore it
+        if (!win.classList.contains('minimized') && left < threshold) {
+            shouldHide = true;
+        }
+    });
+
+    if (shouldHide) {
+        document.getElementById('os-root').classList.add('dock-retracted');
+    } else {
+        document.getElementById('os-root').classList.remove('dock-retracted');
+    }
+}
 
     openAppMenu() {
         const overlay = document.getElementById('app-menu-overlay');
@@ -798,25 +818,33 @@ exitOverview(focusId = null) {
         searchInput.oninput = (e) => renderGrid(e.target.value);
     }
 
-        killProcess(appId) {
-    console.warn(`Kernel: Force killing ${appId}...`);
+ killProcess(appId) {
+    const winId = `win-${appId}`;
+    const win = document.getElementById(winId);
     
-    // 1. Correct Set deletion
-    this.runningApps.delete(appId);
-
-    // 2. Fix the ID mismatch (using win- instead of window-)
-    const win = document.getElementById(`win-${appId}`);
-    if (win) {
-        win.remove();
-    } else {
-        // Fallback check for the other ID format
-        const altWin = document.getElementById(`window-${appId}`);
-        if (altWin) altWin.remove();
+    // 1. Clean up the Engine Instance (Destructors)
+    if (win && win.dataset.engineInstance) {
+        const instance = win.dataset.engineInstance;
+        if (instance.destruct) instance.destruct(); // Stop intervals/telemetry
     }
 
-    // 3. Refresh Dock and Notify Apps
-    this.bootShell();
-    window.dispatchEvent(new CustomEvent('process-killed', { detail: { appId } }));
+    // 2. Remove from DOM and State
+    if (win) win.remove();
+    this.runningApps.delete(appId);
+    
+    // 3. Refresh UI
+    this.bootShell(); 
+    this.checkDockCollision();
+}
+
+closeApp(appId, winId) {
+    const win = document.getElementById(winId);
+    if (!win) return;
+    
+    win.classList.add('closing'); // Trigger CSS animation
+    setTimeout(() => {
+        this.killProcess(appId);
+    }, 300);
 }
 
 // Ensure closeWindow also uses the correct Set syntax
@@ -827,28 +855,7 @@ closeWindow(appId) {
     this.bootShell();
     window.dispatchEvent(new CustomEvent('process-killed', { detail: { appId } }));
 }
-        closeApp(appId, winId) {
-        const el = document.getElementById(winId);
-        if (el) {
-            // NEW: Kill the Temporal Engine Instance on close
-            if (el.dataset.engineInstance) {
-                try {
-                    const engine = el.dataset.engineInstance;
-                    // Check if the module has a destruct or stop timer method
-                    if (engine.destruct) engine.destruct();
-                } catch (e) { console.warn("Engine cleanup failed"); }
-            }
 
-            el.classList.add('closing');
-            setTimeout(() => {
-                el.remove();
-                window.dispatchEvent(new CustomEvent('process-killed', { detail: { appId } }));
-                this.runningApps.delete(appId);
-                this.bootShell();
-                this.updateDockSafety();
-            }, 300);
-        }
-    }
 
     minimizeWindow(id) {
         const el = document.getElementById(id);
@@ -861,6 +868,16 @@ closeWindow(appId) {
             }, 400);
         }
     }
+
+    getTopZIndex() {
+    const windows = document.querySelectorAll('.os-window');
+    let max = 100;
+    windows.forEach(win => {
+        const z = parseInt(win.style.zIndex) || 100;
+        if (z > max) max = z;
+    });
+    return max + 1;
+}
 
     toggleMaximize(id) {
         const el = document.getElementById(id);

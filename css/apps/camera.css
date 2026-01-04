@@ -1,0 +1,25 @@
+/* Camera app styles */
+.camera-app {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+}
+
+.camera-header {
+    background-color: #f0f0f0;
+    padding: 10px;
+    border-bottom: 1px solid #ccc;
+}
+
+.camera-content {
+    flex-grow: 1;
+    overflow-y: auto;
+}
+
+.camera-footer {
+    background-color: #f0f0f0;
+    padding: 10px;
+    border-top: 1px solid #ccc;
+}
+/* Additional camera app styles can be added here */

@@ -15,6 +15,7 @@ export function startBootSequence(onComplete) {
         "Text Found": !!text,
         "LoginGate Found": !!loginGate
     });
+    
 
     if (!bar || !text) {
         console.error("BOOT ERROR: Progress bar elements missing from DOM.");
