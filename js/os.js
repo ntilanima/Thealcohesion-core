@@ -7,7 +7,7 @@
 import { SystemTray } from './apps/tray.js';
 import { registry } from './registry.js';
 import { SovereignVFS } from './apps/vfs.js'; // Ensure VFS is imported for secure file handling
-import { startBootSequence } from '/boot.js'; // Refined boot sequence
+import { startBootSequence } from './boot.js'; // Refined boot sequence
 class TLC_Kernel {
     constructor() {
         this.isDraggingWindow = false;
