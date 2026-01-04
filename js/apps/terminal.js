@@ -3,7 +3,7 @@
  * Module: TerminalApp (v1.2.8)
  */
 
-import { registry } from '../registry.js'; // Ensure path is correct
+import { registry } from '../os-core/registry.js'; // Ensure path is correct
 
 export class TerminalApp {
     constructor(container) {

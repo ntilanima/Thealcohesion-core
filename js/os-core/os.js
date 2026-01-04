@@ -4,9 +4,9 @@
  * Logic: Window Management & Advanced App Routing
  */
 
-import { SystemTray } from './apps/tray.js';
+import { SystemTray } from '../apps/tray.js';
 import { registry } from './registry.js';
-import { SovereignVFS } from './apps/vfs.js'; // Ensure VFS is imported for secure file handling
+import { SovereignVFS } from '../apps/vfs.js'; // Ensure VFS is imported for secure file handling
 import { startBootSequence } from './boot.js'; // Refined boot sequence
 class TLC_Kernel {
     constructor() {
@@ -96,13 +96,13 @@ class TLC_Kernel {
     get APP_ROUTES() {
         return {
             'terminal': async (container) => {
-                const m = await import('./apps/terminal.js');
+                const m = await import('../apps/terminal.js');
                 const instance = new m.TerminalApp(container);
                 instance.init();
                 return instance;
             },
             'time': async (container) => {
-                const m = await import('./time.js');
+                const m = await import('../apps/time.js');
                 const instance = new m.TimeApp(container);
                 instance.init();
                 return instance;
@@ -191,7 +191,7 @@ window.addEventListener('keydown', (e) => {
         // 5. SUBSYSTEM IGNITION
         try {
             // Boot Clock Engine
-            const { TimeApp } = await import('./time.js');
+            const { TimeApp } = await import('../apps/time.js');
             const bootClock = new TimeApp();
             if (bootClock.app && bootClock.app.startClock) {
                 bootClock.app.startClock(); 
@@ -397,7 +397,7 @@ lockSystem() {
                     setTimeout(() => existingHud.remove(), 200);
                     return;
                 }
-                const { TimeApp } = await import('./time.js');
+                const { TimeApp } = await import('../apps/time.js');
                 new TimeApp().app.renderHUD(); 
             };
         }
