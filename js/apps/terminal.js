@@ -144,6 +144,10 @@ export class TerminalApp {
                 this.output.innerHTML = '';
                 break;
 
+            case 'ls':
+                await this.listDirectory();
+                break;
+
             default:
                 await this.typeWrite(`ERR: Directive '${cmd}' unknown.`);
         }
@@ -228,6 +232,32 @@ export class TerminalApp {
             await new Promise(res => setTimeout(res, 5));
         }
         this.isTyping = false;
+    }
+
+    async listDirectory() {
+        if (!window.SovereignVFS) {
+            this.print("Error: VFS Driver not loaded.", "#ff4444");
+            return;
+        }
+
+        try {
+            this.print("Index of /home", "#888");
+            
+            // Hardcoded virtual structure (matching the provisioned data)
+            const structure = [
+                { name: "readme.txt", type: "file" },
+                { name: "documents/", type: "dir" },
+                { name: "documents/investors.txt", type: "file" }
+            ];
+
+            structure.forEach(item => {
+                const color = item.type === 'dir' ? '#3498db' : '#00ff41';
+                this.print(`  ${item.name}`, color);
+            });
+
+        } catch (e) {
+            this.print("VFS_READ_ERROR: Access Denied.", "#ff4444");
+        }
     }
 
     toggleMatrix() {
