@@ -7,17 +7,18 @@
 import { SystemTray } from './apps/tray.js';
 import { registry } from './registry.js';
 import { SovereignVFS } from './apps/vfs.js'; // Ensure VFS is imported for secure file handling
+import { startBootSequence } from '/boot.js'; // Refined boot sequence
 class TLC_Kernel {
     constructor() {
         this.isDraggingWindow = false;
         this.runningApps = new Set(); 
-        this.sessionKey = null; // <--- Store the derived AES key here
+        this.sessionKey = null; 
         this.pinnedApps = ['time', 'tnfi', 'terminal', 'files', 'browser', 'messages', 'camera', 'settings']; 
-        
+        this.idleTimer = null;
+
         console.log("Kernel: Initializing Sovereign Core...");
         
-        // GLOBAL ROUTING LISTENER
-        // Catches 'open' commands from the Terminal or click events
+        // 1. GLOBAL ROUTING LISTENER
         window.addEventListener('launchApp', (e) => {
             const appId = e.detail.appId;
             if (this.runningApps.has(appId)) {
@@ -26,9 +27,34 @@ class TLC_Kernel {
                 this.launchApp(appId);
             }
         });
-        this.systemTray = new SystemTray(this);
-        this.init();
-        this.setupIdleLock(300000); // Trigger the timer setup
+
+        // 2. HIDE UI INITIALLY
+        const osRoot = document.getElementById('os-root');
+        const loginGate = document.getElementById('login-gate');
+        const topBar = document.getElementById('top-bar');
+        
+        if(osRoot) osRoot.style.display = 'none';
+        if(loginGate) {
+            loginGate.style.display = 'none';
+            loginGate.style.opacity = '0';
+        }
+        if(topBar) topBar.classList.add('hidden');
+
+        // 3. START BOOT SEQUENCE (Handover Logic)
+        startBootSequence(() => {
+            console.log("Kernel: Boot Successful. Displaying Identity Access.");
+            
+            // Show login gate with transition
+            if(loginGate) {
+                loginGate.style.display = 'flex';
+                setTimeout(() => loginGate.style.opacity = '1', 50);
+            }
+            
+            // Only initialize subsystems AFTER the splash screen is gone
+            this.init(); 
+            this.systemTray = new SystemTray(this);
+            this.setupIdleLock(300000); 
+        }); // 5 minutes
     }
 
     // IDLE LOCK SYSTEM
@@ -149,8 +175,6 @@ window.addEventListener('keydown', (e) => {
             }
         }
 
-        if (top) top.classList.remove('hidden');
-
         // 5. SUBSYSTEM IGNITION
         try {
             // Boot Clock Engine
@@ -161,6 +185,16 @@ window.addEventListener('keydown', (e) => {
             }
         } catch (e) {
             console.warn("Temporal Engine: Secondary ignition failed, but system remains stable.");
+        }
+
+        if (top) {
+            top.classList.remove('hidden');
+            top.style.display = 'flex'; // Ensures layout matches VPU style
+            top.style.opacity = '0';
+            requestAnimationFrame(() => {
+                top.style.transition = 'opacity 0.5s ease';
+                top.style.opacity = '1';
+            });
         }
         
         this.setupTopBarInteractions(); 
