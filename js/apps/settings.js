@@ -1,5 +1,5 @@
 /**
- * apps/settings.js - Enhanced with Security Audits
+ * js/apps/settings.js - Enhanced with Security Audits
  */
 export class SettingsApp {
     constructor(container, sessionKey) {
