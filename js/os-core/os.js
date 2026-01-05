@@ -61,7 +61,7 @@ class TLC_Kernel {
         setInterval(() => {
             // Tripwire: Check if the key was tampered with or lost
             if (this.isLoggedIn && !this.sessionKey) {
-                triggerRealPanic("ENCLAVE_LOST", "Secure session key purged from volatile memory.");
+                this.triggerRealPanic("ENCLAVE_LOST", "Secure session key purged from volatile memory.");
             }
         }, 10000); // Check every 10 seconds
 
@@ -82,7 +82,7 @@ class TLC_Kernel {
                     this.triggerRealPanic("0xVFS_INTEGRITY_03", "Hardware partition disconnected during runtime.");
                 }
             }
-        }, 5000); // End of constructor
+        }, 500000); // End of constructor
 
 
     }
@@ -164,21 +164,55 @@ class TLC_Kernel {
 
     async boot() {
     console.log("Kernel: Ignition sequence initiated...");
-
-    // 1. CHECK FOR POST-PANIC RECOVERY
-    const lastPanic = localStorage.getItem('LAST_PANIC_CODE');
-    if (lastPanic) {
-        // Halt normal flow to run the Recovery Sequence
-        await this.runRecoverySequence(lastPanic);
+        
+    // 1. HARDWARE HANDSHAKE / PROVISIONING
+    const hasHardwareKey = await this.verifyHardwareSignature();
+    
+    if (!hasHardwareKey) {
+        // Instead of immediate panic, we check if we should allow provisioning
+        const loginGate = document.getElementById('login-gate');
+        if (loginGate) {
+            console.warn("Kernel: Device not provisioned. Intercepting Login Gate.");
+            
+            loginGate.style.display = 'flex';
+            loginGate.style.opacity = '1';
+            
+            loginGate.innerHTML = `
+                <div class="provision-container" style="text-align:center; color:#00ff41; font-family:monospace; padding:30px; border:1px solid #00ff41; background:rgba(0,10,0,0.95); box-shadow: 0 0 20px rgba(0,255,65,0.2);">
+                    <h2 style="letter-spacing:3px; margin-bottom:10px;">HARDWARE_PROVISIONING</h2>
+                    <div style="height:2px; background:#00ff41; width:50px; margin: 0 auto 20px auto;"></div>
+                    <p style="font-size:12px; margin-bottom:25px; color:#888;">No Genesis Key [SIG_2025_12_26] detected on this terminal.</p>
+                    <button id="provision-btn" style="background:#00ff41; color:#000; border:none; padding:12px 24px; cursor:pointer; font-weight:bold; font-family:monospace; transition:0.3s;">
+                        GENERATE_ENCLAVE_KEY
+                    </button>
+                </div>
+            `;
+            
+            document.getElementById('provision-btn').onclick = () => {
+                localStorage.setItem('VPU_HW_ID', "SIG_2025_12_26_ALPHA_GENESIS");
+                this.logEvent('INFO', 'Hardware Signature provisioned to local storage.');
+                location.reload(); // Hard reboot to validate signature
+            };
+            return; // HALT BOOT: Wait for provisioning
+        }
     }
 
-    // 2. TRIGGER THE SPLASH SCREEN / HANDOVER
-    // This moves your startBootSequence logic into a controlled method
+    // 2. CHECK FOR POST-PANIC RECOVERY
+    const lastPanic = localStorage.getItem('LAST_PANIC_CODE');
+    if (lastPanic) {
+        await this.runRecoverySequence(lastPanic);
+        // Log recovery after the sequence finishes
+        this.logEvent('WARN', `System recovered from critical halt: ${lastPanic}`); 
+    }
+
+    // 3. TRIGGER THE SPLASH SCREEN / HANDOVER
     startBootSequence(() => {
         console.log("Kernel: Handover complete. Enabling Identity Access.");
         
         const loginGate = document.getElementById('login-gate');
         if(loginGate) {
+            // We reset the innerHTML in case it was used for provisioning earlier
+            // (Only necessary if you aren't doing a location.reload())
             loginGate.style.display = 'flex';
             setTimeout(() => loginGate.style.opacity = '1', 50);
         }
@@ -188,7 +222,15 @@ class TLC_Kernel {
         this.setupIdleLock(300000); // 5 minutes
         this.isBooted = true;
     });
+    // 3. PROCEED TO SPLASH
     this.logEvent('WARN', `System recovered from critical halt: ${lastPanic}`);  
+}
+
+async verifyHardwareSignature() {
+    // We check for a specific 'hardware_id' in local storage 
+    // that only a genuine member would have provisioned
+    const hwid = localStorage.getItem('VPU_HW_ID');
+    return hwid === "SIG_2025_12_26_ALPHA_GENESIS";
 }
 
 async runRecoverySequence(errorCode) {
@@ -1363,6 +1405,13 @@ logEvent(type, message) {
         ticker.style.color = type === 'CRITICAL' ? '#ff4444' : '#00ff41';
         ticker.classList.add('flash');
         setTimeout(() => ticker.classList.remove('flash'), 3000);
+    }
+
+    // NEW: If a security dashboard is open, tell it to refresh
+    const dashboard = document.querySelector('[id^="win-security"]');
+    if (dashboard) {
+        const instance = dashboard.dataset.engineInstance;
+        if (instance && instance.render) instance.render();
     }
 }
     
