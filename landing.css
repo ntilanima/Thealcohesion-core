@@ -1,0 +1,188 @@
+/*The High-End Styling*/
+:root {
+    --core-glow: #a445ff;
+    --text-dim: rgba(255, 255, 255, 0.5);
+    --bg-black: #050505;
+}
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    cursor: crosshair; /* Adds to the terminal feel */
+}
+
+body, html {
+    width: 100%;
+    height: 100%;
+    overflow: hidden; /* Prevents scrolling */
+    background: var(--bg-black);
+    font-family: 'Courier New', Courier, monospace;
+    color: #fff;
+}
+
+.enclave-gate {
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    padding: 40px;
+    position: relative;
+}
+
+/* Subtle Film Grain Effect */
+.noise {
+    position: fixed;
+    top: 0; left: 0; width: 100%; height: 100%;
+    background: url('https://grainy-gradients.vercel.app/noise.svg');
+    opacity: 0.04;
+    pointer-events: none;
+    z-index: 10;
+}
+
+.top-meta, .bottom-meta {
+    font-size: 10px;
+    letter-spacing: 3px;
+    color: var(--text-dim);
+    display: flex;
+    align-items: center;
+    text-transform: uppercase;
+}
+
+.pulsing {
+    width: 6px;
+    height: 6px;
+    background: var(--core-glow);
+    border-radius: 50%;
+    margin-right: 15px;
+    box-shadow: 0 0 10px var(--core-glow);
+    animation: pulse 2s infinite;
+}
+
+.core-focus {
+    text-align: center;
+    z-index: 5;
+}
+
+.logo-wrap h1 {
+    font-size: clamp(2rem, 8vw, 4rem);
+    letter-spacing: 15px;
+    margin-bottom: 10px;
+    font-weight: 900;
+}
+
+.tagline {
+    color: var(--text-dim);
+    font-size: 12px;
+    letter-spacing: 5px;
+    margin-bottom: 60px;
+}
+
+/* The Download Button */
+.download-btn {
+    display: inline-flex;
+    flex-direction: column;
+    align-items: center;
+    text-decoration: none;
+    color: #fff;
+    padding: 30px 60px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    background: rgba(255, 255, 255, 0.02);
+    backdrop-filter: blur(10px);
+    transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+    position: relative;
+    overflow: hidden;
+}
+
+.download-btn:hover {
+    border-color: var(--core-glow);
+    background: rgba(164, 69, 255, 0.05);
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4);
+    transform: translateY(-5px);
+}
+
+.download-btn .text {
+    font-size: 18px;
+    letter-spacing: 8px;
+    font-weight: bold;
+}
+
+.download-btn .version {
+    font-size: 9px;
+    margin-top: 10px;
+    color: var(--core-glow);
+    letter-spacing: 2px;
+}
+
+@keyframes pulse {
+    0% { opacity: 1; }
+    50% { opacity: 0.3; }
+    100% { opacity: 1; }
+}
+
+/*Enhanced Glitch CSS*/
+
+.glitch {
+    position: relative;
+    display: inline-block;
+}
+
+.glitch::before,
+.glitch::after {
+    content: attr(data-text);
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: var(--bg-black);
+}
+
+.glitch::before {
+    left: 2px;
+    text-shadow: -2px 0 #ff00c1;
+    clip: rect(44px, 450px, 56px, 0);
+    animation: glitch-anim 5s infinite linear alternate-reverse;
+}
+
+.glitch::after {
+    left: -2px;
+    text-shadow: -2px 0 #00fff9, 2px 2px #ff00c1;
+    animation: glitch-anim2 1s infinite linear alternate-reverse;
+}
+
+@keyframes glitch-anim {
+    0% { clip: rect(31px, 9999px, 94px, 0); transform: skew(0.85deg); }
+    5% { clip: rect(70px, 9999px, 71px, 0); transform: skew(0.1deg); }
+    /* ... add more steps for complexity ... */
+    100% { clip: rect(67px, 9999px, 62px, 0); transform: skew(0.3deg); }
+}
+
+@keyframes glitch-anim2 {
+    0% { clip: rect(10px, 9999px, 80px, 0); }
+    100% { clip: rect(20px, 9999px, 50px, 0); }
+}
+
+/*The Verification Styles*/
+@keyframes flash {
+    0% { filter: invert(0); }
+    50% { filter: invert(1); }
+    100% { filter: invert(0); }
+}
+
+/* Add a scanline effect during verification */
+.download-btn.verifying::after {
+    content: '';
+    position: absolute;
+    top: -100%;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(to bottom, transparent, var(--core-glow), transparent);
+    animation: scan 1.5s infinite;
+}
+
+@keyframes scan {
+    0% { top: -100%; }
+    100% { top: 100%; }
+}

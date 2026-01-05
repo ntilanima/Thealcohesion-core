@@ -45,17 +45,41 @@ class TLC_Kernel {
         this.boot();
 
         window.addEventListener('keydown', (e) => {
-            // Escape key to exit Overview
-            if (e.key === 'Escape' && document.body.classList.contains('task-overview-active')) {
-                this.toggleTaskOverview();
+    // 1. PREVENT DEFAULT SYSTEM ESCAPE BEHAVIOR
+    // This stops the browser or OS from potentially closing the tab/window 
+    // or exiting the 'fullscreen' lock we established during login.
+    if (e.key === 'Escape') {
+        e.preventDefault(); 
+        
+        // 2. CONTEXTUAL ESCAPE ONLY
+        // We only allow ESC to exit the Task Overview, not the whole OS.
+        if (document.body.classList.contains('task-overview-active')) {
+            this.toggleTaskOverview();
+            this.logEvent('SYS', 'Overview closed via ESC.');
+            return;
+        }
+
+        // 3. CLOSE ACTIVE MODALS (Like the Vault Viewer)
+        // If the Vault is open, ESC will close the file, but not the App.
+        const activeVaultViewer = document.getElementById('vault-viewer');
+        if (activeVaultViewer && activeVaultViewer.style.display !== 'none') {
+            // We find the 'vault' instance and trigger its purge method
+            if (this.activeProcesses['vault']) {
+                this.activeProcesses['vault'].purgeMemory();
+                return;
             }
-            
-            // Ctrl + Space to open Overview (Standard Pro Shortcut)
-            if (e.ctrlKey && e.code === 'Space') {
-                e.preventDefault();
-                this.toggleTaskOverview();
-            }
-        });
+        }
+
+        // Log the blocked escape attempt
+        console.warn("Kernel: Escape intercepted. OS shutdown must be manual via System Menu.");
+        }
+        
+        // Ctrl + Space for Overview remains unchanged...
+        if (e.ctrlKey && e.code === 'Space') {
+            e.preventDefault();
+            this.toggleTaskOverview();
+        }
+    });
 
         //Every 60 seconds, the Kernel should verify that the sessionKey is still valid and the VFS is accessible. If someone manually clears their browser cache or tries to inject code via the console, the system panics.
         setInterval(() => {
@@ -84,6 +108,60 @@ class TLC_Kernel {
             }
         }, 500000); // End of constructor
 
+        //Escape key disabled
+        window.onkeydown = (e) => {
+            if (e.key === 'Escape') {
+                e.preventDefault();
+                return false; 
+            }
+        };
+        //Stay on Page
+        window.onbeforeunload = (e) => {
+            if (this.isLoggedIn && this.sessionKey) {
+                // This triggers the standard browser "Are you sure you want to leave?" dialog
+                e.preventDefault();
+                e.returnValue = 'Sovereign Session Active: Unsaved Enclave data will be shredded.';
+                return e.returnValue;
+            }
+        };
+
+        // 1. Monitor the Fullscreen State
+        document.addEventListener('fullscreenchange', () => {
+            if (!document.fullscreenElement && this.isLoggedIn) {
+                this.logEvent('SEC', 'SOVEREIGN_STATE_BREACH: Fullscreen exited.');
+                
+                // Immediate Security Action:
+                // If someone hits ESC to leave fullscreen, we shred the session.
+                this.lockSystem(); 
+                
+                alert("SECURITY ALERT: Enclave locked due to Display Mode breach. Manual login required.");
+            }
+        });
+
+        document.addEventListener('fullscreenchange', () => {
+            // If we are logged in but NOT in fullscreen anymore
+            if (!document.fullscreenElement && this.isLoggedIn) {
+                this.logEvent('SEC', 'SOVEREIGN_STATE_BREACH: Fullscreen exited.');
+                
+                // Trigger the 3-second countdown
+                this.triggerEscapeWarning();
+            }
+        });
+
+        window.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') {
+                // Block the event from apps and windows
+                e.stopImmediatePropagation();
+                e.preventDefault();
+
+                // Visual nudge to use the menu
+                this.logEvent('WARN', 'ESC_BLOCKED: Use the System Menu for manual shutdown.');
+                
+                // Brief flash on the Shutdown button if it exists
+                const shutdownBtn = document.querySelector('.menu-item-shutdown'); 
+                if (shutdownBtn) shutdownBtn.style.background = "rgba(255,0,0,0.5)";
+            }
+        }, true); // The 'true' is vital for capturing the event first
 
     }
 
@@ -457,6 +535,16 @@ window.addEventListener('keydown', (e) => {
         this.logEvent('INFO', 'Identity Verified. Session Started.');
         
         console.log("Kernel: Sovereign OS Shell Online.");
+
+        // Force the OS to stay in the viewport
+        window.addEventListener('fullscreenchange', () => {
+            if (!document.fullscreenElement && this.isLoggedIn) {
+                this.logEvent('WARN', 'Fullscreen exited. Re-asserting Enclave Lock.');
+                // Optional: You can choose to automatically lock the system if 
+                // they force-exit fullscreen for security.
+                // this.lockSystem(); 
+            }
+        });
     }
 
     async provisionInitialFiles() {
@@ -556,9 +644,9 @@ window.addEventListener('keydown', (e) => {
 
 // RENDER CONTEXT MENU ITEMS
 renderMenuContent(menu, target) {
-    // Check if we clicked on a window, a file, or the desktop
     const isWindow = target.closest('.os-window');
     
+    // 1. DYNAMIC ITEM DEFINITION
     let items = [
         { label: '📊 System Monitor', action: () => this.launchApp('monitor') },
         { label: '📝 Task Manager', action: () => this.launchApp('taskman') },
@@ -566,6 +654,7 @@ renderMenuContent(menu, target) {
         { label: '🖼️ Change Wallpaper', action: () => alert('Wallpaper settings coming soon.') }
     ];
 
+    // If right-clicking a window, prioritize the Close action
     if (isWindow) {
         items.unshift(
             { label: '❌ Close Window', action: () => {
@@ -575,33 +664,47 @@ renderMenuContent(menu, target) {
             { divider: true }
         );
     }
+
+    // Special Bank/Wallet target
     if (target.closest('#canvas-bank')) {
-    items.push({ label: '💳 Copy VPU Address', action: () => {
-        navigator.clipboard.writeText('0xVPU_GENESIS_2025_12_26');
-        alert('Address Copied');
-    }});
-}
+        items.push({ label: '💳 Copy VPU Address', action: () => {
+            navigator.clipboard.writeText('0xVPU_GENESIS_2025_12_26');
+            this.logEvent('SEC', 'VPU Address copied to clipboard.');
+        }});
+    }
 
-// security action at the end
+    // 2. SOVEREIGN MANUAL EXIT (Replacing ESC behavior)
     items.push({ divider: true });
-items.push({ 
-    label: '🔒 Lock Enclave', 
-    action: () => this.lockSystem(),
-    style: 'color: #f87171;' // Red text for security actions
-});
+    items.push({ 
+        label: '⏻ Shutdown Enclave', 
+        action: () => {
+            if(confirm("TERMINATE SOVEREIGN SESSION? All volatile data (2025-12-26) will be shredded.")) {
+                this.lockSystem();
+            }
+        },
+        style: 'color: #ff4444; font-weight: bold; border: 1px solid rgba(255, 68, 68, 0.2); margin-top: 5px; background: rgba(255, 68, 68, 0.05);' 
+    });
 
-// Update the rendering loop to apply custom styles if they exist:
-menu.innerHTML = items.map(item => {
-    if (item.divider) return `<div style="height:1px; background:#333; margin:5px 0;"></div>`;
-    return `<div class="menu-item" style="padding: 8px 15px; cursor: pointer; transition: 0.2s; ${item.style || ''}">${item.label}</div>`;
-}).join('');
+    // 3. RENDER LOOP
+    menu.innerHTML = items.map(item => {
+        if (item.divider) return `<div style="height:1px; background:#333; margin:5px 0;"></div>`;
+        return `<div class="menu-item" style="padding: 10px 15px; cursor: pointer; transition: 0.2s; ${item.style || ''}">${item.label}</div>`;
+    }).join('');
 
-    // Attach click events
+    // 4. ATTACH LISTENERS
+    const actionableItems = items.filter(item => !item.divider);
     menu.querySelectorAll('.menu-item').forEach((el, i) => {
-        const actionableItems = items.filter(item => !item.divider);
         el.onclick = actionableItems[i].action;
-        el.onmouseenter = () => el.style.background = '#38bdf8';
-        el.onmouseleave = () => el.style.background = 'transparent';
+        
+        // Custom Hover State
+        el.onmouseenter = () => {
+            el.style.background = actionableItems[i].label.includes('Shutdown') ? 'rgba(255, 68, 68, 0.2)' : '#38bdf8';
+            el.style.color = actionableItems[i].label.includes('Shutdown') ? '#ff4444' : '#000';
+        };
+        el.onmouseleave = () => {
+            el.style.background = 'transparent';
+            el.style.color = actionableItems[i].style?.includes('color') ? '#ff4444' : '#eee';
+        };
     });
 }
 
@@ -1467,6 +1570,42 @@ logEvent(type, message) {
         const instance = dashboard.dataset.engineInstance;
         if (instance && instance.render) instance.render();
     }
+}
+
+//Escape key warning
+triggerEscapeWarning() {
+    const overlay = document.createElement('div');
+    overlay.id = 'sec-breach-overlay';
+    overlay.style = `
+        position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
+        background: rgba(139, 0, 0, 0.9); backdrop-filter: blur(20px);
+        z-index: 1000000; display: flex; flex-direction: column;
+        justify-content: center; align-items: center; color: white;
+        font-family: monospace; transition: opacity 0.5s ease;
+    `;
+
+    overlay.innerHTML = `
+        <h1 style="font-size: 3rem; margin-bottom: 10px; text-shadow: 0 0 20px #f00;">DISPLAY_BREACH</h1>
+        <p style="letter-spacing: 2px;">SECURE_STATE LOST: PURGING VOLATILE RAM IN <span id="shred-timer">3</span>s</p>
+        <div style="width: 200px; height: 2px; background: #fff; margin-top: 20px;">
+            <div id="shred-bar" style="width: 100%; height: 100%; background: #ff0000; transition: width 1s linear;"></div>
+        </div>
+    `;
+
+    document.body.appendChild(overlay);
+
+    let count = 3;
+    const shredTimer = setInterval(() => {
+        count--;
+        document.getElementById('shred-timer').innerText = count;
+        document.getElementById('shred-bar').style.width = `${(count / 3) * 100}%`;
+
+        if (count <= 0) {
+            clearInterval(shredTimer);
+            this.lockSystem(); // The final shred
+            overlay.remove();
+        }
+    }, 1000);
 }
     
 }
