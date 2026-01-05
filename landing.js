@@ -66,7 +66,9 @@ document.querySelector('.download-btn').onclick = function(e) {
                 document.body.style.background = "#fff";
                 setTimeout(() => {
                     document.body.style.background = "#050505";
-                    window.location.href = url;
+                    window.location.href = url; //Starts the download
+                    // Trigger the guide after a short delay
+                     setTimeout(showProvisioningGuide, 1500);
                     btn.innerHTML = `<span class="text">DOWNLOAD_STARTED</span><span class="version">HASH: 0x1226_VPU_ALPHA</span>`;
                 }, 100);
             }
