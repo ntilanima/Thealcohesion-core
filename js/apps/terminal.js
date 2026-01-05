@@ -150,8 +150,13 @@ export class TerminalApp {
                 break;
 
             case 'status':
-                await this.typeWrite("SYSTEM: ONLINE\nINTEGRITY: 98.4%\nENCRYPTION: ACTIVE");
-                break;
+            const checkFile = await this.api.vfs.read("home/readme.txt", this.api.sessionKey);
+            if (checkFile) {
+                await this.typeWrite("VFS STATUS: VERIFIED (Integrity 100%)\nENCLAVE: SECURE");
+            } else {
+                await this.typeWrite("VFS STATUS: CORRUPTED\nWARNING: ENCLAVE KEY MISMATCH", "#ff4444");
+            }
+            break;
 
             case 'network':
                 await this.typeWrite("SCANNING VPU NODES...\n[NODE_01]: ONLINE\n[EPOS_RELAY]: SECURE");

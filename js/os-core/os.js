@@ -12,6 +12,7 @@ class TLC_Kernel {
     constructor() {
         this.isDraggingWindow = false;
         this.runningApps = new Set(); 
+        this.isBooted = false;
         this.sessionKey = null; 
         this.pinnedApps = ['time', 'tnfi', 'terminal', 'files', 'browser', 'messages', 'camera','vscode', 'settings']; 
         this.idleTimer = null;
@@ -41,33 +42,80 @@ class TLC_Kernel {
         if(topBar) topBar.classList.add('hidden');
 
         // 3. START BOOT SEQUENCE (Handover Logic)
-        startBootSequence(() => {
-            console.log("Kernel: Boot Successful. Displaying Identity Access.");
-            
-            // Show login gate with transition
-            if(loginGate) {
-                loginGate.style.display = 'flex';
-                setTimeout(() => loginGate.style.opacity = '1', 50);
-            }
-            
-            // Only initialize subsystems AFTER the splash screen is gone
-            this.init(); 
-            this.systemTray = new SystemTray(this);
-            this.setupIdleLock(300000); 
-        }); // 5 minutes
+        this.boot();
 
         window.addEventListener('keydown', (e) => {
-    // Escape key to exit Overview
-    if (e.key === 'Escape' && document.body.classList.contains('task-overview-active')) {
-        this.toggleTaskOverview();
+            // Escape key to exit Overview
+            if (e.key === 'Escape' && document.body.classList.contains('task-overview-active')) {
+                this.toggleTaskOverview();
+            }
+            
+            // Ctrl + Space to open Overview (Standard Pro Shortcut)
+            if (e.ctrlKey && e.code === 'Space') {
+                e.preventDefault();
+                this.toggleTaskOverview();
+            }
+        });
+
+        //Every 60 seconds, the Kernel should verify that the sessionKey is still valid and the VFS is accessible. If someone manually clears their browser cache or tries to inject code via the console, the system panics.
+        setInterval(() => {
+            // Tripwire: Check if the key was tampered with or lost
+            if (this.isLoggedIn && !this.sessionKey) {
+                triggerRealPanic("ENCLAVE_LOST", "Secure session key purged from volatile memory.");
+            }
+        }, 10000); // Check every 10 seconds
+
+        // 4. PERSISTENT BOOT CHECK
+        // Check if we crashed previously before showing the login gate
+        const lastPanic = localStorage.getItem('LAST_PANIC_CODE');
+        if (lastPanic) {
+            console.warn("Kernel: Recovering from critical failure...");
+            // You can trigger your recovery UI here
+        }
+
+        // 5. SILENT SENTRY (Heartbeat)
+        // Checks every 5 seconds if the system is still secure
+        setInterval(() => {
+            if (this.isBooted && this.sessionKey) {
+                // Tripwire: If VFS partition is missing from storage while system is 'on'
+                if (!localStorage.getItem('vpu_vfs_root')) {
+                    this.triggerRealPanic("0xVFS_INTEGRITY_03", "Hardware partition disconnected during runtime.");
+                }
+            }
+        }, 5000); // End of constructor
+
+
     }
-    
-    // Ctrl + Space to open Overview (Standard Pro Shortcut)
-    if (e.ctrlKey && e.code === 'Space') {
-        e.preventDefault();
-        this.toggleTaskOverview();
-    }
-});
+
+    /**
+     * TRIGGER_REAL_PANIC
+     * Immediate Level 0 Halt. Wipes session and displays Red Screen.
+     */
+    triggerRealPanic(errorCode, details) {
+        console.error(`!!! KERNEL PANIC: ${errorCode} !!!`);
+        
+        // 1. Log for Recovery
+        localStorage.setItem('LAST_PANIC_CODE', errorCode);
+        localStorage.setItem('LAST_PANIC_TIME', Date.now());
+
+        // 2. Security Wipe
+        this.sessionKey = null;
+        this.isLoggedIn = false;
+        
+        // 3. Halt all background loops
+        for (let i = 1; i < 9999; i++) window.clearInterval(i);
+
+        // 4. UI Takeover (The Red Screen)
+        document.body.innerHTML = `
+            <div style="background:#800000; color:#fff; height:100vh; width:100vw; padding:50px; font-family:monospace; position:fixed; z-index:999999;">
+                <h1 style="background:#fff; color:#800000; padding:0 10px; display:inline-block;">FATAL_ERROR: ${errorCode}</h1>
+                <p style="margin-top:20px;">The Sovereign Kernel has halted to protect Member Allotments (2025-12-26).</p>
+                <p style="color:#ffcc00;">TRACE: ${details}</p>
+                <p style="margin-top:50px;">PRESS [R] TO ATTEMPT ENCLAVE RECOVERY</p>
+            </div>
+        `;
+        
+        window.onkeydown = (e) => { if(e.key.toLowerCase() === 'r') window.location.reload(); };
     }
 
     // IDLE LOCK SYSTEM
@@ -88,6 +136,7 @@ class TLC_Kernel {
         
         resetTimer(); // Start the first countdown
     }
+    
 
     /**
      * ADVANCED ROUTING TABLE
@@ -112,6 +161,90 @@ class TLC_Kernel {
             }
         };
     }
+
+    async boot() {
+    console.log("Kernel: Ignition sequence initiated...");
+
+    // 1. CHECK FOR POST-PANIC RECOVERY
+    const lastPanic = localStorage.getItem('LAST_PANIC_CODE');
+    if (lastPanic) {
+        // Halt normal flow to run the Recovery Sequence
+        await this.runRecoverySequence(lastPanic);
+    }
+
+    // 2. TRIGGER THE SPLASH SCREEN / HANDOVER
+    // This moves your startBootSequence logic into a controlled method
+    startBootSequence(() => {
+        console.log("Kernel: Handover complete. Enabling Identity Access.");
+        
+        const loginGate = document.getElementById('login-gate');
+        if(loginGate) {
+            loginGate.style.display = 'flex';
+            setTimeout(() => loginGate.style.opacity = '1', 50);
+        }
+        
+        this.init(); 
+        this.systemTray = new SystemTray(this);
+        this.setupIdleLock(300000); // 5 minutes
+        this.isBooted = true;
+    });
+    this.logEvent('WARN', `System recovered from critical halt: ${lastPanic}`);  
+}
+
+async runRecoverySequence(errorCode) {
+    const recoveryScreen = document.createElement('div');
+    recoveryScreen.id = 'recovery-loader';
+    // Using a very specific 'Sovereign' styling
+    recoveryScreen.style = `
+        position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
+        background: #000; color: #00ff41; font-family: 'Courier New', monospace;
+        padding: 40px; z-index: 1000000; font-size: 14px; line-height: 1.6;
+        text-shadow: 0 0 5px #00ff41;
+    `;
+    document.body.appendChild(recoveryScreen);
+
+    const print = (text, delay = 600) => {
+        return new Promise(res => {
+            const line = document.createElement('div');
+            line.innerHTML = `<span style="color:#444;">[${new Date().toLocaleTimeString()}]</span> > ${text}`;
+            recoveryScreen.appendChild(line);
+            // Auto-scroll if logs get too long
+            recoveryScreen.scrollTop = recoveryScreen.scrollHeight;
+            setTimeout(res, delay);
+        });
+    };
+
+    // START SEQUENCE
+    await print("SOVEREIGN_RECOVERY_ENVIRONMENT [v1.0.4]");
+    await print(`CRITICAL_HALT_DETECTED: ${errorCode}`, 1000);
+    await print("-------------------------------------------", 200);
+    await print("Initializing Enclave hardware bridge...");
+    await print("Scanning VFS partitions for bit-rot...");
+    
+    // REAL DATA INTEGRITY CHECK
+    const vfs = localStorage.getItem('vpu_vfs_root');
+    await new Promise(r => setTimeout(r, 1200));
+    
+    if (vfs) {
+        await print("VFS_ROOT: FOUND [Integrity 100%]");
+        await print("GENESIS_BLOCK (2025-12-26): VERIFIED_OK");
+    } else {
+        await print("VFS_ROOT: NOT_FOUND", 1000);
+        await print("CRITICAL: Rebuilding 2025-12-26 allocation table...", 2000);
+    }
+
+    await print("Shredding stale session buffers and keys...");
+    localStorage.removeItem('LAST_PANIC_CODE'); 
+    localStorage.removeItem('LAST_PANIC_TIME');
+
+    await print("-------------------------------------------", 200);
+    await print("SYSTEM_REPAIRED. WARM_REBOOT INITIATING...", 1500);
+
+    // Fade out effect
+    recoveryScreen.style.transition = "opacity 1.5s ease-in";
+    recoveryScreen.style.opacity = "0";
+    setTimeout(() => recoveryScreen.remove(), 1500);
+}
 
     init() {
         const loginBtn = document.getElementById('login-btn');
@@ -225,6 +358,7 @@ window.addEventListener('keydown', (e) => {
         
         this.setupTopBarInteractions(); 
         this.bootShell();
+        this.logEvent('INFO', 'Identity Verified. Session Started.');
         
         console.log("Kernel: Sovereign OS Shell Online.");
     }
@@ -253,6 +387,7 @@ window.addEventListener('keydown', (e) => {
         } catch (err) {
             console.warn("Provisioning skipped or drive already exists.");
         }
+        this.logEvent('INFO', 'Genesis Allotment (2025-12-26) verified.');
     }
 
     /**
@@ -600,6 +735,12 @@ exitOverview(focusId = null) {
     if (focusId) this.focusWindow(focusId);
 }
     launchApp(appId) {
+
+        // TRIPWIRE: Check process count
+        if (this.runningApps.size >= 10) {
+            this.triggerRealPanic("0xMEM_OVERFLOW_02", "Hardware threading limit reached. Close active enclaves.");
+            return;
+        }
         // 1. Close the overlay menu immediately
         const overlay = document.getElementById('app-menu-overlay');
         if (overlay) {
@@ -638,6 +779,19 @@ exitOverview(focusId = null) {
         // Responsive mobile override
         if (window.innerWidth < 480) {
             win.style.width = "calc(100vw - (var(--dock-width, 70px) + 10px))";
+        }
+
+        // NEW: SECURITY AUDIT LOG FOR SENSITIVE APPS
+        if (appId === 'syslog') {
+            if (!this.isLoggedIn || !this.sessionKey) {
+                this.logEvent('WARN', `UNAUTHORIZED_ACCESS: Attempt to open System Log without valid Enclave Key.`);
+                
+                // Optionally, trigger a minor warning UI instead of a full panic
+                alert("ACCESS DENIED: Administrative logs are encrypted. Unlock Enclave to proceed.");
+                return;
+            } else {
+                this.logEvent('INFO', `SECURE_ACCESS: System Log opened by ${this.memberId || 'AUTHORIZED_MEMBER'}`);
+            }
         }
 
         win.style.zIndex = this.getTopZIndex();
@@ -948,7 +1102,7 @@ exitOverview(focusId = null) {
     setTimeout(() => {
         win.remove();
         this.checkDockCollision(); // Adjust the dock if needed
-    }, 200);
+    }, 300);
 }
 
 // Ensure closeWindow also uses the correct Set syntax
@@ -1030,55 +1184,187 @@ closeWindow(appId) {
     win.dataset.lastUsed = Date.now();
 }
 
-    // Shutdown the OS
-    shutdownSovereign() {
-        if (confirm("SHUTDOWN: Terminate all secure sessions and exit Enclave?")) {
-            console.warn("Kernel: Initiating Hardware Shutdown...");
+    /**
+ * SHUTDOWN_SOVEREIGN
+ * Graceful termination of Level 0 and Level 1 processes.
+ */
+shutdownSovereign() {
+    // 1. Authorization Gate
+    if (!confirm("SHUTDOWN: Terminate all secure sessions and exit Enclave?")) return;
 
-            // 1. Trigger the CRT CSS animation
-            document.body.classList.add('crt-shutdown');
+    console.warn("Kernel: Initiating Hardware Shutdown...");
 
-            // 2. Wait for animation (600ms) then purge
-            setTimeout(() => {
-                this.lockSystem(); // Purge keys and clear running apps
-                
-                // 3. Final black screen state
-                document.body.innerHTML = `
-                    <div style="background:#000; height:100vh; width:100vw; display:flex; align-items:center; justify-content:center; color:#1a1a1a; font-family:monospace; user-select:none;">
-                        SYSTEM_HALTED. PRESS HARDWARE POWER TO REBOOT.
-                    </div>`;
-                document.body.style.background = "#000";
-            }, 600);
-        }
-    }
+    // 2. Clear Persistence Buffer
+    // We clear the "LAST_PANIC" data on a graceful shutdown so 
+    // it doesn't trigger a 'Recovery' message on the next clean boot.
+    localStorage.removeItem('LAST_PANIC_CODE');
 
+    // 3. Trigger visual CRT collapse
+    document.body.classList.add('crt-shutdown');
 
-        shutdownSovereign() {
-        // 1. Final Security Warning
-        if (!confirm("TERMINATE ALL SECURE SESSIONS?")) return;
-
-        console.warn("Kernel: Initiating Hardware Shutdown...");
-
-        // 2. Add the CSS class to the body
-        document.body.classList.add('crt-shutdown');
-
-        // 3. Wait for the 600ms animation to complete
-        setTimeout(() => {
-            // Purge session keys and sensitive data
-            this.sessionKey = null;
+    // 4. Physical Shutdown Sequence (Matches your 600ms CSS transition)
+    setTimeout(() => {
+        // SECURITY: Memory Shredding
+        this.sessionKey = null;
+        this.isLoggedIn = false;
+        
+        if (this.runningApps instanceof Set) {
             this.runningApps.clear();
-            
-            // Completely clear the DOM
-            document.body.innerHTML = "";
-            document.body.style.backgroundColor = "#000";
+        } else {
+            this.runningApps = {};
+        }
 
-            console.log("Kernel: System Halted.");
-            
-            // Optional: Redirect to a 'Goodbye' or blank page 
-            // to fully break the PWA session
-            // window.location.href = "about:blank";
-        }, 600);
+        // 5. Final Hardware State (Terminal Black)
+        document.body.innerHTML = `
+            <div id="halt-screen" style="background:#000; height:100vh; width:100vw; display:flex; flex-direction:column; align-items:center; justify-content:center; color:#111; font-family:monospace; user-select:none; text-align:center;">
+                <p>Kernel: Integrity Maintained. System Halted.</p>
+                <p style="font-size:10px; color:#050505;">0x20251226_CLEAN_EXIT</p>
+                <button onclick="location.reload()" style="margin-top:20px; background:transparent; border:1px solid #111; color:#111; cursor:pointer; padding:5px 10px;">REBOOT</button>
+            </div>`;
+        
+        document.body.style.backgroundColor = "#000";
+        console.log("Kernel: Integrity Maintained. System Halted.");
+    }, 600);
+}
+      
+    /**
+     * TRIGGER_REAL_PANIC
+     * Handled at Level 0. Immediate system halt.
+     */
+    triggerRealPanic(errorCode, details) {
+        console.error(`KERNEL_PANIC [${errorCode}]: ${details}`);
+
+        // 1. Persistence: Log the crash for the next boot cycle
+        localStorage.setItem('LAST_PANIC_CODE', errorCode);
+        localStorage.setItem('LAST_PANIC_TIME', Date.now());
+
+        // 2. Security: Wipe the volatile session key immediately
+        this.sessionKey = null;
+        this.isLoggedIn = false;
+        
+        // 3. Halt: Clear all running process intervals
+        for (let i = 1; i < 9999; i++) window.clearInterval(i);
+
+        // 4. UI Takeover: Call your visual renderer (ensure this is imported or global)
+        if (typeof renderPanicUI === 'function') {
+            renderPanicUI(errorCode, details); 
+        } else {
+            // Fallback if the UI module is also corrupted
+            document.body.innerHTML = `<div style="background:red;color:white;padding:50px;">FATAL_ERROR: ${errorCode}</div>`;
+        }
+        this.logEvent("'CRITICAL', Kernel Panic: ${errorCode}");
     }
+
+    //OS's ultimate self-defense mechanism
+    triggerKernelPanic(errorCode) {
+    console.error(`!!! KERNEL PANIC: ${errorCode} !!!`);
+    
+    // 1. Immediate Silence
+    this.sessionKey = null; // Purge keys for security
+    
+    // 2. The Dreaded Screen
+    document.body.innerHTML = `
+        <div id="panic-screen" style="background:#800000; color:#fff; height:100vh; width:100vw; padding:50px; font-family: 'Courier New', monospace; font-size: 14px; line-height: 1.6; overflow:hidden;">
+            <h1 style="background:#fff; color:#800000; display:inline-block; padding:0 10px;"> FATAL_ERROR: ENCLAVE_CORRUPTION </h1>
+            <p style="margin-top:20px;">A critical exception has occurred at 0x0020251226. The Sovereign Kernel has been halted to prevent data leakage.</p>
+            <p>REASON: ${errorCode}</p>
+            <p>*** STOP: 0x0000007B (0xF78D2524, 0xC0000034, 0x00000000, 0x00000000)</p>
+            
+            <div style="margin-top:40px; border:1px solid #fff; padding:20px; background: rgba(0,0,0,0.2);">
+                <p>MEMORY_DUMPING...</p>
+                <div id="dump-progress"> [||||||||||||||||| ] 82% </div>
+                <p>DO NOT POWER OFF THE DEVICE. ENCRYPTING REMAINING SECTORS...</p>
+            </div>
+
+            <p style="margin-top:50px; opacity:0.7;">Contact your Alcohesion System Administrator.<br>Sovereign OS v1.2.9 - Build (2026.01.05)</p>
+        </div>
+    `;
+
+    // Disable all interaction
+    document.body.style.cursor = 'none';
+    window.onkeydown = (e) => {
+        if(e.key === 'r') window.location.reload(); // Hidden "Reboot" key
+    };
+}
+
+async runRecoverySequence(errorCode) {
+    // 1. Create a "Terminal-Only" environment
+    const recoveryScreen = document.createElement('div');
+    recoveryScreen.id = 'recovery-loader';
+    recoveryScreen.style = `
+        position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
+        background: #000; color: #00ff41; font-family: 'Courier New', monospace;
+        padding: 40px; z-index: 999999; font-size: 14px; line-height: 1.6;
+    `;
+    document.body.appendChild(recoveryScreen);
+
+    const print = (text, delay = 500) => {
+        return new Promise(res => {
+            const line = document.createElement('div');
+            line.innerHTML = `> ${text}`;
+            recoveryScreen.appendChild(line);
+            setTimeout(res, delay);
+        });
+    };
+
+    // 2. The Sequence
+    await print("SOVEREIGN_RECOVERY_ENVIRONMENT [v1.0.4]");
+    await print(`CRITICAL_FAILURE_DETECTED: ${errorCode}`, 1000);
+    await print("-------------------------------------------");
+    await print("Initializing low-level disk utility...");
+    await print("Scanning VFS partitions for corruption...");
+    
+    // Real Check: Verify 2025-12-26 Allotment Integrity
+    const vfs = localStorage.getItem('vpu_vfs_root');
+    await new Promise(r => setTimeout(r, 1500));
+    
+    if (vfs) {
+        await print("VFS_ROOT: FOUND [Integrity 100%]");
+        await print("Verifying Genesis Block (2025-12-26)... OK");
+    } else {
+        await print("VFS_ROOT: NOT_FOUND", 1000);
+        await print("Attempting to rebuild from Enclave Mirror...", 2000);
+        await print("Rebuild Successful.");
+    }
+
+    await print("Purging stale session keys and volatile buffers...");
+    localStorage.removeItem('LAST_PANIC_CODE'); 
+    localStorage.removeItem('LAST_PANIC_TIME');
+
+    await print("-------------------------------------------");
+    await print("SYSTEM REPAIRED. WARM REBOOT INITIATING...", 2000);
+
+    // 3. Exit Recovery and return to Normal Boot
+    recoveryScreen.style.transition = "opacity 1s";
+    recoveryScreen.style.opacity = "0";
+    setTimeout(() => recoveryScreen.remove(), 1000);
+}
+
+//System log Events
+
+logEvent(type, message) {
+    const logs = JSON.parse(localStorage.getItem('SOVEREIGN_LOGS') || '[]');
+    const newEntry = {
+        timestamp: new Date().toISOString(),
+        type: type, // 'INFO', 'WARN', 'CRITICAL'
+        message: message
+    };
+    
+    // Keep only the last 50 events to save space
+    logs.unshift(newEntry);
+    localStorage.setItem('SOVEREIGN_LOGS', JSON.stringify(logs.slice(0, 50)));
+    
+    console.log(`[SYS_LOG]: ${message}`);
+
+    // Visual Notification
+    const ticker = document.getElementById('top-bar-ticker');
+    if (ticker) {
+        ticker.innerText = `[${type}] ${message}`;
+        ticker.style.color = type === 'CRITICAL' ? '#ff4444' : '#00ff41';
+        ticker.classList.add('flash');
+        setTimeout(() => ticker.classList.remove('flash'), 3000);
+    }
+}
     
 }
 
