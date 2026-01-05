@@ -11,9 +11,9 @@ import { startBootSequence } from './boot.js'; // Refined boot sequence
 class TLC_Kernel {
     constructor() {
         this.isDraggingWindow = false;
-        this.runningApps = new Set(); 
+        this.runningApps = new Set(); // Track active processes
         this.isBooted = false;
-        this.sessionKey = null; 
+        this.sessionKey = null; // The AES-GCM key derived at login
         this.pinnedApps = ['time', 'tnfi', 'terminal', 'files', 'browser', 'messages', 'camera','vscode', 'settings']; 
         this.idleTimer = null;
 
@@ -158,6 +158,17 @@ class TLC_Kernel {
             },
             'tnfi': (container) => {
                 return this.renderTNFIDashboard(container);
+            },
+            'vault': async (container) => {
+                const m = await import('../apps/vault.js');
+                const instance = new m.VaultApp(container, this);
+                await instance.init();
+
+                // CRITICAL: Save the instance so the Kernel can talk to it later
+                this.activeProcesses = this.activeProcesses || {};
+                this.activeProcesses['vault'] = instance;
+
+                return instance;
             }
         };
     }
@@ -287,6 +298,49 @@ async runRecoverySequence(errorCode) {
     recoveryScreen.style.opacity = "0";
     setTimeout(() => recoveryScreen.remove(), 1500);
 }
+
+    /**
+     * SECURE ENCLAVE BRIDGE
+     * gatekeeper for all VFS communication
+     */
+    async enclaveBridge(appId, request) {
+        // SECURITY GUARD 01: Verify App Identity
+        // Only allow registered apps to request data
+        if (!this.runningApps.has(appId)) {
+            console.error(`Security Violation: Unregistered App [${appId}] attempted VFS access.`);
+            return null;
+        }
+
+        // SECURITY GUARD 02: Session Integrity
+        if (!this.sessionKey) {
+            console.warn("Bridge Refused: No active encryption session.");
+            return null;
+        }
+
+        // SECURITY GUARD 03: Operation Routing
+        try {
+            switch (request.operation) {
+                case 'READ_SECURE':
+                    // This calls your SovereignVFS module
+                    return await SovereignVFS.read(request.path, this.sessionKey);
+                
+                case 'WRITE_SECURE':
+                    return await SovereignVFS.write(request.path, request.data, this.sessionKey);
+
+                default:
+                    return null;
+            }
+        } catch (err) {
+            this.logEvent('ERROR', `Bridge Handshake Failed: ${err.message}`);
+            return null;
+        }
+    }
+
+    // Method to register apps when they start
+    registerApp(appId) {
+        this.runningApps.add(appId);
+        this.logEvent('SYS', `Process [${appId}] registered.`);
+    }
 
     init() {
         const loginBtn = document.getElementById('login-btn');
