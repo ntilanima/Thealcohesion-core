@@ -1,13 +1,23 @@
 /**
  * VPU TERMINAL SYSTEM - SOVEREIGN UPGRADE
- * Module: TerminalApp (v1.2.8)
+ * Module: TerminalApp (v1.2.9)
+ * Security: Sovereign Enclave Protected
  */
 
 import { registry } from '../os-core/registry.js'; // Ensure path is correct
 
 export class TerminalApp {
-    constructor(container) {
+    constructor(container, api) {
+        // 1. THE GUARD: Signature Verification
+        if (!api || api.signature !== 'SOVEREIGN_CORE_V1') {
+            container.innerHTML = `<div style="color:#ff4444; padding:20px;">[FATAL]: UNAUTHORIZED_ENVIRONMENT. Access Denied.</div>`;
+            throw new Error("ENCLAVE_VIOLATION");
+        }
+
+        // 2. BIND ENCLAVE BRIDGE
         this.container = container;
+        this.api = api; // Access to sessionKey, vfs, and close()
+        
         this.output = null;
         this.input = null;
         this.isTyping = false;
@@ -20,7 +30,7 @@ export class TerminalApp {
         this.commands = [
             'help', 'status', 'allotment', 'network', 
             'neofetch', 'matrix', 'time', 'search', 
-            'open', 'clear', 
+            'open', 'clear', 'exit',
             ...registry.map(a => a.id)
         ];
         
@@ -46,6 +56,7 @@ export class TerminalApp {
                 <div id="term-header" style="z-index: 5; margin-bottom: 20px; border-bottom: 1px solid rgba(0, 255, 65, 0.2); padding-bottom: 10px;">
                     <pre style="color:#a445ff; margin:0; font-size: 10px; line-height: 1.2;">${this.vpuLogo}</pre>
                     <div style="font-size: 12px; margin-top: 5px; opacity: 0.8;">
+                        ENCLAVE: ${this.api.identity} | KEY: ${this.api.sessionKey ? 'VERIFIED' : 'NULL'}
                         CORE: Sovereign v1.2.8 | APPS: ${this.appRegistry.length} | KERNEL: 1.0.2-theal
                     </div>
                 </div>
@@ -60,7 +71,7 @@ export class TerminalApp {
                 
                 <div class="terminal-overlay" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.15) 50%); background-size: 100% 4px; pointer-events: none; z-index: 10; opacity: 0.3;"></div>
             </div>`;
-        
+        this.input.focus();
         this.output = this.container.querySelector('#term-output');
         this.input = this.container.querySelector('#term-input');
         this.canvas = this.container.querySelector('#matrix-canvas');
@@ -69,7 +80,7 @@ export class TerminalApp {
         this.input.onkeydown = (e) => this.handleKeyDown(e);
         this.container.onclick = () => this.input.focus();
 
-        this.typeWrite("Hardware Telemetry Initialized...\nApp Engine Online. Type 'search' for apps.");
+        this.typeWrite("Hardware Telemetry Initialized...\n`Sovereign Terminal [v1.2.9] Handshake Successful.\nSecure VFS Mounted. Node: ${this.api.identity}`\nApp Engine Online. Type 'search' for apps.");
     }
 
     async handleCommand(cmd) {
@@ -84,6 +95,25 @@ export class TerminalApp {
         if (cleanCmd !== 'clear') await new Promise(res => setTimeout(res, 100));
 
         switch (cleanCmd) {
+            case 'ls':
+                await this.typeWrite("Directory: /home\n  - readme.txt\n  - documents/\n    - investors.txt");
+                break;
+
+            case 'cat':
+                if (!arg) return this.typeWrite("Usage: cat [filename]");
+                const path = arg.includes('/') ? `home/${arg}` : `home/${arg}`;
+                try {
+                    // Using the Bridge VFS and Key
+                    const content = await this.api.vfs.read(path, this.api.sessionKey);
+                    await this.typeWrite(content || "ERR: File empty or not found.");
+                } catch(e) {
+                    await this.typeWrite("ERR: VFS_DECRYPTION_FAILED");
+                }
+                break;
+
+            case 'exit':
+                this.api.close(); // Uses the bridge to tell Kernel to kill this app
+                break;
             case 'search':
             let searchOutput = "ALCOHESION APP REGISTRY:\n";
             this.appRegistry.forEach(app => {
@@ -149,7 +179,14 @@ export class TerminalApp {
                 break;
 
             default:
-                await this.typeWrite(`ERR: Directive '${cmd}' unknown.`);
+                // Check if user typed an app ID directly
+                const target = this.appRegistry.find(a => a.id === cleanCmd);
+                if (target) {
+                    window.dispatchEvent(new CustomEvent('launchApp', { detail: { appId: cleanCmd } }));
+                } else {
+                    await this.typeWrite(`ERR: Command '${cleanCmd}' not found.`);
+                }
+
         }
     }
 
@@ -284,5 +321,21 @@ export class TerminalApp {
         const interval = setInterval(() => { if (!this.matrixActive) clearInterval(interval); matrix(); }, 50);
     }
 
-    destruct() { this.matrixActive = false; clearInterval(this.liveInterval); }
+    // Inside TerminalApp class
+    destruct() {
+    // 1. Stop the Matrix animation loop
+    this.matrixActive = false; 
+    
+    // 2. Clear the Temporal Pulse (live time) interval
+    if (this.liveInterval) {
+        clearInterval(this.liveInterval);
+        this.liveInterval = null;
+    }
+
+    // 3. Wipe the local references to decrypted data
+    this.history = [];
+    this.output.innerHTML = "";
+    
+    console.log("Terminal: Memory purged. Destruct sequence complete.");
+}
 }

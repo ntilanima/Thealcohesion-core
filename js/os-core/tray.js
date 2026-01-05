@@ -92,7 +92,7 @@ export class SystemTray {
 
             <div class="tray-item" id="tray-settings"><span>⚙️ Settings</span></div>
             <div class="tray-item" id="tray-lock"><span>🔒 Lock</span></div>
-            <div class="tray-item" id="tray-power"><span>⏻ Power Off / Log Out</span><span>▶</span></div>
+            <div class="tray-item" id="tray-power" style="color: #ff4444; font-weight: bold;"><span>⏻ Shutdown Sovereign</span></div>
         `;
         return menu;
     }
@@ -109,6 +109,15 @@ export class SystemTray {
             this.isOpen = false;
             this.el.style.display = 'none';
         });
+
+        // Target the Power Off button
+        const powerBtn = this.el.querySelector('#tray-power');
+        if (powerBtn) {
+            powerBtn.onclick = (e) => {
+                e.stopPropagation();
+                this.kernel.shutdownSovereign(); // Call the kernel method
+            };
+        }
 
         // Functional Logic
         this.el.querySelector('#tray-lock').onclick = () => this.kernel.lockSystem();

@@ -7,7 +7,13 @@ export function startBootSequence(onComplete) {
     const text = document.getElementById('splash-percent');
     const logs = document.getElementById('log-content');
     const loginGate = document.getElementById('login-gate');
-
+    
+    //SERVICE WORKER: Activates service worker
+    if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('./sw.js')
+    .then(() => console.log("Sovereign Service Worker: Active"))
+    .catch(err => console.error("SW Registration Failed", err));
+    }
     // DEBUG: Check if elements exist. Open Console (F12) to see this.
     console.table({
         "Splash Found": !!splash,

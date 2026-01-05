@@ -147,6 +147,19 @@ window.addEventListener('keydown', (e) => {
         const password = passInput ? passInput.value : "default_gateway";
         const memberId = document.getElementById('username')?.value || "GUEST";
 
+        // FORCING FULLSCREEN LOCK
+        const docElm = document.documentElement;
+        if (docElm.requestFullscreen) {
+            docElm.requestFullscreen();
+        } else if (docElm.webkitRequestFullscreen) { /* iOS/Safari */
+            docElm.webkitRequestFullscreen();
+        }
+
+        // LOCKING ORIENTATION (Mobile)
+        if (screen.orientation && screen.orientation.lock) {
+            screen.orientation.lock('landscape').catch(() => {});
+        }
+
         try {
             // 2. CRYPTOGRAPHIC KEY DERIVATION
             // We use PBKDF2 to turn the password into a raw AES-GCM key
@@ -626,52 +639,67 @@ exitOverview(focusId = null) {
      * with your new Dynamic Registry Loader.
      */
     async injectAppContent(appId) {
-        const container = document.getElementById(`canvas-${appId}`);
-        if (!container) return;
-        const win = container.closest('.os-window');
+    const container = document.getElementById(`canvas-${appId}`);
+    if (!container) return;
+    const win = container.closest('.os-window');
 
-        // 1. Check Hardcoded Routes
-        const route = this.APP_ROUTES[appId];
-        if (route) {
-            try {
-                const instance = await route(container);
-                if (instance) win.dataset.engineInstance = instance;
-                return; 
-            } catch (err) {
-                console.error(`Kernel: Route failed for ${appId}:`, err);
-            }
-        }
-
-        // 2. Dynamic Registry Loading (Security-Aware)
-        const appData = registry.find(a => a.id === appId);
-        if (appData && appData.file) {
-            try {
-                const filePath = appData.file.startsWith('./') ? appData.file : `./${appData.file}`;
-                const module = await import(filePath);
-                
-                // Construct class name (e.g., "FilesApp")
-                const className = appId.charAt(0).toUpperCase() + appId.slice(1) + "App";
-                
-                if (module[className]) {
-                    // CRITICAL: Pass the sessionKey here so the app can decrypt files
-                    const instance = new module[className](container, this.sessionKey);
-                    
-                    // We MUST await init() or the "initializing" div won't be replaced
-                    if (instance.init) {
-                        await instance.init(); 
-                    }
-                    
-                    win.dataset.engineInstance = instance;
-                }
-            } catch (err) {
-                console.error(`Kernel: Handshake failed for ${appId}:`, err);
-                container.innerHTML = `<div style="padding:20px; color:#ff4444;">[SYS_ERR]: Handshake Failed. Verify VFS Key.</div>`;
-            }
-        } else {
-            // 3. Last Resort
-            container.innerHTML = `<div style="padding:20px; color:#00ff41;">${appId.toUpperCase()} online. Awaiting module deployment.</div>`;
+    // 1. Check Hardcoded Routes (Internal Kernel Tools)
+    const route = this.APP_ROUTES[appId];
+    if (route) {
+        try {
+            const instance = await route(container);
+            if (instance) win.dataset.engineInstance = instance;
+            return; 
+        } catch (err) {
+            console.error(`Kernel: Route failed for ${appId}:`, err);
         }
     }
+
+    // 2. Dynamic Registry Loading (SOVEREIGN FRAMEWORK MODE)
+    const appData = registry.find(a => a.id === appId);
+    if (appData && appData.file) {
+        try {
+            const filePath = appData.file.startsWith('./') ? appData.file : `./${appData.file}`;
+            const module = await import(filePath);
+            
+            // Create the restricted API object (The Bridge)
+            const sovereignAPI = {
+                signature: 'SOVEREIGN_CORE_V1', // Required for App Handshake, The "Passport"
+                sessionKey: this.sessionKey, //AES-GCM Key
+                vfs: SovereignVFS, //The file system driver
+                identity: "AUTHORIZED_MEMBER",
+                timestamp: "2025-12-26", // Reference to your Investor/EPOS milestone
+                close: () => this.closeApp(appId, win.id), //Self-destruct function
+                // NEW: Automated Memory Purge
+                purge: () => {
+                    console.log(`Kernel: Purging RAM for ${appId}...`);
+                    // Force garbage collection on specific app-held data
+                    return null; 
+                }
+            };
+
+            // Standardize Class Name (e.g., 'terminal' -> 'TerminalApp')
+            const className = appId.charAt(0).toUpperCase() + appId.slice(1) + "App";
+            
+            if (module[className]) {
+                // Instantiate with the Bridge instead of just the key
+                const instance = new module[className](container, sovereignAPI);
+                
+                if (instance.init) {
+                    await instance.init(); 
+                }
+                
+                win.dataset.engineInstance = instance;
+            }
+        } catch (err) {
+            console.error(`Kernel: Handshake failed for ${appId}:`, err);
+            container.innerHTML = `<div style="padding:20px; color:#ff4444;">[SYS_ERR]: Handshake Failed. Verify Enclave Key.</div>`;
+        }
+    } else {
+        // 3. Last Resort
+        container.innerHTML = `<div style="padding:20px; color:#00ff41;">${appId.toUpperCase()} online. Awaiting module deployment.</div>`;
+    }
+}
     renderTNFIDashboard(container) {
         container.innerHTML = `
             <div class="tnfi-app" style="padding:25px; color:#a445ff; font-family: 'Courier New', monospace;">
@@ -837,14 +865,36 @@ exitOverview(focusId = null) {
     this.checkDockCollision();
 }
 
-closeApp(appId, winId) {
+    closeApp(appId, winId) {
     const win = document.getElementById(winId);
     if (!win) return;
-    
-    win.classList.add('closing'); // Trigger CSS animation
+
+    // 1. MEMORY PROTECTION: Trigger internal cleanup
+    // This stops intervals (like your Matrix code) and wipes session data from RAM
+    const instance = win.dataset.engineInstance;
+    if (instance && typeof instance.destruct === 'function') {
+        try {
+            instance.destruct(); 
+            console.log(`Kernel: Process ${appId} terminated cleanly.`);
+        } catch (e) {
+            console.warn(`Kernel: Cleanup failed for ${appId}`, e);
+        }
+    }
+
+    // 2. STATE MANAGEMENT: Remove from running apps set
+    this.runningApps.delete(appId);
+    this.bootShell(); // Refresh dock to show app is no longer "running"
+
+    // 3. UI EXIT ANIMATION: Smooth transition out
+    win.style.transition = "all 0.2s cubic-bezier(0.4, 0, 1, 1)";
+    win.style.opacity = '0';
+    win.style.transform = 'scale(0.95) translateY(10px)';
+
+    // 4. PHYSICAL REMOVAL: Wait for animation, then delete from DOM
     setTimeout(() => {
-        this.killProcess(appId);
-    }, 300);
+        win.remove();
+        this.checkDockCollision(); // Adjust the dock if needed
+    }, 200);
 }
 
 // Ensure closeWindow also uses the correct Set syntax
@@ -924,6 +974,57 @@ closeWindow(appId) {
         el.classList.remove('minimizing');
     }
 }
+
+    // Shutdown the OS
+    shutdownSovereign() {
+        if (confirm("SHUTDOWN: Terminate all secure sessions and exit Enclave?")) {
+            console.warn("Kernel: Initiating Hardware Shutdown...");
+
+            // 1. Trigger the CRT CSS animation
+            document.body.classList.add('crt-shutdown');
+
+            // 2. Wait for animation (600ms) then purge
+            setTimeout(() => {
+                this.lockSystem(); // Purge keys and clear running apps
+                
+                // 3. Final black screen state
+                document.body.innerHTML = `
+                    <div style="background:#000; height:100vh; width:100vw; display:flex; align-items:center; justify-content:center; color:#1a1a1a; font-family:monospace; user-select:none;">
+                        SYSTEM_HALTED. PRESS HARDWARE POWER TO REBOOT.
+                    </div>`;
+                document.body.style.background = "#000";
+            }, 600);
+        }
+    }
+
+
+        shutdownSovereign() {
+        // 1. Final Security Warning
+        if (!confirm("TERMINATE ALL SECURE SESSIONS?")) return;
+
+        console.warn("Kernel: Initiating Hardware Shutdown...");
+
+        // 2. Add the CSS class to the body
+        document.body.classList.add('crt-shutdown');
+
+        // 3. Wait for the 600ms animation to complete
+        setTimeout(() => {
+            // Purge session keys and sensitive data
+            this.sessionKey = null;
+            this.runningApps.clear();
+            
+            // Completely clear the DOM
+            document.body.innerHTML = "";
+            document.body.style.backgroundColor = "#000";
+
+            console.log("Kernel: System Halted.");
+            
+            // Optional: Redirect to a 'Goodbye' or blank page 
+            // to fully break the PWA session
+            // window.location.href = "about:blank";
+        }, 600);
+    }
+    
 }
 
 window.kernel = new TLC_Kernel();
