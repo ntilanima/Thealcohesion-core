@@ -470,7 +470,7 @@ lockSystem() {
     dock.appendChild(menuBtn);
 }
 
-    toggleTaskOverview() {
+   toggleTaskOverview() {
     const workspace = document.getElementById('workspace');
     const windows = document.querySelectorAll('.os-window');
     
@@ -483,24 +483,68 @@ lockSystem() {
         const blur = document.createElement('div');
         blur.id = 'overview-blur';
         blur.innerHTML = `
-            <div id="overview-search-wrap"><input type="text" id="overview-search" placeholder="FILTER ENCLAVES..." autofocus></div>
-            <button id="purge-all-btn">TERMINATE ALL</button>
+            <div id="overview-search-wrap">
+                <input type="text" id="overview-search" placeholder="FILTER ENCLAVES..." autofocus>
+            </div>
+            <button id="purge-all-btn" style="background:#ff4444; color:white; border:none; padding:8px 15px; border-radius:4px; cursor:pointer; font-weight:bold; margin-bottom:20px;">
+                ⏻ TERMINATE ALL
+            </button>
             <div id="overview-grid"></div>
         `;
         workspace.appendChild(blur);
 
+        // 2. Setup Purge All Functionality
+        document.getElementById('purge-all-btn').onclick = (e) => {
+            e.stopPropagation();
+            if(confirm("FORCE QUIT ALL APPLICATIONS?")) {
+                this.runningApps.forEach(appId => {
+                    this.closeApp(appId, `win-${appId}`);
+                });
+                this.exitOverview();
+            }
+        };
+
         const grid = document.getElementById('overview-grid');
 
-        // 2. Prepare Windows for Grid
+        // 3. Prepare Windows for Grid & Add Kill Buttons
         windows.forEach((win) => {
-            // Save current state so we can perfectly restore it
+            // Save state for restoration
             win.dataset.oldTransform = win.style.transform;
             win.dataset.oldLeft = win.style.left;
             win.dataset.oldTop = win.style.top;
             win.dataset.oldWidth = win.style.width;
 
+            const now = Date.now();
+            const lastUsed = parseInt(win.dataset.lastUsed || now);
+            const idleTime = now - lastUsed;
+            const FIVE_MINUTES = 300000; 
+
+            if (idleTime > FIVE_MINUTES) {
+                win.classList.add('ghost-process');
+                // Add an idle timer badge
+                const minutes = Math.floor(idleTime / 60000);
+                const badge = document.createElement('div');
+                badge.className = 'idle-badge';
+                badge.innerText = `IDLE: ${minutes}m`;
+                win.appendChild(badge);
+            } else {
+                win.classList.remove('ghost-process');
+            }
+
+            // --- ADD FORCE QUIT BUTTON ---
+            const killBtn = document.createElement('div');
+            killBtn.className = 'overview-kill-btn';
+            killBtn.innerHTML = '×';
+            killBtn.onclick = (e) => {
+                e.stopPropagation();
+                const appId = win.id.replace('win-', '');
+                this.closeApp(appId, win.id); // Triggers destruct() and cleanup
+            };
+            win.appendChild(killBtn);
+            // ------------------------------
+
             win.classList.add('in-overview');
-            grid.appendChild(win); // Move window into the grid container for auto-layout
+            grid.appendChild(win); 
 
             win.onclick = (e) => {
                 e.stopPropagation();
@@ -513,15 +557,15 @@ lockSystem() {
         searchInput.oninput = (e) => {
             const query = e.target.value.toLowerCase();
             windows.forEach(win => {
-                const match = win.querySelector('.title').innerText.toLowerCase().includes(query);
-                win.style.display = match ? "block" : "none";
+                const titleText = win.querySelector('.title').innerText.toLowerCase();
+                win.style.display = titleText.includes(query) ? "flex" : "none";
             });
         };
 
     } else {
         this.exitOverview();
     }
-}
+} 
 
 // 3. New Helper to Restore Windows Properly
 exitOverview(focusId = null) {
@@ -529,8 +573,17 @@ exitOverview(focusId = null) {
     const windows = document.querySelectorAll('.os-window');
     const blur = document.getElementById('overview-blur');
 
+    //clear the badges when leaving the overview.
+    const badges = win.querySelectorAll('.idle-badge');
+    badges.forEach(b => b.remove());
+    win.classList.remove('ghost-process');
+
     windows.forEach(win => {
         win.classList.remove('in-overview');
+    
+        // Remove the overview-specific kill buttons
+        const killBtn = win.querySelector('.overview-kill-btn');
+        if (killBtn) killBtn.remove();
         // Restore original geometry
         win.style.transform = win.dataset.oldTransform || "";
         win.style.left = win.dataset.oldLeft || "50px";
@@ -632,6 +685,7 @@ exitOverview(focusId = null) {
         
         this.makeDraggable(win);
         this.injectAppContent(appId);
+        win.dataset.lastUsed = Date.now();
     }
 
     /**
@@ -973,6 +1027,7 @@ closeWindow(appId) {
         // Optional: remove any 'minimizing' classes if you use them for animations
         el.classList.remove('minimizing');
     }
+    win.dataset.lastUsed = Date.now();
 }
 
     // Shutdown the OS
