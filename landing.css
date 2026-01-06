@@ -9,7 +9,7 @@
     margin: 0;
     padding: 0;
     box-sizing: border-box;
-    cursor: crosshair; /* Adds to the terminal feel */
+   cursor : crosshair; /* Adds to the terminal feel */
 }
 
 body, html {
@@ -207,3 +207,4 @@ body, html {
     0% { left: -30%; }
     100% { left: 100%; }
 }
+

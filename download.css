@@ -1,0 +1,117 @@
+/* --- SOVEREIGN FONT DEFINITIONS --- */
+
+@font-face {
+    font-family: 'Inter-Sovereign';
+    src: url('./fonts/Inter-Regular.woff2') format('woff2');
+    font-weight: 400;
+    font-style: normal;
+}
+
+@font-face {
+    font-family: 'Inter-Sovereign';
+    src: url('./fonts/Inter-Bold.woff2') format('woff2');
+    font-weight: 700;
+    font-style: normal;
+}
+
+@font-face {
+    font-family: 'Mono-Sovereign';
+    src: url('./fonts/JetBrainsMono.woff2') format('woff2');
+    font-weight: 400;
+}
+
+:root {
+    --primary-purple: #a445ff;
+    --bg-black: #050505;
+    --card-bg: rgba(15, 15, 15, 0.9);
+    --border: rgba(164, 69, 255, 0.25);
+}
+
+/* Base Setup */
+body {
+    background-color: var(--bg-black);
+    color: white;
+    font-family: 'Inter', sans-serif;
+    margin: 0;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+    padding: 20px; /* Safety padding for small screens */
+    box-sizing: border-box;
+    cursor: crosshair !important;
+}
+
+/* Responsive Logo */
+.mini-logo {
+    width: clamp(80px, 15vw, 120px); /* Scales between 80px and 120px based on screen width */
+    height: auto;
+    margin-bottom: 1.5rem;
+    filter: drop-shadow(0 0 10px rgba(164, 69, 255, 0.3));
+}
+
+/* Container */
+.download-container {
+    width: 100%;
+    max-width: 1100px;
+    text-align: center;
+}
+
+/* Responsive Grid */
+.platform-grid {
+    display: grid;
+    /* Automatically creates columns that fit at least 320px, otherwise stacks */
+    grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+    gap: 2rem;
+    margin: 3rem 0;
+}
+
+/* Mobile Adjustments for Grid */
+@media (max-width: 480px) {
+    .platform-grid {
+        grid-template-columns: 1fr; /* Force single column on very small phones */
+        gap: 1.5rem;
+    }
+    
+    h1 { font-size: 1.5rem; }
+}
+
+/* Card Styling */
+.card {
+    background: var(--card-bg);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: clamp(20px, 5vw, 40px); /* Responsive padding */
+    backdrop-filter: blur(10px);
+    transition: transform 0.3s ease, border-color 0.3s ease;
+    display: flex;
+    flex-direction: column;
+}
+
+/* Button Responsiveness */
+.btn {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 1rem;
+    margin-bottom: 0.8rem;
+    font-size: clamp(0.85rem, 2vw, 1rem);
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid transparent;
+    border-radius: 8px;
+    color: #eee;
+    text-decoration: none;
+    transition: all 0.2s ease;
+}
+
+.btn:hover {
+    border-color: var(--primary-purple);
+    background: rgba(164, 69, 255, 0.1);
+}
+
+.btn small {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.7rem;
+    opacity: 0.6;
+    margin-left: 10px;
+}
