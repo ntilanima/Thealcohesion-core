@@ -1,37 +1,92 @@
-# ===== Node modules =====
-node_modules/
-npm-debug.log*
-yarn-error.log*
+############################################
+# THEALCOHESION OS – OFFICIAL GITIGNORE
+# Purpose: Clean, secure, recoverable OS repo
+############################################
 
-# ===== Electron build outputs =====
-dist/
-out/
-*.AppImage
-*.deb
-*.rpm
-*.exe
-*.dmg
-*.zip
-*.7z
-
-# ===== OS-specific files =====
+########## OS / SYSTEM FILES ##########
 .DS_Store
 Thumbs.db
-desktop.ini
+ehthumbs.db
+Desktop.ini
 
-# ===== IDE / Editor files =====
+########## EDITORS / IDEs ##########
 .vscode/
 .idea/
-*.sublime-workspace
-*.sublime-project
-
-# ===== Logs =====
+*.swp
+*.swo
 *.log
 
-# ===== Temporary files =====
-*.tmp
-*.temp
+########## NODE / NPM ##########
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
 
-# ===== Optional: other system files =====
-*.swp
-*~
+########## ENV / SECRETS ##########
+.env
+.env.*
+*.key
+*.pem
+*.crt
+*.secret
+
+########## BUILD OUTPUTS ##########
+dist/
+build/
+out/
+.cache/
+.tmp/
+
+########## FRONTEND FRAMEWORKS ##########
+.next/
+.nuxt/
+.svelte-kit/
+.angular/
+
+########## OS / BROWSER RUNTIME ##########
+runtime/
+sessions/
+profiles/
+user-data/
+temp/
+cache/
+
+########## THEALCOHESION OS INTERNALS ##########
+/kernel/runtime/*
+/apps/**/runtime/*
+/vpu/cache/*
+/vpu/snapshots/*
+/system/logs/*
+/system/crash-dumps/*
+
+########## SUBMODULE INTERNALS ##########
+.git/modules/
+**/.git/modules/
+
+########## DATABASES ##########
+*.db
+*.sqlite
+*.sqlite3
+data/
+storage/
+
+########## ARCHIVES ##########
+*.zip
+*.tar
+*.tar.gz
+*.7z
+
+########## TEST / COVERAGE ##########
+coverage/
+.nyc_output/
+
+########## OPTIONAL (UNCOMMENT IF NEEDED) ##########
+# public/assets/generated/
+# docs/generated/
+
+############################################
+# RULES:
+# - DO commit: source code, configs, package.json
+# - DO NOT commit: generated, secrets, caches
+############################################

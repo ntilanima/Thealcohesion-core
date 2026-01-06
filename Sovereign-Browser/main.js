@@ -90,10 +90,16 @@ app.whenReady().then(() => {
   createWindow()
   registerGlobalKeys()
 
+// ADD EXTRA SHORTCUTS HERE:
+  globalShortcut.register('Escape', () => {
+    console.log('Escape blocked via GlobalShortcut');
+  }); // This is the }) for the shortcut
+
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) createWindow()
   })
-})
+}) 
+
 
 // VPU messaging & permissions
 ipcMain.on('vpu-message', (event, data) => {
@@ -103,6 +109,16 @@ ipcMain.on('vpu-message', (event, data) => {
     event.reply('vpu-reply', { success: 'Action allowed', app: data.app || null })
   }
 })
+
+// ADD THE NEW HANDSHAKE LOGIC HERE:
+ipcMain.handle('get-allotment-status', async (event, investorKey) => {
+  console.log(`Verifying Handshake for: ${investorKey}`);
+  return {
+    system: "Thealcohesion OS",
+    partition: "Genesis",
+    active: true
+  };
+}); // This is the }) you were asking about
 
 // Close app on all windows closed (except macOS)
 app.on('window-all-closed', () => {

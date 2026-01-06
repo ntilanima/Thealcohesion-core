@@ -20,3 +20,18 @@ contextBridge.exposeInMainWorld('vpu', {
     })
   }
 })
+
+//The Genesis Handshake
+contextBridge.exposeInMainWorld('vpu', {
+  sendMessage: (msg) => ipcRenderer.send('vpu-message', msg),
+  onMessage: (callback) => ipcRenderer.on('vpu-reply', (event, data) => callback(data)),
+
+  // NEW: Secure Handshake for the 2025-12-26 Allotment
+  verifyAllotment: async (investorKey) => {
+    return await ipcRenderer.invoke('get-allotment-status', investorKey);
+  },
+
+  checkPermission: async (appName) => {
+    // ... your existing checkPermission logic ...
+  }
+})

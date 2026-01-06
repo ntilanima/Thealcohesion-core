@@ -7,8 +7,9 @@ module.exports = {
     { key: 'Alt+F4', action: 'block' },
     { key: 'Alt+Space', action: 'block' },
     { key: 'Ctrl+W', action: 'block' },
-    { key: 'Ctrl+Q', action: 'block' }
-    // Meta, Alt+Tab, Ctrl+Alt+Del removed
+    { key: 'Ctrl+Q', action: 'block' },
+    { key: 'Alt+Tab', action: 'block' },
+    // Meta, Ctrl+Alt+Del removed
   ],
 
   appSpecific: {
