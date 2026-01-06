@@ -1,0 +1,3 @@
+[submodule "Thealcohesion-core"]
+	path = Thealcohesion-core
+	url = https://github.com/ntilanima/Thealcohesion-core.git
