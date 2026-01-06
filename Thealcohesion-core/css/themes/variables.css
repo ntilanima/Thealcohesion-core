@@ -1,0 +1,9 @@
+/* Theme Variables: root theme variables (colors, fonts, sizes) */
+:root {
+    --ubuntu-purple: #8a2be2;
+    --ubuntu-dark-aubergine: #4b0082;
+    --ubuntu-light-purple: #d8bfd8;
+    --ubuntu-blue: #4169e1;
+    --ubuntu-light-blue: #add8e6;
+}
+/* Additional variables can be added here */

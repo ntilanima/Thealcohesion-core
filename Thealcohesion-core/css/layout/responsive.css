@@ -1,0 +1,49 @@
+/*os-window, window-header, window-content styles */
+.os-window {
+    background: rgba(255, 255, 255, 0.9);
+    border: 1px solid rgba(0, 0, 0, 0.1);
+    border-radius: 8px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+    position: absolute;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    animation: debian-launch 0.4s ease forwards;
+}
+.window-header {
+    background: var(--ubuntu-purple);
+    color: white;
+    padding: 10px;
+    font-size: 16px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    cursor: move;
+}
+.window-header .window-controls {
+    display: flex;
+    gap: 10px;
+}
+.window-header .window-controls .control-btn {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    cursor: pointer;
+}
+.window-header .window-controls .close-btn {
+    background: #ff5f57;
+}
+.window-header .window-controls .minimize-btn {
+    background: #ffbd2e;
+}
+.window-header .window-controls .maximize-btn {
+    background: #28c840;
+}
+.window-content {
+    flex-grow: 1;
+    padding: 15px;
+    overflow: auto;
+    background: white;
+    color: black;
+}
+/* Additional window styles can be added here */

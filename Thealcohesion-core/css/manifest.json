@@ -1,0 +1,12 @@
+{
+  "name": "Thealcohesion Sovereign OS",
+  "short_name": "Sovereign",
+  "start_url": "/index.html",
+  "display": "fullscreen",
+  "orientation": "any",
+  "background_color": "#000000",
+  "theme_color": "#a445ff",
+  "icons": [
+    { "src": "./images/logo.png", "sizes": "512x512", "type": "image/png" }
+  ]
+}
