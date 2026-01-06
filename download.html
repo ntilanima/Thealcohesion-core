@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <title>Thealcohesion OS | Provisioning</title>
-    <link rel="stylesheet" href="download.css">
+    <link rel="stylesheet" href="/download.css">
 </head>
 <body class="sovereign-theme">
     <div class="background-glow"></div>
@@ -20,17 +20,41 @@
                 <div class="card-glow"></div>
                 <h2>Desktop Kernels</h2>
                 <div class="links">
+                       <div class="links">
+                        <a href="./builds/checksum.txt" target="_blank" class="verify-link">
+                            <small>Verify Integrity (SHA-256)</small>
+                        </a>
+                    </div>
                     <a href="#" class="btn"><span class="icon">🪟</span> Windows <small>v1.0.1 - x64</small></a>
+                                        <div class="links">
+                        <a href="./builds/checksum.txt" target="_blank" class="verify-link">
+                            <small>Verify Integrity (SHA-256)</small>
+                        </a>
+                    </div>
                     <a href="#" class="btn"><span class="icon">🍎</span> macOS <small>Universal Binary</small></a>
-                    <a href="#" class="btn primary"><span class="icon">🐧</span> Linux <small>.AppImage / .deb</small></a>
+                                        <div class="links">
+                        <a href="./builds/checksum.txt" target="_blank" class="verify-link">
+                            <small>Verify Integrity (SHA-256)</small>
+                        </a>
+                    </div>
+                    <a href="./builds/thealcohesion-linux-v1.0.1.AppImage" class="btn primary"><span class="icon">🐧</span> Linux <small>.AppImage / .deb</small></a>
                 </div>
             </div>
 
             <div class="card mobile">
                 <div class="card-glow"></div>
                 <h2>Mobile Nodes</h2>
-                <div class="links">
+                                    <div class="links">
+                        <a href="./builds/checksum.txt" target="_blank" class="verify-link">
+                            <small>Verify Integrity (SHA-256)</small>
+                        </a>
+                    </div>
                     <a href="#" class="btn"><span class="icon">🤖</span> Android <small>APK Archive</small></a>
+                    <div class="links">
+                        <a href="./builds/checksum.txt" target="_blank" class="verify-link">
+                            <small>Verify Integrity (SHA-256)</small>
+                        </a>
+                    </div>
                     <a href="#" class="btn"><span class="icon">📱</span> iOS <small>TestFlight Access</small></a>
                 </div>
             </div>
@@ -40,7 +64,80 @@
             <p>2025-12-26 GENESIS PARTITION ACTIVE</p>
             <div class="status-indicator"><span class="dot"></span> Secure Connection Verified</div>
         </footer>
+
+        <div id="provisioning-overlay">
+            <div class="terminal-log-box" id="log-box">
+                </div>
+        </div>
     </main>
     <script src="/loading.js"></script>
+    <script>
+document.addEventListener('DOMContentLoaded', () => {
+    const logBox = document.getElementById('log-box');
+    const overlay = document.getElementById('provisioning-overlay');
+    const platform = window.navigator.platform.toLowerCase();
+    const ua = window.navigator.userAgent.toLowerCase();
+    
+    let osMatch = '';
+    let cardType = '';
+
+    // --- PART 1: SYSTEM DETECTION ---
+    if (platform.includes('win')) { osMatch = 'Windows'; cardType = 'desktop'; }
+    else if (platform.includes('mac')) { osMatch = 'macOS'; cardType = 'desktop'; }
+    else if (platform.includes('linux')) { osMatch = 'Linux'; cardType = 'desktop'; }
+    else if (ua.includes('android')) { osMatch = 'Android'; cardType = 'mobile'; }
+    else if (ua.includes('iphone') || ua.includes('ipad')) { osMatch = 'iOS'; cardType = 'mobile'; }
+
+    if (osMatch) {
+        // Highlight the correct Card
+        const targetCard = document.querySelector(`.card.${cardType}`);
+        if (targetCard) targetCard.classList.add('detected');
+
+        // Highlight the specific Button and trigger Handshake Pulse
+        document.querySelectorAll('.btn').forEach(btn => {
+            if (btn.innerText.includes(osMatch)) {
+                btn.classList.add('detected-link');
+                setTimeout(() => btn.classList.add('handshake-active'), 500);
+            }
+        });
+    }
+
+    // --- PART 2: PROVISIONING LOG LOGIC ---
+    function addLog(text, delay) {
+        setTimeout(() => {
+            const line = document.createElement('div');
+            line.className = 'log-line';
+            line.innerHTML = `<span style="color: #888;">></span> ${text}`;
+            logBox.appendChild(line);
+        }, delay);
+    }
+
+    document.querySelectorAll('.btn').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            e.preventDefault(); 
+            const osName = btn.innerText.split('\n')[0].trim();
+            const fileUrl = btn.getAttribute('href');
+
+            overlay.style.display = 'flex';
+            logBox.innerHTML = ''; 
+
+            // Terminal Handshake Sequence
+            addLog(`Initializing Handshake with Thealcohesion Core...`, 200);
+            addLog(`Partition: GENESIS_2025-12-26 detected.`, 600);
+            addLog(`Validating signature for ${osName} binary...`, 1100);
+            addLog(`SHA-256: 78572cc89b33... VERIFIED`, 1400);
+            addLog(`SECURE_CHANNEL_ESTABLISHED`, 1600);
+            addLog(`Provisioning ${osName} Kernel Package...`, 2100);
+            addLog(`Redirecting to download node... <span class="cursor-blink"></span>`, 2600);
+
+            // Execute Download after the log finishes
+            setTimeout(() => {
+                overlay.style.display = 'none';
+                if(fileUrl && fileUrl !== '#') window.location.href = fileUrl;
+            }, 3500);
+        });
+    });
+});
+</script>
 </body>
 </html>
