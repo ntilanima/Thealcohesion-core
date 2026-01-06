@@ -1,0 +1,18 @@
+/* Overlay effects for the application: crt-effect, snap-preview, glass backgrounds */
+/* --- CRT EFFECT --- */
+@keyframes crt-effect {
+    0% { opacity: 0; }
+    100% { opacity: 1; }
+}
+/* --- SNAP PREVIEW EFFECT --- */
+@keyframes snap-preview {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.05); }
+    100% { transform: scale(1); }
+}
+/* --- GLASS BACKGROUND EFFECT --- */
+@keyframes glass-background {
+    from { background-color: rgba(255, 255, 255, 0.2); }
+    to { background-color: rgba(255, 255, 255, 0.8); }
+}
+/* Additional overlay effects can be added here */

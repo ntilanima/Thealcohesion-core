@@ -1,0 +1,341 @@
+/* --- THEME VARIABLES --- */
+:root {
+    --ubuntu-purple: #300a24;
+    --ubuntu-orange: #E95420;
+    --ubuntu-dark-aubergine: #2c001e;
+    --glass-bg: rgba(255, 255, 255, 0.05);
+    --font-ubuntu: 'Ubuntu', 'Cantarell', sans-serif;
+    --dock-width: 65px;
+}
+
+/* --- BASE LAYOUT --- */
+body, html {
+    margin: 0;
+    padding: 0;
+    width: 100vw;
+    height: 100vh;
+    overflow: hidden; /* Stops scrolling */
+    background: linear-gradient(150deg, var(--ubuntu-purple) 0%, var(--ubuntu-dark-aubergine) 100%);
+    font-family: var(--font-ubuntu);
+    color: white;
+}
+
+/* --- SYSTEM BARS --- */
+#top-bar {
+    height: 30px;
+    background: rgba(0, 0, 0, 0.85);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0 15px;
+    font-size: 13px;
+    z-index: 1000;
+}
+
+#side-dock {
+    position: fixed;
+    left: 0;
+    top: 30px;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.4);
+    backdrop-filter: blur(10px);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding-top: 15px;
+    border-right: 1px solid rgba(255,255,255,0.05);
+    z-index: 999;
+    width: var(--dock-width);
+    transition: width 0.3s cubic-bezier(0.2, 0.8, 0.3, 1),
+                transform 0.3s cubic-bezier(0.2, 0.8, 0.3, 1),
+                opacity 0.2s ease;
+}
+
+.dock-icon {
+    width: 44px;
+    height: 44px;
+    margin-bottom: 12px;
+    cursor: pointer;
+    transition: transform 0.2s;
+}
+
+.dock-icon:hover { transform: scale(1.1); }
+
+/* --- LOGIN GATE (FullScreen Overlay) --- */
+#login-gate {
+    position: fixed;
+    top: 0; left: 0;
+    width: 100vw; height: 100vh;
+    background: inherit; /* Keeps the purple gradient */
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 10000;
+}
+
+.login-box {
+    background: var(--glass-bg);
+    backdrop-filter: blur(30px);
+    padding: 40px;
+    border-radius: 12px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    text-align: center;
+    width: 350px;
+    box-shadow: 0 20px 50px rgba(0,0,0,0.5);
+}
+
+/* --- DESKTOP WORKSPACE (Ubuntu Grid) --- */
+#workspace {
+    margin-left: var(--dock-width);
+    transition: margin-left 0.3s cubic-bezier(0.2, 0.8, 0.3, 1);
+    height: calc(100vh - 30px);
+    grid-template-columns: repeat(auto-fill, 100px);
+    grid-template-rows: repeat(auto-fill, 110px);
+    grid-auto-flow: column; /* Desktop icons stack vertically first */
+    gap: 15px;
+    padding: 20px;
+    height: 100vh;
+    position: relative;
+    overflow: hidden;
+    justify-content: center;
+    align-items: center;
+    display: flex;             /* Enable Flexbox */
+    background: linear-gradient(135deg, #5E2750 0%, #2c001e 100%); /* Ubuntu Purple */
+}
+
+.desktop-icon {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    cursor: pointer;
+    padding: 10px;
+    border-radius: 6px;
+}
+
+.login-box {
+    background: rgba(255, 255, 255, 0.1);
+    backdrop-filter: blur(10px);
+    padding: 2.5rem;
+    border-radius: 12px;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    text-align: center;
+    width: 350px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+}
+
+.desktop-icon:hover { background: rgba(255,255,255,0.1); }
+
+.desktop-icon span { font-size: 2.5rem; } /* For Emojis */
+.icon-label {
+    margin-top: 8px;
+    font-size: 11px;
+    text-shadow: 1px 1px 2px black;
+}
+
+/* --- UTILITY --- */
+.hidden { display: none !important; }
+
+/*fade-in effect for login gate */
+#login-gate {
+    transition: opacity 0.5s ease;
+}
+
+/* --- LAUNCH ANIMATION FOR WINDOWS --- */
+@keyframes debian-launch {
+    0% {
+        opacity: 0;
+        transform: scale(0.92) translateY(10px);
+        filter: blur(4px);
+    }
+    100% {
+        opacity: 1;
+        transform: scale(1) translateY(0);
+        filter: blur(0);
+    }
+}
+
+.os-window {
+    will-change: left, top, opacity;
+    animation: fade-in 0.2s ease forwards;
+}
+
+@keyframes fade-in {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+/* --- SOVEREIGN TERMINAL UI --- */
+#vpu-terminal {
+    background: #000;
+    color: #00ff41;
+    font-family: 'Consolas', 'Monaco', 'Lucida Console', 'Courier New', monospace !important;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    padding: 10px;
+    box-sizing: border-box;
+    overflow: hidden; 
+    animation: terminal-flicker 0.2s infinite;
+    position: relative;
+}
+
+#vpu-terminal #term-output {
+    flex: 1;
+    /* Fluid scaling + Zoom transition */
+    font-size: clamp(9px, 1.5vw, 14px); 
+    transition: font-size 0.2s ease-out;
+    
+    /* Alignment & Fit */
+    white-space: pre; 
+    line-height: 1.1;
+    letter-spacing: -0.5px;
+    
+    /* Scrolling */
+    overflow-y: auto;
+    overflow-x: auto;
+    scrollbar-width: thin;
+    scrollbar-color: #004411 #000;
+    
+    /* Layering for Matrix */
+    position: relative;
+    z-index: 2;
+}
+
+/* Chrome/Safari Scrollbar */
+#vpu-terminal #term-output::-webkit-scrollbar { width: 6px; }
+#vpu-terminal #term-output::-webkit-scrollbar-track { background: #000; }
+#vpu-terminal #term-output::-webkit-scrollbar-thumb { background: #004411; border-radius: 3px; }
+
+/* Input & Interaction */
+#vpu-terminal .input-line {
+    display: flex;
+    position: relative;
+    z-index: 2;
+    font-size: clamp(10px, 1.5vw, 14px);
+    gap: 10px;
+}
+
+#vpu-terminal input {
+    background: transparent;
+    border: none;
+    outline: none;
+    color: #00ff41;
+    font-family: inherit;
+    font-size: inherit;
+    caret-color: #00ff41;
+    width: 100%;
+    min-width: 0;
+}
+
+/* Visual Effects: Glow & Flickers */
+#vpu-terminal span[style*="#a445ff"] { text-shadow: 0 0 8px rgba(164, 69, 255, 0.6); }
+#vpu-terminal .output-area, #vpu-terminal span, #vpu-terminal input {
+    text-shadow: 0 0 5px rgba(0, 255, 65, 0.4);
+}
+
+@keyframes terminal-flicker {
+    0% { opacity: 0.98; }
+    5% { opacity: 0.95; }
+    10% { opacity: 0.98; }
+    100% { opacity: 1; }
+}
+
+#vpu-terminal canvas {
+    position: absolute;
+    top: 0; left: 0;
+    z-index: 1;
+    pointer-events: none;
+}
+
+/* --- RESPONSIVE ADJUSTMENTS FOR SMALL SCREENS --- */
+@media (max-width: 768px) {
+    #term-output {
+        font-size: 11px !important;
+        white-space: pre-wrap !important; /* Forces text to wrap instead of stretching window */
+        word-break: break-all;
+    }
+    
+    .os-window {
+        /* Prevents the window from expanding beyond its boundaries */
+        max-width: calc(100vw - 95px) !important; 
+    }
+}
+
+/* MOBILE WINDOW OVERRIDE */
+@media (max-width: 768px) {
+    .os-window {
+        width: 100% !important;
+        height: calc(100% - 40px) !important; /* Leave room for top bar */
+        border-radius: 20px 20px 0 0 !important; /* Rounded tops like mobile apps */
+        box-shadow: 0 -5px 15px rgba(0,0,0,0.5);
+        transition: transform 0.3s cubic-bezier(0.1, 0.7, 1.0, 0.1), z-index 0s;
+        max-width: calc(100vw - 10px);
+        max-height: calc(100vh - 40px);
+        border-radius: 14px;
+    }
+}
+
+@media (max-width: 430px) {
+    .os-window {
+        width: 100% !important;
+        height: calc(100% - 40px) !important; /* Leave room for top bar */
+        border-radius: 20px 20px 0 0 !important; /* Rounded tops like mobile apps */
+        box-shadow: 0 -5px 15px rgba(0,0,0,0.5);
+        transition: transform 0.3s cubic-bezier(0.1, 0.7, 1.0, 0.1), z-index 0s;
+    }
+}
+
+
+
+/* --- ANIMATIONS for splash screen --- */
+
+#os-splash {
+    background: radial-gradient(circle at center, #1a0b2e 0%, #000000 100%);
+    overflow: hidden;
+    display: flex !important; /* Force splash to show first */
+    opacity: 1;
+    z-index: 99999;
+}
+
+/* The scanning line effect visible in the video */
+#os-splash::after {
+    content: " ";
+    position: absolute;
+    top: 0; left: 0; bottom: 0; right: 0;
+    background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%), 
+                linear-gradient(90deg, rgba(255, 0, 0, 0.06), rgba(0, 255, 0, 0.02), rgba(0, 0, 255, 0.06));
+    background-size: 100% 2px, 3px 100%;
+    z-index: 20001;
+    pointer-events: none;
+}
+
+#os-splash h1 {
+    color: #a445ff;
+    text-transform: uppercase;
+    font-weight: 800;
+    text-shadow: 0 0 10px #a445ff, 0 0 20px #a445ff;
+    animation: vpu-glow-pulse 2s infinite ease-in-out;
+}
+
+#vpu-logo {
+    filter: drop-shadow(0 0 15px #a445ff);
+    animation: logo-entrance 1.5s ease-out;
+}
+
+@keyframes vpu-glow-pulse {
+    0%, 100% { opacity: 1; text-shadow: 0 0 10px #a445ff, 0 0 20px #a445ff; }
+    50% { opacity: 0.8; text-shadow: 0 0 5px #a445ff, 0 0 10px #a445ff; }
+}
+
+@keyframes logo-entrance {
+    from { transform: scale(0.5); opacity: 0; filter: brightness(3); }
+    to { transform: scale(1); opacity: 0.5; filter: brightness(1); }
+}
+
+/* The specific green for the boot-logs */
+#boot-logs {
+    border: 1px solid #00ff41 !important;
+    box-shadow: 0 0 15px rgba(0, 255, 65, 0.2);
+    text-transform: uppercase;
+}
