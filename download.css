@@ -296,3 +296,48 @@ body {
     box-shadow: 0 0 15px var(--primary-purple);
     transition: width 0.1s linear;
 }
+
+
+.modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.9);
+    backdrop-filter: blur(15px);
+    display: none; /* Hidden by default */
+    align-items: center;
+    justify-content: center;
+    z-index: 11000;
+}
+
+.modal-content {
+    background: #0a0a0a;
+    border: 1px solid var(--primary-purple);
+    padding: 30px;
+    width: 90%;
+    max-width: 400px;
+    box-shadow: 0 0 50px rgba(164, 69, 255, 0.3);
+}
+
+.modal-content input, .modal-content textarea {
+    width: 100%;
+    padding: 12px;
+    margin-bottom: 10px;
+    background: #111;
+    border: 1px solid #333;
+    color: white;
+    font-family: 'Sovereign-Mono', monospace;
+}
+
+.modal-btn {
+    width: 100%;
+    padding: 15px;
+    border: none;
+    cursor: pointer;
+    font-family: 'Sovereign-Sans', sans-serif;
+    font-weight: bold;
+    margin-top: 10px;
+}
+
+.confirm { background: var(--primary-purple); color: black; }
+.interest { background: transparent; border: 1px solid var(--primary-purple); color: var(--primary-purple); }
+.cancel { color: #888; background: transparent; font-size: 0.8rem; }

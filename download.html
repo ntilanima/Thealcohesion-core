@@ -75,11 +75,14 @@
 document.addEventListener('DOMContentLoaded', () => {
     const logBox = document.getElementById('log-box');
     const overlay = document.getElementById('provisioning-overlay');
+    const memberModal = document.getElementById('member-modal');
+    const interestModal = document.getElementById('interest-modal');
     const platform = window.navigator.platform.toLowerCase();
     const ua = window.navigator.userAgent.toLowerCase();
     
     let osMatch = '';
     let cardType = '';
+    let currentDownloadUrl = ''; // Global within this scope to remember which file was clicked
 
     // --- PART 1: SYSTEM DETECTION ---
     if (platform.includes('win')) { osMatch = 'Windows'; cardType = 'desktop'; }
@@ -117,20 +120,70 @@ document.addEventListener('DOMContentLoaded', () => {
             logBox.appendChild(line);
         }, delay);
     }
-    // --- PART 3: CLICK EVENT & PROGRESS BAR ---
+    // --- PART 3: CLICK EVENT, MODALL TRIGGERS & PROGRESS BAR ---
     document.querySelectorAll('.btn').forEach(btn => {
         btn.addEventListener('click', (e) => {
-            e.preventDefault(); 
-            const osName = btn.innerText.split('\n')[0].trim();
-            const fileUrl = btn.getAttribute('href');
+            e.preventDefault();
+            currentDownloadUrl = btn.getAttribute('href'); // Store the link
+            memberModal.style.display = 'flex'; // Show the gatekeeper first
+        });
+    });
 
-            // Generate the ID here so it can be used in the logs below
-            const nativeID = generateNativeID();
+    // Membership Confirmation
+    document.getElementById('member-form').addEventListener('submit', (e) => {
+        e.preventDefault();
+        const licenseKey = document.getElementById('m-license').value.toUpperCase();
+        const memberName = document.getElementById('m-name').value;
 
-            overlay.style.display = 'flex';
-            logBox.innerHTML = ''; 
+        // VALIDATION: Key must start with SOV-
+        if (licenseKey.startsWith('SOV-') && licenseKey.length > 8) {
+            memberModal.style.display = 'none';
+            startProvisioningSequence(memberName, licenseKey);
+        } else {
+            alert("INVALID LICENSE KEY: Access Denied.");
+        }
+    });
 
-            // Terminal Handshake Sequence
+    // Interest Button Trigger
+    document.getElementById('interested-btn').addEventListener('click', () => {
+        memberModal.style.display = 'none';
+        interestModal.style.display = 'flex';
+    });
+
+    // Interest Form Submission
+    document.getElementById('interest-form').addEventListener('submit', (e) => {
+        e.preventDefault();
+        const email = "admin@thealcohesion.space";
+        window.location.href = `mailto:${email}?subject=Space Native Interest Request`;
+        alert("Request sent to Admin.");
+        interestModal.style.display = 'none';
+    });
+
+    // --- PART 4: THE ACTUAL PROVISIONING SEQUENCE ---
+    function startProvisioningSequence(name, key) {
+        const nativeID = generateNativeID();
+        overlay.style.display = 'flex';
+        logBox.innerHTML = ''; 
+
+        // 1. Handshake & Security Logs
+        addLog(`Initializing Handshake with Thealcohesion Core...`, 200);
+        addLog(`Identity Confirmed: <span style="color: #00ff41;">${nativeID}</span>`, 600);
+        addLog(`Space Native: ${name} (Authenticated via ${key})`, 900);
+        
+        // IP Capture Logic
+        fetch('https://api.ipify.org?format=json')
+            .then(res => res.json())
+            .then(data => {
+                addLog(`SECURE_NODE_IP: ${data.ip}`, 1200);
+                if(localStorage.getItem('downloaded_ip') === data.ip) {
+                    addLog(`<span style="color:red">FLAG: IP already registered. Locking Partition.</span>`, 1600);
+                } else {
+                    addLog(`STATUS: Binding Kernel to Machine IP...`, 1600);
+                    localStorage.setItem('downloaded_ip', data.ip);
+                }
+            });
+
+        // Terminal Handshake Sequence
             addLog(`Initializing Handshake with Thealcohesion Core...`, 200);
             addLog(`Thealcohesion Space Native Identity Confirmed.`, 200);
             addLog(`Allocating 5GB Sovereign Partition issued...`, 600);
@@ -141,34 +194,76 @@ document.addEventListener('DOMContentLoaded', () => {
             addLog(`Provisioning ${osName} Kernel Package...`, 2100);
             addLog(`Redirecting to download node... <span class="cursor-blink"></span>`, 2600);
 
-            // 2. Create and Start Progress Bar
-            setTimeout(() => {
-                const progressBarContainer = document.createElement('div');
-                progressBarContainer.className = 'progress-container';
-                progressBarContainer.innerHTML = '<div class="progress-bar" id="fill"></div>';
-                logBox.appendChild(progressBarContainer);
 
-                const fill = document.getElementById('fill');
-                let width = 0;
-                const interval = setInterval(() => {
-                    if (width >= 100) {
-                        clearInterval(interval);
-                        addLog(`DEPLOYMENT COMPLETE for ${nativeID} Redirecting...`, 200);
-                    } else {
-                        width++;
-                        fill.style.width = width + '%';
-                    }
-                }, 15); // Adjust speed to match the total log duration
-            }, 2600);
+        // 2. Progress Bar
+        setTimeout(() => {
+            const progressBarContainer = document.createElement('div');
+            progressBarContainer.className = 'progress-container';
+            progressBarContainer.innerHTML = '<div class="progress-bar" id="fill"></div>';
+            logBox.appendChild(progressBarContainer);
 
-            // Execute Download after the log finishes
-            setTimeout(() => {
-                overlay.style.display = 'none';
-                if(fileUrl && fileUrl !== '#') window.location.href = fileUrl;
-            }, 7000);
-        });
-    });
+            const fill = document.getElementById('fill');
+            let width = 0;
+            const interval = setInterval(() => {
+                if (width >= 100) {
+                    clearInterval(interval);
+                    addLog(`DEPLOYMENT COMPLETE for ${nativeID}. Redirecting...`, 200);
+                } else {
+                    width++;
+                    fill.style.width = width + '%';
+                }
+            }, 20);
+        }, 3200);
+
+        // 3. Final Redirect
+        setTimeout(() => {
+            overlay.style.display = 'none';
+            if(currentDownloadUrl && currentDownloadUrl !== '#') {
+                window.location.href = currentDownloadUrl;
+            }
+        }, 6500);
+    }
 });
+
+// Global Close Function
+function closeAllModals() {
+    document.querySelectorAll('.modal-overlay').forEach(m => m.style.display = 'none');
+}
+
 </script>
+
+<div id="member-modal" class="modal-overlay">
+    <div class="modal-content">
+        <h3>Native Identity Verification</h3>
+        <p>Enter your Sovereign License Key to unlock the kernel.</p>
+        <form id="member-form">
+            <input type="text" id="m-name" placeholder="Full Name" required>
+            <input type="text" id="m-license" placeholder="Sovereign License Key (e.g. SOV-XXXX)" required>
+            <input type="text" id="m-no" placeholder="Membership Number" required>
+            <input type="tel" id="m-phone" placeholder="Registered Phone" required>
+            <input type="email" id="m-email" placeholder="Registered Email" required>
+            <input type="text" id="m-country" placeholder="Country" required>
+            
+            <button type="submit" class="modal-btn confirm">Verify & Provision</button>
+            <button type="button" id="interested-btn" class="modal-btn interest">Become a Space Native</button>
+        </form>
+    </div>
+</div>
+
+<div id="interest-modal" class="modal-overlay">
+    <div class="modal-content">
+        <h3>Expression of Interest</h3>
+        <p>Join the Thealcohesion Space Native Program.</p>
+        <form id="interest-form">
+            <input type="text" placeholder="Full Name" required>
+            <input type="text" placeholder="Country" required>
+            <input type="tel" placeholder="Phone Number" required>
+            <input type="email" placeholder="Email Address" required>
+            <textarea placeholder="Reason for Joining" required></textarea>
+            <button type="submit" class="modal-btn interest">Submit to Admin</button>
+            <button type="button" onclick="closeAllModals()" class="modal-btn cancel">Cancel</button>
+        </form>
+    </div>
+</div>
 </body>
 </html>
