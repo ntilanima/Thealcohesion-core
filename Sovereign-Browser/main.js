@@ -86,6 +86,11 @@ function createWindow() {
       callback({ cancel: false })
     }
   })
+
+  // Prevents the user from zooming in/out and breaking the layout
+mainWindow.webContents.on('did-finish-load', () => {
+  mainWindow.webContents.setVisualZoomLevelLimits(1, 1);
+});
 }
 
 
@@ -113,6 +118,14 @@ ipcMain.handle('get-allotment-status', async (event, investorKey) => {
     active: true
   };
 }); 
+
+//Power Management
+ipcMain.on('system-power', (event, action) => {
+    if (action === 'shutdown') app.quit();
+    if (action === 'reboot') {
+        mainWindow.reload(); // Restarts the Kiosk/OS cycle
+    }
+});
 
 // App ready
 app.whenReady().then(() => {
