@@ -1,53 +1,317 @@
 :root {
-    --neon-purple: #a445ff;
-    --bg-black: #050505;
+    --primary-purple: #bc70ff;
+    --text-white: #ffffff;
+    --text-silver: #a0a0a0;
+    --bg-black: #020202;
+    --error-red: #ff4b4b;
 }
 
 body {
-    background: var(--bg-black);
-    color: white;
+    background-color: var(--bg-black);
+    color: var(--text-white);
     font-family: 'Sovereign-Mono', monospace;
-    height: 100vh;
     margin: 0;
+    height: 100vh;
     display: flex;
     align-items: center;
     justify-content: center;
     overflow: hidden;
 }
 
-.kiosk-container { text-align: center; width: 80%; }
+/* Background Layering */
+.bg-elements {
+    position: fixed;
+    inset: 0;
+    z-index: -1;
+    background: radial-gradient(circle at center, #0a0515 0%, #020202 100%);
+}
 
-.terminal-header h1 {
-    font-size: 2.5rem;
-    color: var(--neon-purple);
-    margin-bottom: 0.5rem;
-    border-right: 3px solid var(--neon-purple); /* The cursor */
-    display: inline-block;
-    white-space: nowrap;
-    overflow: hidden;
+.ambient-orb {
+    position: absolute;
+    width: 600px;
+    height: 600px;
+    background: radial-gradient(circle, rgba(164, 69, 255, 0.18) 0%, transparent 70%);
+    border-radius: 50%;
+    filter: blur(80px);
+    pointer-events: none;
+    z-index: -1;
+    /* Use will-change to tell the browser to optimize for movement */
+    will-change: transform;
+    transition: transform 0.2s cubic-bezier(0.2, 0, 0.2, 1); /* Smooths the mouse following */
+}
+
+.orb-1 { top: -150px; left: -150px; }
+.orb-2 { bottom: -150px; right: -150px; }
+
+.orb-1 { top: -10%; left: -10%; }
+.orb-2 { bottom: -10%; right: -10%; }
+
+/* Main Container */
+.kiosk-container {
+    width: 90%;
+    max-width: 800px;
+    padding: 60px 40px;
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    background: rgba(255, 255, 255, 0.01);
+    backdrop-filter: blur(10px);
+    border-radius: 8px;
+    text-align: center;
+    position: relative;
+    z-index: 10;
+}
+
+#typewriter-h1 {
+    font-size: clamp(1.5rem, 5vw, 2.5rem);
+    margin: 0 0 15px 0;
+    letter-spacing: -0.5px;
+    color: var(--text-white);
+}
+
+#typewriter-p {
+    font-size: 1rem;
+    color: var(--text-silver);
+    margin: 0;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+}
+
+/* Progress Zone */
+.sync-bar-container {
+    width: 100%;
+    height: 2px;
+    background: rgba(255, 255, 255, 0.1);
+    margin-top: 40px;
+    margin-bottom: 10px;
+}
+
+#sync-progress {
+    width: 0%;
+    height: 100%;
+    background: var(--primary-purple);
+    box-shadow: 0 0 10px var(--primary-purple);
+    transition: width 0.3s ease;
+}
+
+/* Button & Errors */
+.enter-button {
+    background: var(--text-white);
+    color: black;
+    border: none;
+    padding: 16px 48px;
+    font-family: inherit;
+    font-weight: 900;
+    text-transform: uppercase;
+    cursor: pointer;
+    margin-top: 30px;
+    transition: all 0.3s ease;
+}
+
+.enter-button:hover {
+    box-shadow: 0 0 30px var(--primary-purple);
+    transform: translateY(-2px);
+}
+
+.hidden-element {
+    display: none;
+    opacity: 0;
 }
 
 .error-text {
-    color: #ff4545;
+    color: var(--error-red);
+    font-size: 0.85rem;
     margin-top: 20px;
-    font-size: 0.9rem;
+    font-weight: bold;
 }
 
-#enter-btn {
-    background: transparent;
-    border: 1px solid var(--neon-purple);
-    color: var(--neon-purple);
-    padding: 15px 40px;
-    font-size: 1.2rem;
-    cursor: pointer;
-    transition: 0.3s;
+/* Ensure the background container is visible */
+.bg-elements {
+    position: fixed;
+    inset: 0;
+    z-index: -1; /* Keeps them behind the text */
+    background: radial-gradient(circle at center, #0a0515 0%, #020202 100%);
+    overflow: hidden;
+}
+
+.ambient-orb {
+    position: absolute;
+    width: 500px;
+    height: 500px;
+    /* Use a slightly stronger purple so it's visible on dark screens */
+    background: radial-gradient(circle, rgba(164, 69, 255, 0.15) 0%, transparent 70%);
+    border-radius: 50%;
+    filter: blur(60px); /* Softens the edges */
+    pointer-events: none; /* Prevents them from blocking button clicks */
+    animation: drift 25s infinite alternate ease-in-out;
+}
+
+/* Position them at opposite corners */
+.orb-1 { 
+    top: -100px; 
+    left: -100px; 
+}
+
+.orb-2 { 
+    bottom: -100px; 
+    right: -100px; 
+    animation-delay: -7s; /* Offsets the animation so they don't move in sync */
+    background: radial-gradient(circle, rgba(130, 50, 255, 0.12) 0%, transparent 70%);
+}
+
+@keyframes drift {
+    from { transform: translate(0, 0) scale(1); }
+    to { transform: translate(150px, 100px) scale(1.1); }
+}
+
+@keyframes powerUpFlash {
+    0% {
+        transform: scale(1);
+        background: radial-gradient(circle, rgba(164, 69, 255, 0.18) 0%, transparent 70%);
+        filter: blur(80px);
+    }
+    30% {
+        transform: scale(2.5);
+        background: radial-gradient(circle, rgba(188, 112, 255, 0.8) 0%, transparent 70%);
+        filter: blur(20px); /* Sharpen the glow during the flash */
+    }
+    100% {
+        transform: scale(3);
+        background: radial-gradient(circle, rgba(164, 69, 255, 0) 0%, transparent 70%);
+        filter: blur(100px);
+        opacity: 0;
+    }
+}
+
+.orb-active {
+    animation: powerUpFlash 0.8s forwards ease-out !important;
+}
+
+/* Ensure the container fades out too */
+.kiosk-fade-out {
+    opacity: 0;
+    transform: scale(0.95);
+    transition: opacity 0.6s ease-in-out;
+    pointer-events: none;
+}
+
+
+/* Fixed Overlay: Using visibility + opacity for 100% reliability */
+#welcome-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background: #000000; 
+    z-index: 99999; /* Higher than orbs and container */
+    display: none;  /* JS will toggle this to flex */
+    opacity: 0;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    transition: opacity 0.8s ease-in-out;
+}
+
+#welcome-overlay.welcome-active {
+    opacity: 1 !important;
+}
+
+.welcome-content {
+    text-align: center;
+    font-family: 'Sovereign-Mono', monospace;
+}
+
+.glitch-text {
+    color: var(--primary-purple);
+    font-size: 0.8rem;
+    letter-spacing: 4px;
+    margin-bottom: 10px;
+    opacity: 0.7;
+}
+
+#native-display-id {
+    font-size: 2.5rem;
+    color: #fff;
+    margin: 0;
+    text-shadow: 0 0 20px var(--primary-purple);
+}
+
+.welcome-content p {
+    color: var(--text-silver);
+    margin-top: 15px;
+    letter-spacing: 2px;
+}
+
+.timestamp-text {
     margin-top: 30px;
+    font-size: 0.7rem;
+    color: var(--primary-purple);
+    font-family: 'Sovereign-Mono', monospace;
+    letter-spacing: 1px;
+    opacity: 0.5;
+    text-transform: uppercase;
 }
 
-#enter-btn:hover {
-    background: var(--neon-purple);
-    color: black;
-    box-shadow: 0 0 20px var(--neon-purple);
+/* The Laser Line */
+.scan-line {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 4px;
+    background: var(--primary-purple);
+    box-shadow: 0 0 20px var(--primary-purple), 0 0 40px var(--primary-purple);
+    z-index: 10000;
+    opacity: 0;
 }
 
-.hidden-element { display: none; }
+#welcome-overlay.welcome-active .scan-line {
+    opacity: 0.7;
+    animation: scanMove 2.5s ease-in-out infinite;
+}
+
+@keyframes scanMove {
+    0% { top: 0%; }
+    50% { top: 100%; }
+    100% { top: 0%; }
+}
+
+/* Add a subtle flicker to the recognized text */
+.glitch-text {
+    animation: textFlicker 0.1s infinite secondary;
+}
+
+@keyframes textFlicker {
+    0% { opacity: 0.7; }
+    50% { opacity: 1; }
+    100% { opacity: 0.8; }
+}
+
+
+.manifest-box {
+    margin: 20px auto;
+    width: 250px;
+    text-align: left;
+    font-family: 'Sovereign-Mono', monospace;
+    font-size: 0.7rem;
+    color: var(--primary-purple);
+    border-left: 1px solid rgba(164, 69, 255, 0.3);
+    padding-left: 15px;
+    height: 100px; /* Keeps layout stable */
+}
+
+.manifest-line {
+    opacity: 0;
+    animation: fadeInSpec 0.3s forwards;
+    margin-bottom: 4px;
+}
+
+@keyframes fadeInSpec {
+    from { opacity: 0; transform: translateX(-10px); }
+    to { opacity: 1; transform: translateX(0); }
+}
+
+.manifest-line:nth-child(4) {
+    color: #00ff41; /* Green highlight for the Power Cell status */
+    font-weight: bold;
+    text-shadow: 0 0 5px rgba(0, 255, 65, 0.5);
+}

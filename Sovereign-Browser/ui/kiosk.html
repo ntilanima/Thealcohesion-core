@@ -7,18 +7,45 @@
     <link rel="stylesheet" href="kiosk.css">
 </head>
 <body>
+    <iframe id="os-frame" src="os-index.html" style="display:none;" aria-hidden="true"></iframe>
 
-    <iframe id="os-frame" src="os-index.html" style="display:none;"></iframe>
+    <div class="bg-elements">
+        <div class="ambient-orb orb-1"></div>
+        <div class="ambient-orb orb-2"></div>
+        <div class="scanlines"></div>
+    </div>
 
-    <div class="kiosk-container">
+    <main class="kiosk-container">
+        <div class="node-badge">NODE_STATUS: <span id="node-status">INITIALIZING</span></div>
+        
         <div class="terminal-header">
             <h1 id="typewriter-h1"></h1>
             <p id="typewriter-p"></p>
         </div>
 
+        <div id="loading-zone">
+            <div class="sync-bar-container">
+                <div id="sync-progress"></div>
+            </div>
+            <div id="sync-text">SYNCHRONIZING ENCLAVE...</div>
+        </div>
+
         <div id="status-area">
-            <button id="enter-btn" class="hidden-element">Enter the Kiosk</button>
-            <p id="error-msg" class="error-text"></p>
+            <button id="enter-btn" class="enter-button hidden-element">Enter the Kiosk</button>
+            <div id="error-msg" class="error-text"></div>
+        </div>
+    </main>
+
+    <div id="welcome-overlay">
+        <div class="scan-line"></div>
+        <div class="welcome-content">
+            <div class="glitch-text" id="scan-status">SCANNING HARDWARE...</div>
+            <h2 id="native-display-id"></h2>
+            
+            <div id="system-manifest" class="manifest-box"></div>
+            
+            <p>Welcome Home, Space Native.</p>
+            <div id="last-login-display" class="timestamp-text"></div>
         </div>
     </div>
 
