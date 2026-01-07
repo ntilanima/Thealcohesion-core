@@ -11,7 +11,7 @@
     <main class="download-container">
         <header class="download-header">
             <img src="./logo.png" alt="Thealcohesion Logo" class="mini-logo">
-            <h1>System Provisioning</h1>
+            <h1>Thealcohesion Space Natives Provisioning</h1>
             <p class="subtitle">Select your architecture to initialize the Sovereign Core</p>
         </header>
 
@@ -61,8 +61,8 @@
         </div>
 
         <footer class="allotment-footer">
-            <p>2025-12-26 GENESIS PARTITION ACTIVE</p>
-            <div class="status-indicator"><span class="dot"></span> Secure Connection Verified</div>
+            <p>2025-12-26 GENESIS PARTITION ACTIVE| SPACE NATIVE EXCLUSIVE</p>
+            <div class="status-indicator"><span class="dot"></span> Secure Native Connection Verified</div>
         </footer>
 
         <div id="provisioning-overlay">
@@ -102,6 +102,12 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
+    // --- NATIVE ID GENERATOR ---
+    function generateNativeID() {
+        const segment = () => Math.random().toString(36).substring(2, 6).toUpperCase();
+        return `TN-${segment()}-${segment()}`;
+    }
+
     // --- PART 2: PROVISIONING LOG LOGIC ---
     function addLog(text, delay) {
         setTimeout(() => {
@@ -111,18 +117,23 @@ document.addEventListener('DOMContentLoaded', () => {
             logBox.appendChild(line);
         }, delay);
     }
-
+    // --- PART 3: CLICK EVENT & PROGRESS BAR ---
     document.querySelectorAll('.btn').forEach(btn => {
         btn.addEventListener('click', (e) => {
             e.preventDefault(); 
             const osName = btn.innerText.split('\n')[0].trim();
             const fileUrl = btn.getAttribute('href');
 
+            // Generate the ID here so it can be used in the logs below
+            const nativeID = generateNativeID();
+
             overlay.style.display = 'flex';
             logBox.innerHTML = ''; 
 
             // Terminal Handshake Sequence
             addLog(`Initializing Handshake with Thealcohesion Core...`, 200);
+            addLog(`Thealcohesion Space Native Identity Confirmed.`, 200);
+            addLog(`Allocating 5GB Sovereign Partition issued...`, 600);
             addLog(`Partition: GENESIS_2025-12-26 detected.`, 600);
             addLog(`Validating signature for ${osName} binary...`, 1100);
             addLog(`SHA-256: 78572cc89b33... VERIFIED`, 1400);
@@ -130,11 +141,31 @@ document.addEventListener('DOMContentLoaded', () => {
             addLog(`Provisioning ${osName} Kernel Package...`, 2100);
             addLog(`Redirecting to download node... <span class="cursor-blink"></span>`, 2600);
 
+            // 2. Create and Start Progress Bar
+            setTimeout(() => {
+                const progressBarContainer = document.createElement('div');
+                progressBarContainer.className = 'progress-container';
+                progressBarContainer.innerHTML = '<div class="progress-bar" id="fill"></div>';
+                logBox.appendChild(progressBarContainer);
+
+                const fill = document.getElementById('fill');
+                let width = 0;
+                const interval = setInterval(() => {
+                    if (width >= 100) {
+                        clearInterval(interval);
+                        addLog(`DEPLOYMENT COMPLETE for ${nativeID} Redirecting...`, 200);
+                    } else {
+                        width++;
+                        fill.style.width = width + '%';
+                    }
+                }, 15); // Adjust speed to match the total log duration
+            }, 2600);
+
             // Execute Download after the log finishes
             setTimeout(() => {
                 overlay.style.display = 'none';
                 if(fileUrl && fileUrl !== '#') window.location.href = fileUrl;
-            }, 3500);
+            }, 7000);
         });
     });
 });
