@@ -41,14 +41,11 @@ function createWindow() {
   //Load Browser Kiosk welcome page
     // ✅ LOAD ONLY THE KIOSK
   mainWindow.loadFile(path.join(__dirname, 'ui/kiosk.html'))
+
+   // Logic to prevent "White Flash" on load
   mainWindow.once('ready-to-show', () => mainWindow.show())
   
-  // Load Thealcohesion OS index.html
-  const osIndex = path.join(__dirname, '../Thealcohesion-core/index.html')
-
-  // Only show window when ready
-  mainWindow.once('ready-to-show', () => mainWindow.show())
-
+  // 3. THEALCOHESION SECURITY POLICIES
   // Block window close
   mainWindow.on('close', (e) => {
     e.preventDefault()
@@ -89,6 +86,32 @@ function createWindow() {
   })
 }
 
+
+// VPU messaging & permissions
+// 5. IPC HANDLERS (The Bridge)
+// Handler to trigger the OS boot from the Kiosk
+ipcMain.handle('boot-os-core', async () => {
+  const osPath = path.join(__dirname, '../Thealcohesion-core/index.html');
+  
+  if (fs.existsSync(osPath)) {
+    mainWindow.loadFile(osPath);
+    return { success: true };
+  } else {
+    console.error("OS Core not found at:", osPath);
+    return { success: false, error: "OS_NOT_FOUND" };
+  }
+});
+
+// ADD THE NEW HANDSHAKE LOGIC HERE:
+ipcMain.handle('get-allotment-status', async (event, investorKey) => {
+  console.log(`Verifying Handshake for: ${investorKey}`);
+  return {
+    system: "Thealcohesion OS",
+    partition: "Genesis",
+    active: true
+  };
+}); 
+
 // App ready
 app.whenReady().then(() => {
   createWindow()
@@ -103,26 +126,6 @@ app.whenReady().then(() => {
     if (BrowserWindow.getAllWindows().length === 0) createWindow()
   })
 }) 
-
-
-// VPU messaging & permissions
-ipcMain.on('vpu-message', (event, data) => {
-  if (data.app && appPermissions[data.app] === false) {
-    event.reply('vpu-reply', { error: 'Permission denied for ' + data.app, app: data.app })
-  } else {
-    event.reply('vpu-reply', { success: 'Action allowed', app: data.app || null })
-  }
-})
-
-// ADD THE NEW HANDSHAKE LOGIC HERE:
-ipcMain.handle('get-allotment-status', async (event, investorKey) => {
-  console.log(`Verifying Handshake for: ${investorKey}`);
-  return {
-    system: "Thealcohesion OS",
-    partition: "Genesis",
-    active: true
-  };
-}); // This is the }) you were asking about
 
 // Close app on all windows closed (except macOS)
 app.on('window-all-closed', () => {
