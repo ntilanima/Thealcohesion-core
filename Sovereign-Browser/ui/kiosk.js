@@ -7,6 +7,7 @@ const enterBtn = document.getElementById('enter-btn');
 const errorMsg = document.getElementById('error-msg');
 const syncText = document.getElementById('sync-text');
 const nodeStatus = document.getElementById('node-status');
+const scanStatus = document.getElementById('scan-status');
 
 // Audio Assets
 const typeSound = new Audio('keypress.mp3');
@@ -23,17 +24,20 @@ function updateProgressBar(percent) {
 function typewriter(elementId, text, speed, callback) {
     let i = 0;
     const element = document.getElementById(elementId);
-    if(!element) return;
     element.innerHTML = ""; 
 
     function type() {
         if (i < text.length) {
             element.innerHTML += text.charAt(i);
+            
+            // Play mechanical click
             typeSound.currentTime = 0;
             typeSound.play().catch(() => {});
+            
             i++;
             if (elementId === "typewriter-h1") updateProgressBar((i / text.length) * 45);
             if (elementId === "typewriter-p") updateProgressBar(45 + (i / text.length) * 45);
+            
             setTimeout(type, speed);
         } else if (callback) {
             setTimeout(callback, 400); 
@@ -100,6 +104,7 @@ function checkSystemStatus() {
 enterBtn.addEventListener('click', async (e) => {
     e.preventDefault();
 
+    // 1. Data Prep
     const specs = await getSystemManifest();
     const nativeID = localStorage.getItem('spaceNativeID') || "NATIVE-GENESIS";
     const lastLogin = localStorage.getItem('lastEnclaveLogin') || "INITIAL_INITIALIZATION";
@@ -110,41 +115,41 @@ enterBtn.addEventListener('click', async (e) => {
     const container = document.querySelector('.kiosk-container');
     const welcome = document.getElementById('welcome-overlay');
     const manifest = document.getElementById('system-manifest');
-    const percentEl = document.getElementById('scan-percentage');
-    const statusEl = document.getElementById('scan-status');
+    
 
-    // Initial Setup
+    // 2. Initial Setup
     document.getElementById('native-display-id').innerText = nativeID;
     document.getElementById('last-login-display').innerText = `LAST_ACCESS: ${lastLogin}`;
     manifest.innerHTML = ""; 
 
-    // Trigger Visual Surge
+    // 3. Trigger Visual Surge
     orbs.forEach(orb => orb.classList.add('orb-active'));
     container.classList.add('kiosk-fade-out');
     if (powerSound) powerSound.play().catch(() => {});
 
-    // Reveal Overlay
-    welcome.style.display = 'flex'; 
+    // 4. The Two-Step Overlay Reveal
+    welcome.style.display = 'flex'; // Step 1: Put it in the DOM
     
     setTimeout(() => {
-        welcome.classList.add('welcome-active'); 
+        welcome.classList.add('welcome-active'); // Step 2: Fade it in
         localStorage.setItem('lastEnclaveLogin', currentTimeStr);
         
-        // 5. Percentage Counter (0 to 100 over ~3.5 seconds)
-        let count = 0;
-        const counterInterval = setInterval(() => {
-            count += Math.floor(Math.random() * 3) + 1; 
-            if (count >= 100) {
-                count = 100;
-                clearInterval(counterInterval);
-                statusEl.innerText = "IDENTITY RECOGNIZED";
-                statusEl.style.color = "#00ff41";
-                statusEl.style.textShadow = "0 0 10px #00ff41";
-            }
-            if(percentEl) percentEl.innerText = count.toString().padStart(2, '0');
-        }, 35);
-
-        // 6. Print real-time system manifest
+    // 5. Percentage Counter Animation (0 to 100 over 3 seconds)
+    const percentEl = document.getElementById('scan-percentage');
+    const statusEl = document.getElementById('scan-status');
+    let count = 0;
+    const counterInterval = setInterval(() => {
+        count += Math.floor(Math.random() * 3) + 1; // Random increments for "Realism"
+        if (count >= 100) {
+            count = 100;
+            clearInterval(counterInterval);
+            // Finalize Status
+            statusEl.innerText = "IDENTITY RECOGNIZED";
+            statusEl.style.color = "#00ff41";
+        }
+        percentEl.innerText = count.toString().padStart(2, '0');
+    }, 30);
+        // Print real-time system manifest
         specs.forEach((spec, index) => {
             setTimeout(() => {
                 const line = document.createElement('div');
@@ -153,44 +158,50 @@ enterBtn.addEventListener('click', async (e) => {
                 manifest.appendChild(line);
                 typeSound.currentTime = 0;
                 typeSound.play().catch(() => {});
-            }, index * 300); 
+            }, index * 250); 
         });
-    }, 50); 
+    }, 50); // Smallest delay to ensure display:flex is registered
 
-    // 7. Navigation (Dwell for 6 seconds total)
+    // 6. Update Status mid-scan
     setTimeout(() => {
-        welcome.style.opacity = '0';
-        setTimeout(() => {
-            window.location.href = "os-index.html"; 
-        }, 1000);
-    }, 6000); 
+        const statusEl = document.getElementById('scan-status');
+        if(statusEl) {
+            statusEl.innerText = "IDENTITY RECOGNIZED";
+            statusEl.style.color = "#00ff41";
+        }
+    }, 2500);
+
+    // 7. Navigation
+    setTimeout(() => {
+        window.location.href = "../Thealcohesion-core/ndex.html"; 
+        }, 6500); // Short buffer for a smooth exit
 }); 
 
-// 8. Iframe Logic
 iframe.onload = () => { 
     osReady = true; 
-    console.log("Sovereign OS Loaded.");
+    console.log("Sovereign OS Loaded in Background.");
 };
 
-// 9. Ambient Mouse Tracking
-document.addEventListener('mousemove', (e) => {
-    const orb1 = document.querySelector('.orb-1');
-    const orb2 = document.querySelector('.orb-2');
-    if(!orb1 || !orb2) return;
-    const moveX = (e.clientX - window.innerWidth / 2) / 25;
-    const moveY = (e.clientY - window.innerHeight / 2) / 25;
-    orb1.style.transform = `translate(${moveX}px, ${moveY}px)`;
-    orb2.style.transform = `translate(${-moveX * 1.5}px, ${-moveY * 1.5}px)`;
-});
+// 8. Ambient Mouse Tracking
+    document.addEventListener('mousemove', (e) => {
+        const orb1 = document.querySelector('.orb-1');
+        const orb2 = document.querySelector('.orb-2');
+        const moveX = (e.clientX - window.innerWidth / 2) / 25;
+        const moveY = (e.clientY - window.innerHeight / 2) / 25;
 
-// 10. Initialization
-window.onload = () => {
-    typewriter("typewriter-h1", h1Text, 40, () => {
-        typewriter("typewriter-p", pText, 25, () => {
-            checkSystemStatus();
-        });
+        if(orb1) orb1.style.transform = `translate(${moveX}px, ${moveY}px)`;
+        if(orb2) orb2.style.transform = `translate(${-moveX * 1.5}px, ${-moveY * 1.5}px)`;
     });
-};
+
+    // 9. Initialization
+    window.onload = () => {
+        typewriter("typewriter-h1", h1Text, 40, () => {
+            typewriter("typewriter-p", pText, 25, () => {
+                checkSystemStatus();
+            });
+        });
+    };
+    
 
 window.addEventListener('offline', checkSystemStatus);
 window.addEventListener('online', checkSystemStatus);

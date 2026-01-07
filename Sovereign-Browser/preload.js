@@ -1,43 +1,49 @@
-const { contextBridge, ipcRenderer } = require('electron')
+const { contextBridge, ipcRenderer } = require('electron');
 
-if (!ipcRenderer) throw new Error('ipcRenderer is undefined! Check preload path.')
+// 1. Safety Check
+if (!ipcRenderer) {
+    console.error('IPC Renderer is unavailable. Bridging failed.');
+}
 
-const { contextBridge } = require('electron')
-
-contextBridge.exposeInMainWorld('kiosk', {
-  isOnline: () => navigator.onLine
-})
-
+// 2. The Unified Bridge
+// We expose everything under one 'vpu' or 'api' object to keep it clean.
 contextBridge.exposeInMainWorld('vpu', {
-  sendMessage: (msg) => ipcRenderer.send('vpu-message', msg),
-  onMessage: (callback) => ipcRenderer.on('vpu-reply', (event, data) => callback(data)),
+    // Basic Connectivity
+    isOnline: () => navigator.onLine,
 
-  checkPermission: async (appName) => {
-    if (!ipcRenderer) throw new Error('ipcRenderer not available')
-    return new Promise((resolve) => {
-      const listener = (data) => {
-        if (data.app === appName || data.success || data.error) {
-          ipcRenderer.removeListener('vpu-reply', listener)
-          resolve(data)
-        }
-      }
-      ipcRenderer.on('vpu-reply', listener)
-      ipcRenderer.send('vpu-message', { app: appName })
-    })
-  }
-})
+    // The Genesis Handshake (Allotment Verification)
+    verifyAllotment: async (investorKey) => {
+        return await ipcRenderer.invoke('get-allotment-status', investorKey);
+    },
 
-//The Genesis Handshake
-contextBridge.exposeInMainWorld('vpu', {
-  sendMessage: (msg) => ipcRenderer.send('vpu-message', msg),
-  onMessage: (callback) => ipcRenderer.on('vpu-reply', (event, data) => callback(data)),
+    // System Transition (Switching from Kiosk to OS)
+    bootOS: async () => {
+        return await ipcRenderer.invoke('boot-os-core');
+    },
 
-  // NEW: Secure Handshake for the 2025-12-26 Allotment
-  verifyAllotment: async (investorKey) => {
-    return await ipcRenderer.invoke('get-allotment-status', investorKey);
-  },
+    // Messaging System
+    sendMessage: (msg) => ipcRenderer.send('vpu-message', msg),
+    
+    // Improved Listener (prevents memory leaks)
+    onMessage: (callback) => {
+        const subscription = (event, data) => callback(data);
+        ipcRenderer.on('vpu-reply', subscription);
+        
+        // Return a cleanup function
+        return () => ipcRenderer.removeListener('vpu-reply', subscription);
+    },
 
-  checkPermission: async (appName) => {
-    // ... your existing checkPermission logic ...
-  }
-})
+    // Permission Logic
+    checkPermission: async (appName) => {
+        return new Promise((resolve) => {
+            const listener = (event, data) => {
+                if (data.app === appName || data.success || data.error) {
+                    ipcRenderer.removeListener('vpu-reply', listener);
+                    resolve(data);
+                }
+            };
+            ipcRenderer.on('vpu-reply', listener);
+            ipcRenderer.send('vpu-message', { app: appName });
+        });
+    }
+});
