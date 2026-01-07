@@ -105,6 +105,33 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
+    //Timer for security
+    let countdown; // Global interval reference
+
+    function startTimeoutTimer() {
+    let timeLeft = 60;
+    const display = document.getElementById('timer-count');
+    display.innerText = timeLeft;
+    display.style.color = "#ff4545";
+
+    clearInterval(countdown); // Reset if already running
+    
+    countdown = setInterval(() => {
+        timeLeft--;
+        display.innerText = timeLeft;
+
+        if (timeLeft <= 10) {
+            display.style.fontWeight = "bold"; // Visual urgency
+        }
+
+        if (timeLeft <= 0) {
+            clearInterval(countdown);
+            closeAllModals();
+            alert("CONNECTION TIMEOUT: Secure session has expired for security protocols.");
+        }
+    }, 1000);
+    }
+
     // --- NATIVE ID GENERATOR ---
     function generateNativeID() {
         const segment = () => Math.random().toString(36).substring(2, 6).toUpperCase();
@@ -159,6 +186,8 @@ document.addEventListener('DOMContentLoaded', () => {
             e.preventDefault();
             currentDownloadUrl = btn.getAttribute('href'); // Store the link
             memberModal.style.display = 'flex'; // Show the gatekeeper first
+            // TRIGGER THE TIMER
+            startTimeoutTimer();
         });
     });
 
@@ -170,6 +199,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // VALIDATION: Key must start with SOV-
         if (licenseKey.startsWith('SOV-') && licenseKey.length > 8) {
+            // --- if key is validated ---
+            clearInterval(countdown); 
+            // --------------------------
             memberModal.style.display = 'none';
             startProvisioningSequence(memberName, licenseKey);
         } else {
@@ -274,6 +306,9 @@ function closeAllModals() {
 
 <div id="member-modal" class="modal-overlay">
     <div class="modal-content">
+        <div id="connection-timer" style="color: #ff4545; font-family: 'Sovereign-Mono', monospace; font-size: 0.8rem; text-align: right; margin-bottom: 10px;">
+            SECURE CONNECTION: <span id="timer-count">60</span>s
+        </div>
         <h3>Native Identity Verification</h3>
         <p>Enter your Sovereign License Key to unlock the kernel.</p>
         <form id="member-form">
