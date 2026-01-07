@@ -1,6 +1,7 @@
 const { app, BrowserWindow, globalShortcut, ipcMain, session } = require('electron')
 const path = require('path')
 const keyboardPolicies = require('./keyboard-policies')
+const fs = require('fs'); // <--- ADD THIS LINE HERE
 
 // Disable GPU to avoid libva errors
 app.disableHardwareAcceleration()

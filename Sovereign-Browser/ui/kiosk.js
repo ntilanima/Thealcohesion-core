@@ -171,11 +171,32 @@ enterBtn.addEventListener('click', async (e) => {
         }
     }, 2500);
 
-    // 7. Navigation
-    setTimeout(() => {
-        window.location.href = "../Thealcohesion-core/ndex.html"; 
-        }, 6500); // Short buffer for a smooth exit
-}); 
+// 7. Secure Navigation via VPU Bridge
+    setTimeout(async () => {
+        // Fade out the overlay for a smooth transition
+        const welcome = document.getElementById('welcome-overlay');
+        if (welcome) welcome.style.opacity = '0';
+
+        console.log("Initiating Kernel Handshake...");
+
+        try {
+            // Tell the Electron Main Process to load the OS folder
+            const response = await window.vpu.bootOS();
+
+            if (!response.success) {
+                console.error("OS Launch Failed:", response.error);
+                // Display error if the OS folder is missing
+                const statusEl = document.getElementById('scan-status');
+                if (statusEl) {
+                    statusEl.innerText = "ERROR: CORE NOT FOUND";
+                    statusEl.style.color = "#ff4b4b";
+                }
+            }
+        } catch (err) {
+            console.error("Bridge Communication Error:", err);
+        }
+    }, 6500); // 6.5s buffer to allow the manifest typing to finish
+});
 
 iframe.onload = () => { 
     osReady = true; 
