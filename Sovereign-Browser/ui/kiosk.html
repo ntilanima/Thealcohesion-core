@@ -1,28 +1,27 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <title>Thealcohesion Sovereign Kiosk</title>
-  <link rel="stylesheet" href="./kiosk.css" />
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Thealcohesion Kiosk</title>
+    <link rel="stylesheet" href="kiosk.css">
 </head>
 <body>
 
-<div id="kiosk">
-  <h1 id="title"></h1>
-  <p id="subtitle"></p>
+    <iframe id="os-frame" src="os-index.html" style="display:none;"></iframe>
 
-  <p id="status">Kiosk not ready</p>
+    <div class="kiosk-container">
+        <div class="terminal-header">
+            <h1 id="typewriter-h1"></h1>
+            <p id="typewriter-p"></p>
+        </div>
 
-  <button id="enter" disabled>Enter the Kiosk</button>
-</div>
+        <div id="status-area">
+            <button id="enter-btn" class="hidden-element">Enter the Kiosk</button>
+            <p id="error-msg" class="error-text"></p>
+        </div>
+    </div>
 
-<!-- OS PRELOAD (HIDDEN BUT ACTIVE) -->
-<iframe
-  id="os-frame"
-  src="../../Thealcohesion-core/index.html"
-  style="display:none; border:none;"
-></iframe>
-
-<script src="./kiosk.js"></script>
+    <script src="kiosk.js"></script>
 </body>
 </html>

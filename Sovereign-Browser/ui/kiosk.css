@@ -1,28 +1,53 @@
+:root {
+    --neon-purple: #a445ff;
+    --bg-black: #050505;
+}
+
 body {
-  margin: 0;
-  background: black;
-  color: #a445ff;
-  font-family: monospace;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  height: 100vh;
+    background: var(--bg-black);
+    color: white;
+    font-family: 'Sovereign-Mono', monospace;
+    height: 100vh;
+    margin: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
 }
 
-#kiosk {
-  text-align: center;
+.kiosk-container { text-align: center; width: 80%; }
+
+.terminal-header h1 {
+    font-size: 2.5rem;
+    color: var(--neon-purple);
+    margin-bottom: 0.5rem;
+    border-right: 3px solid var(--neon-purple); /* The cursor */
+    display: inline-block;
+    white-space: nowrap;
+    overflow: hidden;
 }
 
-button {
-  margin-top: 20px;
-  padding: 12px 30px;
-  font-size: 16px;
-  background: #a445ff;
-  border: none;
-  cursor: pointer;
+.error-text {
+    color: #ff4545;
+    margin-top: 20px;
+    font-size: 0.9rem;
 }
 
-button:disabled {
-  opacity: 0.4;
-  cursor: not-allowed;
+#enter-btn {
+    background: transparent;
+    border: 1px solid var(--neon-purple);
+    color: var(--neon-purple);
+    padding: 15px 40px;
+    font-size: 1.2rem;
+    cursor: pointer;
+    transition: 0.3s;
+    margin-top: 30px;
 }
+
+#enter-btn:hover {
+    background: var(--neon-purple);
+    color: black;
+    box-shadow: 0 0 20px var(--neon-purple);
+}
+
+.hidden-element { display: none; }

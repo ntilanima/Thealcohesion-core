@@ -1,53 +1,58 @@
-const titleText = "Welcome to Thealcohesion Space Native Kiosk"
-const subtitleText = "The Secured Decoupled Enclave Architecture"
+const h1Text = "Welcome to Thealcohesion Space Native Kiosk";
+const pText = "The Secured Decoupled Enclave Architecture";
 
-const titleEl = document.getElementById('title')
-const subtitleEl = document.getElementById('subtitle')
-const statusEl = document.getElementById('status')
-const enterBtn = document.getElementById('enter')
-const osFrame = document.getElementById('os-frame')
+let osReady = false;
 
-let osReady = false
-
-// TYPEWRITER
-function type(el, text, speed = 40) {
-  let i = 0
-  const interval = setInterval(() => {
-    el.textContent += text[i++]
-    if (i === text.length) clearInterval(interval)
-  }, speed)
+function typewriter(elementId, text, speed, callback) {
+    let i = 0;
+    const element = document.getElementById(elementId);
+    function type() {
+        if (i < text.length) {
+            element.innerHTML += text.charAt(i);
+            i++;
+            setTimeout(type, speed);
+        } else if (callback) {
+            callback();
+        }
+    }
+    type();
 }
 
-type(titleEl, titleText)
-setTimeout(() => type(subtitleEl, subtitleText, 30), 1200)
+// Start sequence
+window.onload = () => {
+    typewriter("typewriter-h1", h1Text, 50, () => {
+        typewriter("typewriter-p", pText, 30, () => {
+            checkSystemStatus();
+        });
+    });
+};
 
-// INTERNET CHECK
-function updateNetwork() {
-  if (!window.kiosk.isOnline()) {
-    statusEl.textContent = "You are not connected to the internet, please check your connection"
-    return false
-  }
-  return true
+const iframe = document.getElementById('os-frame');
+const enterBtn = document.getElementById('enter-btn');
+const errorMsg = document.getElementById('error-msg');
+
+// Monitor Iframe loading
+iframe.onload = () => { osReady = true; };
+
+function checkSystemStatus() {
+    if (!navigator.onLine) {
+        errorMsg.innerText = "You are not connected to the internet, please check your connection";
+        enterBtn.classList.add('hidden-element');
+    } else if (!osReady) {
+        errorMsg.innerText = "Kiosk not ready";
+        setTimeout(checkSystemStatus, 1000); // Re-check readiness
+    } else {
+        errorMsg.innerText = "";
+        enterBtn.classList.remove('hidden-element');
+    }
 }
 
-// OS READY CHECK
-osFrame.onload = () => {
-  osReady = true
-  if (updateNetwork()) {
-    statusEl.textContent = "Kiosk ready"
-    enterBtn.disabled = false
-  }
-}
+// Enter Button Functionality
+enterBtn.addEventListener('click', () => {
+    // Reveal the OS by showing the frame or navigating
+    window.location.href = "os-index.html"; 
+});
 
-// ENTER BUTTON
-enterBtn.onclick = () => {
-  if (!osReady) {
-    statusEl.textContent = "Kiosk not ready"
-    return
-  }
-
-  document.getElementById('kiosk').style.display = 'none'
-  osFrame.style.display = 'block'
-  osFrame.style.width = '100vw'
-  osFrame.style.height = '100vh'
-}
+// Real-time Offline Check
+window.addEventListener('offline', checkSystemStatus);
+window.addEventListener('online', checkSystemStatus);
