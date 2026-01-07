@@ -38,6 +38,7 @@ function createWindow() {
       preload: path.join(__dirname, 'preload.js') // Preload script
     }
   })
+  
 
   //Load Browser Kiosk welcome page
     // ✅ LOAD ONLY THE KIOSK
