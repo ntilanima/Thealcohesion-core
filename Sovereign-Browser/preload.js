@@ -2,6 +2,12 @@ const { contextBridge, ipcRenderer } = require('electron')
 
 if (!ipcRenderer) throw new Error('ipcRenderer is undefined! Check preload path.')
 
+const { contextBridge } = require('electron')
+
+contextBridge.exposeInMainWorld('kiosk', {
+  isOnline: () => navigator.onLine
+})
+
 contextBridge.exposeInMainWorld('vpu', {
   sendMessage: (msg) => ipcRenderer.send('vpu-message', msg),
   onMessage: (callback) => ipcRenderer.on('vpu-reply', (event, data) => callback(data)),

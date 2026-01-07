@@ -38,9 +38,13 @@ function createWindow() {
     }
   })
 
+  //Load Browser Kiosk welcome page
+    // ✅ LOAD ONLY THE KIOSK
+  mainWindow.loadFile(path.join(__dirname, 'ui/kiosk.html'))
+  mainWindow.once('ready-to-show', () => mainWindow.show())
+  
   // Load Thealcohesion OS index.html
   const osIndex = path.join(__dirname, '../Thealcohesion-core/index.html')
-  mainWindow.loadFile(osIndex)
 
   // Only show window when ready
   mainWindow.once('ready-to-show', () => mainWindow.show())

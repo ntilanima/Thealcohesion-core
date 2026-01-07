@@ -1,0 +1,28 @@
+body {
+  margin: 0;
+  background: black;
+  color: #a445ff;
+  font-family: monospace;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100vh;
+}
+
+#kiosk {
+  text-align: center;
+}
+
+button {
+  margin-top: 20px;
+  padding: 12px 30px;
+  font-size: 16px;
+  background: #a445ff;
+  border: none;
+  cursor: pointer;
+}
+
+button:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
