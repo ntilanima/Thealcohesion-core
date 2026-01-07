@@ -111,6 +111,39 @@ document.addEventListener('DOMContentLoaded', () => {
         return `TN-${segment()}-${segment()}`;
     }
 
+    //Certificate generator
+    function downloadCertificate(name, id, ip, key) {
+    const date = new Date().toLocaleDateString();
+    const content = `
+    =========================================
+        THEALCOHESION SPACE NATIVE
+        CERTIFICATE OF NATIVITY
+    =========================================
+
+    NATIVE NAME:   ${name}
+    NATIVE ID:     ${id}
+    REGISTERED IP: ${ip}
+    LICENSE KEY:   ${key}
+    PARTITION:     GENESIS 2025-12-26
+    STATUS:        5GB ALLOTMENT INITIALIZED
+    DATE:          ${date}
+
+    -----------------------------------------
+    This document serves as proof of your 
+    Sovereign Identity within Thealcohesion.
+    =========================================
+        `;
+        
+        const blob = new Blob([content], { type: 'text/plain' });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = `NATIVE_CERTIFICATE_${id}.txt`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    }
+
     // --- PART 2: PROVISIONING LOG LOGIC ---
     function addLog(text, delay) {
         setTimeout(() => {
@@ -218,9 +251,16 @@ document.addEventListener('DOMContentLoaded', () => {
         // 3. Final Redirect
         setTimeout(() => {
             overlay.style.display = 'none';
+            // 1. Download the Software Kernel
             if(currentDownloadUrl && currentDownloadUrl !== '#') {
                 window.location.href = currentDownloadUrl;
             }
+
+            // 2. Download the Native Certificate (after a 1-second delay)
+            setTimeout(() => {
+                const currentIP = localStorage.getItem('downloaded_ip') || 'N/A';
+                downloadCertificate(name, nativeID, currentIP, key);
+            }, 1000);
         }, 6500);
     }
 });
