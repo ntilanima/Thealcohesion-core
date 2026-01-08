@@ -163,6 +163,50 @@ class TLC_Kernel {
             }
         }, true); // The 'true' is vital for capturing the event first
 
+        
+        // AUDIO CONTROLLER
+        // 1. Setup the Audio Hardware
+        this.initAudioEngine = () => {
+            try {
+                const AudioContext = window.AudioContext || window.webkitAudioContext;
+                this.audioContext = new AudioContext();
+                this.masterGain = this.audioContext.createGain();
+                this.masterGain.connect(this.audioContext.destination);
+                
+                this.systemVolume = 80;
+                this.masterGain.gain.value = 0.8;
+                console.log("Kernel: Audio Engine Online.");
+            } catch (e) {
+                console.warn("Kernel: Audio hardware deferred until user interaction.");
+            }
+        };
+
+        // 2. Setup the Volume Controller
+        this.setSystemVolume = (value) => {
+            if (this.audioContext && this.audioContext.state === 'suspended') {
+                this.audioContext.resume();
+            }
+
+            this.systemVolume = value;
+            const volumeLevel = value / 100;
+
+            // Control Web Audio API
+            if (this.masterGain) {
+                this.masterGain.gain.setTargetAtTime(volumeLevel, this.audioContext.currentTime, 0.02);
+            }
+
+            // Control all <audio> and <video> tags in the OS
+            document.querySelectorAll('audio, video').forEach(media => {
+                media.volume = volumeLevel;
+            });
+
+            // Logging (Using your existing logEvent method)
+            this.logEvent('SYS', `Volume set to ${value}%`);
+        };
+
+        // 3. Initialize immediately
+        this.initAudioEngine();
+
     }
 
     /**
@@ -1606,6 +1650,29 @@ triggerEscapeWarning() {
             overlay.remove();
         }
     }, 1000);
+}
+
+    // Volume triger
+    initAudioEngine() {
+        this.audioContext = new (window.AudioContext || window.webkitAudioContext)();
+        this.masterGain = this.audioContext.createGain();
+        this.masterGain.connect(this.audioContext.destination);
+        
+        // Default Volume (80%)
+        this.setSystemVolume(80);
+    }
+
+    setSystemVolume(value) {
+    this.systemVolume = value;
+    const volumeLevel = value / 100;
+
+    // Direct Control: Find every audio/video element in the DOM and set volume
+    const mediaElements = document.querySelectorAll('audio, video');
+    mediaElements.forEach(media => {
+        media.volume = volumeLevel;
+    });
+
+    console.log(`System Volume set to: ${value}%`);
 }
     
 }

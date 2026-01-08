@@ -1,0 +1,6 @@
+{
+  "appId": "com.thealcohesion.shell",
+  "appName": "Sovereign Kiosk",
+  "webDir": "www",
+  "linuxAndroidStudioPath": "/snap/android-studio/current/android-studio/bin/studio.sh"
+}
