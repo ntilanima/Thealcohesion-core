@@ -1,7 +1,12 @@
-const { app, BrowserWindow, globalShortcut, ipcMain, session } = require('electron')
+const { app, BrowserWindow, globalShortcut, ipcMain, session, protocol} = require('electron')
 const path = require('path')
 const keyboardPolicies = require('./keyboard-policies')
 const fs = require('fs'); // <--- ADD THIS LINE HERE
+
+// Must register the scheme before app is ready
+protocol.registerSchemesAsPrivileged([
+  { scheme: 'thealcohesion', privileges: { standard: true, secure: true, supportFetchAPI: true } }
+]);
 
 // Disable GPU to avoid libva errors
 app.disableHardwareAcceleration()
@@ -38,6 +43,20 @@ function createWindow() {
       preload: path.join(__dirname, 'preload.js') // Preload script
     }
   })
+
+  //Handling "App Switches" via Protocol
+  mainWindow.webContents.on('will-navigate', (event, url) => {
+      if (url.startsWith('thealcohesion://')) {
+          event.preventDefault();
+          const command = url.split('://')[1];
+          
+          console.log(`Executing System Command: ${command}`);
+          // Example: if command is 'open-epos', trigger your EPOS module
+          if (command === 'open-epos') {
+              mainWindow.webContents.send('os-command', 'launch-epos');
+          }
+      }
+  });
   
 
   //Load Browser Kiosk welcome page
@@ -89,6 +108,7 @@ function createWindow() {
 
   // Prevents the user from zooming in/out and breaking the layout
 mainWindow.webContents.on('did-finish-load', () => {
+  console.log("Sovereign Shell: OS Loaded and ready for Protocol Commands.");
   mainWindow.webContents.setVisualZoomLevelLimits(1, 1);
 });
 }
@@ -129,8 +149,16 @@ ipcMain.on('system-power', (event, action) => {
 
 // App ready
 app.whenReady().then(() => {
-  createWindow()
-  registerGlobalKeys()
+  // Register the File Protocol handler
+  protocol.registerFileProtocol('thealcohesion', (request, callback) => {
+    const url = request.url.replace('thealcohesion://', '');
+    // Adjust the path to point to your root workspace
+    const filePath = path.join(__dirname, '..', url);
+    callback({ path: filePath });
+  });
+
+  createWindow();
+  registerGlobalKeys();
 
 // ADD EXTRA SHORTCUTS HERE:
   globalShortcut.register('Escape', () => {
@@ -151,4 +179,5 @@ app.on('window-all-closed', () => {
 app.on('will-quit', () => {
   globalShortcut.unregisterAll()
 })
+
 
