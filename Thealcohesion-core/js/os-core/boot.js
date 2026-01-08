@@ -100,3 +100,5 @@ export function startBootSequence(onComplete) {
         }
     }, 50);
 }
+
+startBootSequence();
