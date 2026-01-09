@@ -209,6 +209,42 @@ class TLC_Kernel {
 
     }
 
+
+    /**
+ * SHUTDOWN_SEQUENCE (2025-12-26 Compliant)
+ * Hard wipe of all volatile memory and return to cold boot state.
+ */
+async shutdown() {
+    this.logEvent('SYS', 'SHUTDOWN: Purging volatile memory...');
+
+    // 1. Wipe the keys and session
+    this.sessionKey = null;
+    this.isLoggedIn = false;
+    
+    // 2. Clear sensitive UI elements immediately
+    document.getElementById('os-root').innerHTML = '';
+    
+    // 3. The "Halt" UI
+    document.body.innerHTML = `
+        <div style="background:#000; color:#00ff41; height:100vh; width:100vw; 
+                    display:flex; flex-direction:column; align-items:center; 
+                    justify-content:center; font-family:monospace; text-align:center;">
+            <h2 style="border:1px solid #00ff41; padding:20px;">SYSTEM_HALTED</h2>
+            <p style="margin-top:20px; color:#444;">Genesis Block [SIG_2025_12_26] Locked.</p>
+            <p style="font-size:12px; color:#222;">It is now safe to close your browser window.</p>
+            <button onclick="window.location.reload()" 
+                    style="margin-top:30px; background:transparent; border:1px solid #222; color:#222; cursor:pointer;">
+                REBOOT_KERNEL
+            </button>
+        </div>
+    `;
+
+    // 4. Try to close (will only work if the OS was opened via a launcher)
+    let id = window.setInterval(null, 0);
+    while (id--) window.clearInterval(id);
+    window.close(); 
+}
+
     /**
      * TRIGGER_REAL_PANIC
      * Immediate Level 0 Halt. Wipes session and displays Red Screen.
@@ -344,19 +380,21 @@ class TLC_Kernel {
         
         const loginGate = document.getElementById('login-gate');
         if(loginGate) {
-            // We reset the innerHTML in case it was used for provisioning earlier
-            // (Only necessary if you aren't doing a location.reload())
             loginGate.style.display = 'flex';
             setTimeout(() => loginGate.style.opacity = '1', 50);
         }
         
         this.init(); 
         this.systemTray = new SystemTray(this);
-        this.setupIdleLock(300000); // 5 minutes
+        this.setupIdleLock(300000); 
         this.isBooted = true;
-    });
-    // 3. PROCEED TO SPLASH
-    this.logEvent('WARN', `System recovered from critical halt: ${lastPanic}`);  
+
+        // Log recovery only once here
+        if (lastPanic) {
+            this.logEvent('WARN', `System recovered from critical halt: ${lastPanic}`); 
+        }
+    }); // End of boot()
+    
 }
 
 async verifyHardwareSignature() {
@@ -722,8 +760,8 @@ renderMenuContent(menu, target) {
     items.push({ 
         label: '⏻ Shutdown Enclave', 
         action: () => {
-            if(confirm("TERMINATE SOVEREIGN SESSION? All volatile data (2025-12-26) will be shredded.")) {
-                this.lockSystem();
+            if(confirm("TERMINATE SOVEREIGN SESSION? All allotment data (2025-12-26) will be purged from RAM.")) {
+                this.shutdown(); // Call the hard wipe sequence
             }
         },
         style: 'color: #ff4444; font-weight: bold; border: 1px solid rgba(255, 68, 68, 0.2); margin-top: 5px; background: rgba(255, 68, 68, 0.05);' 
@@ -1432,8 +1470,14 @@ closeWindow(appId) {
  * Graceful termination of Level 0 and Level 1 processes.
  */
 shutdownSovereign() {
+    //idempotency guard
+    if (this._shutdownInProgress) return;
+    this._shutdownInProgress = true;
+
     // 1. Authorization Gate
-    if (!confirm("SHUTDOWN: Terminate all secure sessions and exit Enclave?")) return;
+    if (!confirm("SHUTDOWN: Terminate all secure sessions and exit Enclave?")) {
+        this._shutdownInProgress = false; 
+        return;}
 
     console.warn("Kernel: Initiating Hardware Shutdown...");
 
@@ -1447,27 +1491,32 @@ shutdownSovereign() {
 
     // 4. Physical Shutdown Sequence (Matches your 600ms CSS transition)
     setTimeout(() => {
-        // SECURITY: Memory Shredding
-        this.sessionKey = null;
-        this.isLoggedIn = false;
-        
-        if (this.runningApps instanceof Set) {
-            this.runningApps.clear();
-        } else {
-            this.runningApps = {};
-        }
+    this.sessionKey = null;
+    this.isLoggedIn = false;
 
-        // 5. Final Hardware State (Terminal Black)
-        document.body.innerHTML = `
-            <div id="halt-screen" style="background:#000; height:100vh; width:100vw; display:flex; flex-direction:column; align-items:center; justify-content:center; color:#111; font-family:monospace; user-select:none; text-align:center;">
-                <p>Kernel: Integrity Maintained. System Halted.</p>
-                <p style="font-size:10px; color:#050505;">0x20251226_CLEAN_EXIT</p>
-                <button onclick="location.reload()" style="margin-top:20px; background:transparent; border:1px solid #111; color:#111; cursor:pointer; padding:5px 10px;">REBOOT</button>
-            </div>`;
-        
-        document.body.style.backgroundColor = "#000";
-        console.log("Kernel: Integrity Maintained. System Halted.");
-    }, 600);
+    if (this.runningApps instanceof Set) {
+        this.runningApps.clear();
+    } else {
+        this.runningApps = {};
+    }
+
+    // Attempt HARD browser exit (only works in trusted contexts / PWA)
+    try {
+        window.close();
+    } catch (e) {}
+
+    // Fallback: internal HALT screen
+    document.body.innerHTML = `
+        <div id="halt-screen" style="background:#000; height:100vh; width:100vw; display:flex; flex-direction:column; align-items:center; justify-content:center; color:#111; font-family:monospace; user-select:none; text-align:center;">
+            <p>Kernel: Integrity Maintained. System Halted.</p>
+            <p style="font-size:10px; color:#050505;">0x20251226_CLEAN_EXIT</p>
+            <p style="font-size:9px; opacity:0.3;">BROWSER_EXIT_BLOCKED</p>
+            <button onclick="location.reload()" style="margin-top:20px; background:transparent; border:1px solid #111; color:#111; cursor:pointer; padding:5px 10px;">REBOOT</button>
+        </div>`;
+
+    document.body.style.backgroundColor = "#000";
+}, 600);
+
 }
       
     /**
