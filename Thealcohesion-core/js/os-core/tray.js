@@ -129,7 +129,7 @@ export class SystemTray {
         this.el.querySelector('#toggle-wifi').onclick = (e) => e.currentTarget.classList.toggle('active');
         this.el.querySelector('#toggle-bluetooth').onclick = (e) => e.currentTarget.classList.toggle('active');
         this.el.querySelector('#tray-power').onclick = () => this.kernel.shutdownSovereign();
-        this.el.querySelector('#tray-lock').onclick = () => this.kernel.lockSystem();
+        this.el.querySelector('#tray-lock').onclick = () => this.kernel.suspendSession();
         this.el.querySelector('#tray-settings').onclick = () => this.kernel.launchApp('settings');
 
         document.getElementById('status-area').onclick = (e) => {

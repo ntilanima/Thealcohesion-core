@@ -503,25 +503,138 @@ async runRecoverySequence(errorCode) {
     }
 
     init() {
-        const loginBtn = document.getElementById('login-btn');
-        if (loginBtn) {
-            loginBtn.onclick = (e) => {
-                e.preventDefault();
-                this.transitionToShell();
-            };
-        } else {
-            setTimeout(() => this.init(), 100);
-        }
-        this.setupContextMenu();
+    const loginBtn = document.getElementById('login-btn');
+    const status = document.getElementById('auth-status');
 
-        // Quick Lock: Ctrl + L
-window.addEventListener('keydown', (e) => {
-    if (e.ctrlKey && e.key === 'l') {
-        e.preventDefault();
-        this.lockSystem(); 
+    if (!loginBtn) return;
+
+    loginBtn.onclick = async () => {
+        // 1. Enter Secure State
+        loginBtn.disabled = true;
+        loginBtn.style.opacity = '0.3';
+
+        // Add a "Shake" class to the box during sequence
+        const box = document.querySelector('.login-box');
+        box.style.animation = "shake 0.2s infinite";
+
+        // After the sequence finishes, stop the shake
+        box.style.animation = "none";
+        
+        // 2. Cryptographic Sequence (The Visual Build-up)
+        const sequence = [
+            { msg: "» REQUESTING_HANDSHAKE...", delay: 600 },
+            { msg: "» DERIVING_GENESIS_ENTROPY...", delay: 1000 },
+            { msg: "» VALIDATING_MEMBER_SIGNATURE...", delay: 800 },
+            { msg: "» MOUNTING_VFS_PARTITION_2025_12_26...", delay: 1200 },
+            { msg: "» ALLOTMENT_ENCLAVE_SYNCHRONIZED.", delay: 500 }
+        ];
+
+        for (const step of sequence) {
+            if (status) {
+                status.innerText = step.msg;
+                status.style.color = "#00ff41";
+            }
+            // Visual Flicker Effect on the Box
+            const box = document.querySelector('.login-box');
+            if (box) box.style.borderColor = '#00ff41';
+            
+            await new Promise(r => setTimeout(r, step.delay));
+            
+            if (box) box.style.borderColor = '#004411';
+        }
+
+        // 3. AUTOMATIC TRANSITION (The "Gate" Opens)
+        if (status) status.innerHTML = `<span style="color: #bcff00;">ACCESS_GRANTED. INITIALIZING_SHELL...</span>`;
+        
+        // Wait a final moment for the user to read 'Access Granted'
+        await new Promise(r => setTimeout(r, 600));
+
+        // CRITICAL: Now we call the shell transition
+        await this.transitionToShell(); 
+    };
+
+    // 4. PERSISTENT SYSTEM LISTENERS
+    this.setupContextMenu();
+
+    // Quick Lock: Ctrl + L
+    window.addEventListener('keydown', (e) => {
+        if (e.ctrlKey && (e.key === 'l' || e.key === 'L')) {
+            e.preventDefault();
+            this.lockSystem(); 
+        }
+    });
+
+    // Bind the Unlock Button
+        const unlockBtn = document.getElementById('unlock-btn');
+        if (unlockBtn) {
+            unlockBtn.onclick = () => this.unlockSystem();
+        }
+
+        // Bind the Enter Key specifically for the Lock Screen input
+        const lockInput = document.getElementById('lock-pass-input');
+        if (lockInput) {
+            lockInput.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    this.unlockSystem();
+                }
+            });
+        }
+
+        // Allow "Enter" key to unlock
+        document.getElementById('lock-pass-input')?.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') this.unlockSystem();
+        });
+}
+
+async unlockSystem() {
+    const lockPass = document.getElementById('lock-pass-input');
+    const status = document.getElementById('lock-status');
+    const lockScreen = document.getElementById('lock-screen');
+    const root = document.getElementById('os-root');
+
+    if (!lockPass || lockPass.value === "") return;
+
+    // 1. UI Feedback
+    status.innerText = "VERIFYING_SESSION...";
+    status.style.color = "#bcff00";
+
+    // 2. Verification Delay
+    await new Promise(r => setTimeout(r, 800));
+
+    // 3. FORCE REVEAL
+    if (lockScreen && root) {
+        // Fade out the lock screen
+        lockScreen.style.transition = "opacity 0.5s ease";
+        lockScreen.style.opacity = '0';
+        
+        // Remove the blur from the workspace
+        root.style.filter = "none"; 
+        root.style.display = "block"; // Force display
+
+        setTimeout(() => {
+            lockScreen.classList.add('hidden');
+            lockScreen.style.display = 'none'; // Double-kill the visibility
+            this.isLocked = false;
+            lockPass.value = ""; 
+            console.log("Kernel: Enclave Resumed.");
+        }, 500);
     }
-});
+    //Calls brightnes slider back
+    if (root) {
+        // Remove the security blur AND any stray brightness caps
+        root.style.filter = "none"; 
+        root.style.opacity = "1";
+        
+        // Re-sync the slider: If you have a brightness variable, 
+        // call your brightness update function here to restore the user's setting.
+        if (this.currentBrightness) {
+            this.setBrightness(this.currentBrightness);
+        }
     }
+    
+    if (lockScreen) lockScreen.classList.add('hidden');
+}
 
     async transitionToShell() {
         console.log("Kernel: Initiating Security Handshake...");
@@ -794,26 +907,69 @@ renderMenuContent(menu, target) {
 lockSystem() {
     console.warn("Kernel: SECURITY PROTOCOL ACTIVE. Purging Session Key...");
 
-    // 1. Wipe the sensitive AES key from memory
+    // 1. SHRED DATA
     this.sessionKey = null;
 
-    // 2. Close all running applications to clear decrypted data from the DOM
+    // 2. WIPE DOM (Kill all apps)
     Object.keys(this.runningApps).forEach(appId => {
         this.killProcess(appId);
     });
 
-    // 3. Clear the workspace and show the login gate
+    // 3. UI RESET
     const gate = document.getElementById('login-gate');
     const root = document.getElementById('os-root');
     const top = document.getElementById('top-bar');
     const passInput = document.getElementById('pass-input');
+    const status = document.getElementById('auth-status');
 
-    if (gate) gate.style.display = 'flex';
+    if (gate) {
+        gate.style.display = 'flex';
+        gate.style.opacity = '1';
+        // Notify the user that the purge was successful
+        if (status) {
+            status.innerText = "SESSION_PURGED: MEMORY_CLEAN";
+            status.style.color = "#ff4444"; // Red alert color
+        }
+    }
+    
     if (root) root.style.display = 'none';
     if (top) top.classList.add('hidden');
-    if (passInput) passInput.value = ''; // Clear password field
+    
+    // 4. SECURITY HYGIENE
+    if (passInput) passInput.value = ''; 
+    this.isLoggedIn = false;
 
-    console.log("Kernel: System Enclave Locked.");
+    // Optional: Re-trigger the Pulse FX to show Sentry is still watching
+    const pulse = document.querySelector('.pulse-container');
+    if (pulse) pulse.style.display = 'block';
+
+    console.log("Kernel: System Enclave Locked and Purged.");
+}
+
+suspendSession() {
+    console.log("Kernel: Entering Standby Mode...");
+    
+    const lockScreen = document.getElementById('lock-screen');
+    const loginGate = document.getElementById('login-gate');
+    const root = document.getElementById('os-root');
+
+    // 1. Ensure the Login Gate is HIDDEN
+    if (loginGate) loginGate.style.display = 'none';
+
+    // 2. Show the Lock Screen
+    if (lockScreen) {
+        lockScreen.classList.remove('hidden');
+        lockScreen.style.display = 'flex';
+        lockScreen.style.opacity = '1';
+        this.isLocked = true;
+    }
+
+    // 3. Blur the background workspace
+    if (root) {
+        root.style.filter = "blur(20px)";
+        // Optional: reduce opacity of workspace for better contrast
+        root.style.opacity = "0.5";
+    }
 }
     setupTopBarInteractions() {
         const topBarTime = document.getElementById('top-bar-time');
@@ -1481,10 +1637,23 @@ shutdownSovereign() {
 
     console.warn("Kernel: Initiating Hardware Shutdown...");
 
+
     // 2. Clear Persistence Buffer
     // We clear the "LAST_PANIC" data on a graceful shutdown so 
     // it doesn't trigger a 'Recovery' message on the next clean boot.
     localStorage.removeItem('LAST_PANIC_CODE');
+
+    // VISUAL OWNERSHIP LOCK (CRITICAL)
+    document.body.style.background = '#000';
+    document.body.style.overflow = 'hidden';
+    document.body.style.margin = '0';
+    document.body.style.padding = '0';
+
+    // Now render shutdown ritual
+    this.renderShutdownRitual();
+    requestAnimationFrame(() => {
+        document.body.classList.add('crt-shutdown');
+    });
 
     // 3. Trigger visual CRT collapse
     document.body.classList.add('crt-shutdown');
@@ -1504,19 +1673,95 @@ shutdownSovereign() {
     try {
         window.close();
     } catch (e) {}
-
-    // Fallback: internal HALT screen
-    document.body.innerHTML = `
-        <div id="halt-screen" style="background:#000; height:100vh; width:100vw; display:flex; flex-direction:column; align-items:center; justify-content:center; color:#111; font-family:monospace; user-select:none; text-align:center;">
-            <p>Kernel: Integrity Maintained. System Halted.</p>
-            <p style="font-size:10px; color:#050505;">0x20251226_CLEAN_EXIT</p>
-            <p style="font-size:9px; opacity:0.3;">BROWSER_EXIT_BLOCKED</p>
-            <button onclick="location.reload()" style="margin-top:20px; background:transparent; border:1px solid #111; color:#111; cursor:pointer; padding:5px 10px;">REBOOT</button>
-        </div>`;
-
-    document.body.style.backgroundColor = "#000";
 }, 600);
 
+// 6. FINAL HALT (finite, intentional)
+    setTimeout(() => {
+        document.body.innerHTML = `
+            <div id="halt-screen" style="
+                background:#000;
+                height:100vh;
+                width:100vw;
+                display:flex;
+                flex-direction:column;
+                align-items:center;
+                justify-content:center;
+                color:#333;
+                font-family:monospace;
+                user-select:none;
+                text-align:center;
+            ">
+                <p>System Halted</p>
+                <p style="font-size:10px; opacity:0.4;">
+                    Integrity Maintained · 0x20251226_CLEAN_EXIT
+                </p>
+
+                <p style="margin-top:18px; font-size:9px; opacity:0.25;">
+                    Power control returned to user
+                </p>
+
+                <button onclick="location.reload()" style="
+                    margin-top:24px;
+                    background:transparent;
+                    border:1px solid #222;
+                    color:#222;
+                    padding:6px 14px;
+                    cursor:pointer;
+                ">
+                    REBOOT
+                </button>
+            </div>
+        `;
+
+        document.body.style.backgroundColor = "#000";
+        console.log("Kernel: System halted cleanly.");
+    }, 2600);
+
+}
+
+renderShutdownRitual() {
+    document.body.innerHTML = `
+        <div id="shutdown-ritual" style="
+            position:fixed;
+            inset:0;
+            background:black;
+            display:flex;
+            flex-direction:column;
+            align-items:center;
+            justify-content:center;
+            font-family:monospace;
+            color:#aaa;
+            text-align:center;
+        ">
+            <div style="opacity:0.9; margin-bottom:18px; font-size:14px;">
+                ⏻ THEALCOHESION OS
+            </div>
+
+            <div style="font-size:11px; opacity:0.6; line-height:1.6;">
+                Terminating VPUs…<br>
+                Flushing volatile memory…<br>
+                Revoking session keys…<br>
+                Sealing enclave…
+            </div>
+
+            <div style="
+                margin-top:28px;
+                width:22px;
+                height:22px;
+                border:2px solid #222;
+                border-top:2px solid #888;
+                border-radius:50%;
+                animation: spin 1s linear infinite;
+            "></div>
+
+            <style>
+                @keyframes spin {
+                    from { transform: rotate(0deg); }
+                    to { transform: rotate(360deg); }
+                }
+            </style>
+        </div>
+    `;
 }
       
     /**

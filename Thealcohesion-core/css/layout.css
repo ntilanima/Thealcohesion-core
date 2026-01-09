@@ -348,19 +348,6 @@ pointer-events: none;
     }
 }
 
-/* Ensure the Login Gate is always centered and visible first */
-#login-gate {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100vw;
-    height: 100vh;
-    display: none;
-    justify-content: center;
-    align-items: center;
-    z-index: 10000;
-    background: linear-gradient(135deg, #5E2750 0%, #2c001e 100%);
-}
 
 /* Target the logo container inside the login gate */
 #login-gate .logo {

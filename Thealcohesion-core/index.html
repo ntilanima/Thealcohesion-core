@@ -32,22 +32,73 @@
 </div>
     <!-- LOGIN GATE -->
     <section id="login-gate">
-        <div class="login-box">
-            <img class="logo" src="./images/logo.png" alt="Thealcohesion-Core OS">
-            <h1>Identity Access</h1>
-            <p>Virtual Pragmatic Universe</p>
-            <div class="input-group">
-                <input type="text" id="username" placeholder="Member Username">
-                <input type="password" id="pass-input" placeholder="Key Phrase">
-            </div>
-            <button id="login-btn">Verify Identity</button>
-            <p class="legal-notice">Access restricted per Section 0.5.2 of the Charter.</p>
+    <div class="terminal-overlay"></div>
+    <div class="pulse-container">
+        <div class="ring"></div>
+        <div class="ring"></div>
+    </div>
+
+    <div class="scanlines"></div>
+    <div class="vignette"></div>
+    
+    <div class="login-box">
+        <div class="box-header">
+            <span class="secure-tag">ENCLAVE_SECURE</span>
+            <span class="version-tag">v.2025.12.26</span>
         </div>
-    </section>
+
+        <h1>Identity Access</h1>
+        <p class="subtitle">Sovereign Kioski</p>
+        
+        <div class="input-group">
+            <div class="field">
+                <label>MEMBER_ID</label>
+                <input type="text" id="username" placeholder="0x..." spellcheck="false" autocomplete="off">
+            </div>
+            <div class="field">
+                <label>GENESIS_KEY</label>
+                <input type="password" id="pass-input" placeholder="••••••••">
+            </div>
+        </div>
+
+        <button id="login-btn">
+            <span class="btn-text">INITIATE_HANDSHAKE</span>
+        </button>
+
+        <div id="auth-status" class="status-monitor">STANDBY: Awaiting Credentials...</div>
+        
+        <p class="legal-notice">Access restricted per Section 0.5.2 of the Charter.</p>
+    </div>
+</section>
+
+<!--LOCK SCREEN-->
+    <div id="lock-screen" class="hidden">
+        <div class="scanlines"></div>
+        <div class="lock-box">
+            <div class="user-profile">
+                <div class="user-avatar">0x</div>
+                <h2 id="lock-user-display">MEMBER_SESSION_ACTIVE</h2>
+            </div>
+            
+            <div class="input-group">
+                <label>RE-AUTHENTICATE_GENESIS_KEY</label>
+                <input type="password" id="lock-pass-input" placeholder="••••••••">
+            </div>
+
+            <button id="unlock-btn" onclick="kernel.unlockSystem()">RESUME_ENCLAVE</button>
+            <div id="lock-status" class="status-monitor">SESSION_PAUSED</div>
+        
+        <div style="margin-top: 20px;">
+            <a href="#" onclick="kernel.lockSystem()" style="color: #440000; font-size: 10px; text-decoration: none;">
+                TERMINATE_SESSION_AND_PURGE_MEMORY
+            </a>
+        </div>
+        </div>
+    </div>
 
     <!-- TOP BAR -->
     <header id="top-bar" class="hidden">
-        <div class="left-section"><span class="activities">Activities</span></div>
+        <div class="left-section"><span class="activities">KIOSK</span></div>
         <div class="center-section"><span id="top-bar-time">--:--:--</span></div>
         <div id="status-area" style="cursor: pointer; display: flex; align-items: center; gap: 10px; padding: 0 15px;">
             <div id="status-icons" style="display: flex; gap: 8px; font-size: 14px;">
