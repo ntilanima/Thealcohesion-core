@@ -820,12 +820,44 @@ async unlockSystem() {
 
     // 2. Listen for Right Click
     window.addEventListener('contextmenu', (e) => {
-        e.preventDefault(); // Stop browser menu
-        
-        const { clientX: x, clientY: y } = e;
-        menu.style.top = `${y}px`;
-        menu.style.left = `${x}px`;
-        menu.style.display = 'block';
+    e.preventDefault();
+    const menu = document.getElementById('global-context-menu');
+    
+    // 1. Render content first so the browser knows the height
+    this.renderMenuContent(menu, e.target);
+    
+    menu.style.display = 'block';
+    menu.style.visibility = 'hidden'; // Hide momentarily to calculate size
+
+    const menuWidth = menu.offsetWidth;
+    const menuHeight = menu.offsetHeight;
+    const padding = 10; // Safety gap from screen edge
+
+    let x = e.clientX;
+    let y = e.clientY;
+
+    // 2. Horizontal Boundary Check
+    // If menu + expected submenu width (approx 240px) exceeds width, flip left
+    const expectedTotalWidth = menuWidth + 240; 
+    if (x + expectedTotalWidth > window.innerWidth) {
+        x = x - menuWidth;
+        menu.classList.add('reverse-x'); // Add class to flip submenus to the left
+    } else {
+        menu.classList.remove('reverse-x');
+    }
+
+    // 3. Vertical Boundary Check
+    if (y + menuHeight > window.innerHeight) {
+        y = window.innerHeight - menuHeight - padding;
+    }
+
+    // 4. Top/Left Boundary Check (Prevent negative coordinates)
+    x = Math.max(padding, x);
+    y = Math.max(padding, y);
+
+    menu.style.left = `${x}px`;
+    menu.style.top = `${y}px`;
+    menu.style.visibility = 'visible';
 
         // Dynamic Menu Content based on what was clicked
         this.renderMenuContent(menu, e.target);
@@ -840,69 +872,262 @@ async unlockSystem() {
 // RENDER CONTEXT MENU ITEMS
 renderMenuContent(menu, target) {
     const isWindow = target.closest('.os-window');
+    const isIcon = target.closest('.desktop-icon');
+    const isDockIcon = target.closest('.dock-item'); // New Dock Detector
+
     
-    // 1. DYNAMIC ITEM DEFINITION
-    let items = [
-        { label: '📊 System Monitor', action: () => this.launchApp('monitor') },
-        { label: '📝 Task Manager', action: () => this.launchApp('taskman') },
-        { divider: true },
-        { label: '🖼️ Change Wallpaper', action: () => alert('Wallpaper settings coming soon.') }
+
+    // --- DOCK ICON LOGIC ---
+    let dockItems = [];
+    if (isDockIcon) {
+        const appId = isDockIcon.dataset.app; // Ensure your dock icons have data-app="terminal" etc.
+        const appInstance = this.runningApps[appId];
+
+        if (!appInstance) {
+            // Case 1: App is not running
+            dockItems.push({ label: '▶ Start Process', action: () => this.launchApp(appId) });
+        } else {
+            const winElement = document.getElementById(`win-${appId}`);
+            if (winElement && winElement.classList.contains('minimized')) {
+                // Case 2: App is running but minimized
+                dockItems.push({ label: '📂 Restore Window', action: () => this.restoreApp(appId) });
+            } else {
+                // Case 3: App is already active/visible
+                dockItems.push({ label: '👁 View Instance', action: () => this.focusApp(appId) });
+            }
+            dockItems.push({ 
+                label: '❌ Terminate', 
+                action: () => this.closeApp(appId, `win-${appId}`),
+                className: 'danger-action' 
+            });
+        }
+    }
+    // 1. DATA STRUCTURE: Subsections & Items
+    const menuData = [
+        {
+            section: "DOCK_OPERATIONS",
+            visible: !!isDockIcon, // Only show if we clicked the dock
+            items: dockItems
+        },
+        {
+            section: "ACTIVE_CONTEXT",
+            visible: isWindow || isIcon,
+            items: [
+                isWindow ? {
+                    label: '🗔 Window Management',
+                    children: [
+                        { label: '➖ Minimize', action: () => isWindow.classList.add('minimized') },
+                        { label: '❌ Close Enclave', action: () => {
+                            const appId = isWindow.id.replace('win-', '');
+                            this.closeApp(appId, isWindow.id);
+                        }}
+                    ]
+                } : null,
+                isIcon ? {
+                    label: '🚀 Object Actions',
+                    children: [
+                        { label: 'Run Process', action: () => isIcon.click() },
+                        { label: 'Shred Shortcut', action: () => isIcon.remove() }
+                    ]
+                } : null
+            ].filter(Boolean)
+        },
+        {
+            section: "SYSTEM_TOOLS",
+            items: [
+                { 
+                    label: '🐚 Terminal Shell', 
+                    kbd: 'Alt+T',
+                    children: [
+                        { label: 'New Instance', action: () => this.launchApp('terminal') },
+                        { label: 'Root Privileges', action: () => this.launchApp('terminal', {root:true}) }
+                    ]
+                },
+                { label: '📊 System Monitor', action: () => this.launchApp('monitor') },
+                { label: '📝 Task Manager', action: () => this.launchApp('taskman') }
+            ]
+        },
+        {
+            section: "VFS_OPERATIONS",
+            items: [
+                { label: '📁 Create New Folder', action: () => this.createFolder(), kbd: 'N' },
+                { label: '🔡 Arrange Genesis Grid', action: () => this.arrangeIcons() }
+            ]
+        },
+        {
+            section: "WORKSPACE_CONFIG",
+            items: [
+                { label: '🖼️ Change Wallpaper', action: () => this.changeBackground() },
+                { 
+                    label: '⚙️ OS Preferences', 
+                    children: [
+                        { label: 'Toggle Scanlines', action: () => this.toggleScanlines() },
+                        { label: 'Adjust Security Blur', action: () => alert("Blur settings active.") },
+                        { label: 'Matrix FX Theme', action: () => this.setTheme('matrix') }
+                    ]
+                }
+            ]
+        },
+        {
+            section: "SECURITY_PROTOCOL",
+            items: [
+                { label: '🔒 Lock OS (Standby)', action: () => this.suspendSession(), kbd: 'Ctrl+L' },
+                { label: '🧹 Close All Windows', action: () => this.closeAllWindows() }, // NEW ITEM
+                { label: '🔄 Reboot Kernel', action: () => location.reload() },
+                { 
+                    label: '☢️ Shutdown Enclave', 
+                    className: 'danger-action',
+                    action: () => {
+                        if(confirm("TERMINATE SESSION? 2025-12-26 Allotment data will be shredded.")) {
+                            this.lockSystem();
+                        }
+                    }
+                }
+            ]
+        }
     ];
 
-    // If right-clicking a window, prioritize the Close action
-    if (isWindow) {
-        items.unshift(
-            { label: '❌ Close Window', action: () => {
-                const appId = isWindow.id.replace('win-', '');
-                this.closeApp(appId, isWindow.id);
-            }},
-            { divider: true }
-        );
-    }
+    // 2. RECURSIVE HTML GENERATOR
+    const generateHTML = (data) => {
+        return data.map(sec => {
+            if (sec.visible === false) return '';
+            
+            let html = `<div class="menu-section-label">${sec.section}</div>`;
+            html += sec.items.map(item => {
+                const hasChildren = item.children && item.children.length > 0;
+                return `
+                    <div class="menu-item ${hasChildren ? 'has-submenu' : ''} ${item.className || ''}" data-label="${item.label}">
+                        <span class="m-label">${item.label}</span>
+                        ${hasChildren ? '<span class="chevron">›</span>' : ''}
+                        ${item.kbd ? `<kbd>${item.kbd}</kbd>` : ''}
+                        ${hasChildren ? `<div class="vpu-submenu">${generateSubHTML(item.children)}</div>` : ''}
+                    </div>`;
+            }).join('');
+            html += `<div class="menu-divider"></div>`;
+            return html;
+        }).join('');
+    };
 
-    // Special Bank/Wallet target
-    if (target.closest('#canvas-bank')) {
-        items.push({ label: '💳 Copy VPU Address', action: () => {
-            navigator.clipboard.writeText('0xVPU_GENESIS_2025_12_26');
-            this.logEvent('SEC', 'VPU Address copied to clipboard.');
-        }});
-    }
+    const generateSubHTML = (subItems) => {
+        return subItems.map(si => `
+            <div class="menu-item" data-label="${si.label}">
+                <span class="m-label">${si.label}</span>
+            </div>
+        `).join('');
+    };
 
-    // 2. SOVEREIGN MANUAL EXIT (Replacing ESC behavior)
-    items.push({ divider: true });
-    items.push({ 
-        label: '⏻ Shutdown Enclave', 
-        action: () => {
-            if(confirm("TERMINATE SOVEREIGN SESSION? All allotment data (2025-12-26) will be purged from RAM.")) {
-                this.shutdown(); // Call the hard wipe sequence
-            }
-        },
-        style: 'color: #ff4444; font-weight: bold; border: 1px solid rgba(255, 68, 68, 0.2); margin-top: 5px; background: rgba(255, 68, 68, 0.05);' 
-    });
+    menu.innerHTML = generateHTML(menuData);
 
-    // 3. RENDER LOOP
-    menu.innerHTML = items.map(item => {
-        if (item.divider) return `<div style="height:1px; background:#333; margin:5px 0;"></div>`;
-        return `<div class="menu-item" style="padding: 10px 15px; cursor: pointer; transition: 0.2s; ${item.style || ''}">${item.label}</div>`;
-    }).join('');
+    // 3. UNIVERSAL CLICK HANDLER
+    menu.onclick = (e) => {
+        const targetItem = e.target.closest('.menu-item');
+        if (!targetItem || targetItem.classList.contains('has-submenu')) return;
 
-    // 4. ATTACH LISTENERS
-    const actionableItems = items.filter(item => !item.divider);
-    menu.querySelectorAll('.menu-item').forEach((el, i) => {
-        el.onclick = actionableItems[i].action;
+        const label = targetItem.dataset.label;
         
-        // Custom Hover State
-        el.onmouseenter = () => {
-            el.style.background = actionableItems[i].label.includes('Shutdown') ? 'rgba(255, 68, 68, 0.2)' : '#38bdf8';
-            el.style.color = actionableItems[i].label.includes('Shutdown') ? '#ff4444' : '#000';
+        // Deep search for the action associated with this label
+        const executeAction = (data) => {
+            for (let sec of data) {
+                for (let item of sec.items) {
+                    if (item.label === label) return item.action();
+                    if (item.children) {
+                        for (let sub of item.children) {
+                            if (sub.label === label) return sub.action();
+                        }
+                    }
+                }
+            }
         };
-        el.onmouseleave = () => {
-            el.style.background = 'transparent';
-            el.style.color = actionableItems[i].style?.includes('color') ? '#ff4444' : '#eee';
-        };
-    });
+
+        executeAction(menuData);
+        menu.style.display = 'none';
+    };
 }
 
+//creates folder
+createFolder() {
+    const folderId = `folder-${Date.now()}`;
+    const folderName = prompt("Enter Folder Name:", "New_Registry") || "New_Folder";
+    this.logEvent('FS', 'Creating new directory...');
+    // Add logic to push a new icon to your workspace grid
+    
+    // 1. Create the Desktop Icon Element
+    const icon = document.createElement('div');
+    icon.className = 'desktop-icon';
+    icon.id = `icon-${folderId}`;
+    icon.innerHTML = `
+        <span class="icon-glyph">📁</span>
+        <span class="icon-label">${folderName}</span>
+    `;
+
+    // 2. Add Open Behavior (Double Click)
+    icon.ondblclick = () => this.openFolder(folderId, folderName);
+
+    // 3. Append to Workspace
+    const workspace = document.getElementById('workspace');
+    if (workspace) {
+        workspace.appendChild(icon);
+        this.logEvent('FS', `Directory created: ${folderName} [${folderId}]`);
+    }
+}
+
+openFolder(id, name) {
+    // Check if window already exists
+    if (document.getElementById(`win-${id}`)) return;
+
+    // Use your existing launchApp or window creation logic
+    const folderWindow = this.createWindow(id, `Index: /${name}`, `
+        <div class="folder-content">
+            <p style="color: #00ff4133; font-size: 11px;">[ DIRECTORY_EMPTY ]</p>
+            </div>
+    `);
+}
+
+arrangeIcons() {
+    const workspace = document.getElementById('workspace');
+    const icons = Array.from(workspace.getElementsByClassName('desktop-icon'));
+    this.logEvent('UI', 'Re-organizing Genesis grid...');
+    // Add logic to sort desktop-icon elements
+    
+    // Sort by Label text
+    icons.sort((a, b) => {
+        const nameA = a.querySelector('.icon-label').innerText.toUpperCase();
+        const nameB = b.querySelector('.icon-label').innerText.toUpperCase();
+        return nameA < nameB ? -1 : nameA > nameB ? 1 : 0;
+    });
+
+    // Re-append in order (Flexbox/Grid in CSS will handle the positioning)
+    icons.forEach(icon => workspace.appendChild(icon));
+    this.logEvent('UI', 'Genesis Grid re-aligned by Name.');
+}
+
+restoreApp(appId) {
+    const win = document.getElementById(`win-${appId}`);
+    if (win) {
+        win.classList.remove('minimized');
+        this.focusApp(appId);
+        this.logEvent('UI', `Restored ${appId} to workspace.`);
+    }
+}
+
+focusApp(appId) {
+    const win = document.getElementById(`win-${appId}`);
+    if (win) {
+        // Bring to front
+        document.querySelectorAll('.os-window').forEach(w => w.style.zIndex = "100");
+        win.style.zIndex = "1000";
+        this.logEvent('UI', `Focus shifted to ${appId}`);
+    }
+}
+
+closeAllWindows() {
+    const workspace = document.getElementById('workspace');
+    workspace.classList.add('pulse-bg');
+    setTimeout(() => workspace.classList.remove('pulse-bg'), 400);
+
+    const processes = Object.keys(this.runningApps);
+    processes.forEach(appId => this.closeApp(appId, `win-${appId}`));
+}
 // SECURITY PROTOCOL: LOCK SYSTEM
 lockSystem() {
     console.warn("Kernel: SECURITY PROTOCOL ACTIVE. Purging Session Key...");
@@ -1968,8 +2193,11 @@ triggerEscapeWarning() {
 
     console.log(`System Volume set to: ${value}%`);
 }
+
+
     
 }
+
 
 window.kernel = new TLC_Kernel();
 

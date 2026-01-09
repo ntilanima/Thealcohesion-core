@@ -835,10 +835,113 @@ pointer-events: none;
 
 /* --- GLOBAL CONTEXT MENU STYLES --- */
 #global-context-menu {
-    backdrop-filter: blur(10px);
-    animation: menuFadeIn 0.15s ease-out;
+    max-height: 90vh; /* Never taller than 90% of screen */
+    position: fixed;
+    z-index: 100000;
+    background: rgba(10, 10, 10, 0.95);
+    backdrop-filter: blur(25px);
+    border: 1px solid rgba(0, 255, 65, 0.2);
+    width: 260px;
+    padding: 10px 0;
+    box-shadow: 0 30px 60px rgba(0,0,0,0.9);
+    font-family: 'JetBrains Mono', monospace;
 }
 
+.menu-section-label {
+    font-size: 8px;
+    letter-spacing: 1.5px;
+    padding: 12px 16px 4px;
+    color: #00ff41;
+    text-transform: uppercase;
+    font-weight: 900;
+}
+
+.menu-item {
+    position: relative;
+    padding: 10px 16px;
+    font-size: 12px;
+    color: #ccc;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    cursor: pointer;
+}
+
+/* Reverse Submenu (Opens Left) */
+.reverse-x .vpu-submenu {
+    left: auto;
+    right: 100%; /* Flips the anchor point */
+    margin-right: 2px;
+}
+
+.menu-item:hover {
+    background: rgba(0, 255, 65, 0.15);
+    color: #fff;
+}
+
+/* SUB-MENU ALIGNMENT */
+.vpu-submenu {
+    position: absolute;
+    left: 100%;
+    top: -5px;
+    background: rgba(15, 15, 15, 0.98);
+    border: 1px solid rgba(0, 255, 65, 0.4);
+    min-width: 180px;
+    display: none;
+    z-index: 100001;
+    box-shadow: 15px 0 30px rgba(0,0,0,0.5);
+}
+
+.menu-item.has-submenu:hover > .vpu-submenu {
+    display: block;
+}
+
+.menu-divider {
+    height: 1px;
+    background: rgba(255,255,255,0.05);
+    margin: 8px 0;
+}
+
+.danger-action {
+    color: #ff4444 !important;
+    font-weight: bold;
+    border-top: 1px solid rgba(255, 68, 68, 0.1);
+    margin-top: 5px;
+}
+
+kbd {
+    font-size: 9px;
+    opacity: 0.4;
+    border: 1px solid #444;
+    padding: 1px 4px;
+    border-radius: 3px;
+}
+
+/* Add this to your existing context menu CSS */
+.menu-item[data-label^="▶"] {
+    color: #00ff41;
+    font-weight: bold;
+}
+
+.menu-item[data-label^="👁"] {
+    border-left: 3px solid #00ff41;
+    padding-left: 13px;
+}
+
+.dock-item {
+    /* Ensure your dock items have this for the detector to work */
+    cursor: pointer;
+    transition: transform 0.2s;
+}
+.pulse-bg {
+    animation: bgPulse 0.4s ease-out;
+}
+
+@keyframes bgPulse {
+    0% { filter: brightness(1); }
+    50% { filter: brightness(1.5) hue-rotate(90deg); }
+    100% { filter: brightness(1); }
+}
 @keyframes menuFadeIn {
     from { opacity: 0; transform: scale(0.95); }
     to { opacity: 1; transform: scale(1); }

@@ -184,22 +184,36 @@ input:focus {
 }
 
 .desktop-icon {
+    width: 80px;
+    height: 90px;
     display: flex;
     flex-direction: column;
     align-items: center;
-    text-align: center;
-    cursor: pointer;
-    padding: 10px;
-    border-radius: 6px;
+    justify-content: center;
+    border-radius: 4px;
+    transition: background 0.2s;
+    border: 1px solid transparent;
 }
 
-.desktop-icon:hover { background: rgba(255,255,255,0.1); }
+.desktop-icon:hover {
+    background: rgba(0, 255, 65, 0.1);
+    border: 1px solid rgba(0, 255, 65, 0.2);
+}
 
-.desktop-icon span { font-size: 2.5rem; } /* For Emojis */
+.icon-glyph {
+    font-size: 2.2rem;
+    filter: drop-shadow(0 0 5px rgba(0, 255, 65, 0.2));
+}
+
 .icon-label {
-    margin-top: 8px;
+    margin-top: 5px;
     font-size: 11px;
-    text-shadow: 1px 1px 2px black;
+    color: #fff;
+    text-shadow: 1px 1px 2px #000;
+    max-width: 75px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
 .scanlines {
