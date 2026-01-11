@@ -1,0 +1,42 @@
+/* Lock Screen*/
+
+#lock-screen {
+    position: fixed;
+    top: 0; left: 0;
+    width: 100vw; height: 100vh;
+    background: rgba(0, 0, 0, 0.9); /* Darker backdrop to hide workspace */
+    backdrop-filter: blur(20px);   /* High blur for security */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 20000;
+    font-family: 'Courier New', monospace;
+    color: #00ff41;
+}
+
+.lock-box {
+    width: 350px;
+    padding: 2.5rem;
+    border: 1px solid #004411;
+    background: #000;
+    text-align: center;
+}
+
+.user-avatar {
+    width: 60px; height: 60px;
+    border: 1px solid #00ff41;
+    border-radius: 50%;
+    margin: 0 auto 15px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 20px;
+    background: rgba(0, 255, 65, 0.05);
+}
+
+#lock-screen .input-group label {
+    font-size: 10px;
+    display: block;
+    margin-bottom: 8px;
+    color: #008822;
+}

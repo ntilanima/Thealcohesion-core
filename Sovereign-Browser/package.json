@@ -37,9 +37,9 @@
   },
   "linux": {
     "icon": "assets/icon.png",
-    "target": ["AppImage", "deb", "rpm"],
+    "target": ["AppImage", "deb"],
     "maintainer": "Archanti <archanti@example.com>",
-    "category": "Utility"
+    "category": "Network"
   }
 }
 

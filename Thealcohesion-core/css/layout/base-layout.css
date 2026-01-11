@@ -1,46 +1,119 @@
 /* body, html, workspace, desktop icons */
+:root {
+    --ubuntu-purple: #300a24;
+    --ubuntu-orange: #E95420;
+    --ubuntu-dark-aubergine: #2c001e;
+    --running-accent: #a445ff; /* Sovereign Purple */
+    --matrix-green: #00ff41;
+    --top-bar-h: 35px;
+    --font-ubuntu: 'Ubuntu', 'Cantarell', sans-serif;
+    --glass-bg: rgba(255, 255, 255, 0.05);
+    --app-size: clamp(48px, 6vh, 64px); /* Optimized for mobile/desktop scaling */
+    --dock-width: clamp(56px, 8vw, 72px);
+}
+
+
+/* --- CORE RESET --- */
 body, html {
-    margin: 0;
-    padding: 0;
-    width: 100vw;
-    height: 100vh;
+    margin: 0; padding: 0;
+    width: 100vw; height: 100vh;
     overflow: hidden;
-    background: linear-gradient(150deg, var(--ubuntu-purple) 0%, var(--ubuntu-dark-aubergine) 100%);
+    background: #000; /* Base color for boot */
     font-family: var(--font-ubuntu);
     color: white;
-}
-
-html, body{ 
     overscroll-behavior: none;
+    /* Force the App to ignore the 'notch' or 'home bar' on mobile */
+    padding: env(safe-area-inset-top) env(safe-area-inset-right) 
+             env(safe-area-inset-bottom) env(safe-area-inset-left);
 }
 
-#workspace {
-    flex-grow: 1;
-    height: 100%;
+
+/* --- SYSTEM ROOT (The Stage) --- */
+#os-root {
+    position: fixed;
+    inset: 0;
+    display: flex;
+    flex-direction: column; /* Top bar on top, everything else below */
+}
+
+/* --- OS ROOT CONTAINER --- */
+#os-root {
+    display: none; /* JS toggles this to flex */
+    transition: all 0.4s cubic-bezier(0.165, 0.84, 0.44, 1);
     width: 100vw;
-    position: relative;
+    height: calc(100vh - var(--top-bar-h));
+    left: 0;
+    background: transparent; /* Ensure no solid color is hidden behind UI */
+    z-index: 10;
+}
+
+/* --- THE WORKSPACE (The Content Area) --- */
+#workspace {
+    position: absolute;
+    top: var(--top-bar-h);
+    left: 0;
+    right: var(--dock-w); /* Respects the Right Dock */
+    bottom: 0;
+    background: linear-gradient(135deg, #5E2750 0%, #2c001e 100%); /* Ubuntu Purple */
     overflow: hidden;
-    z-index: 5;  
-    top: 0;
-    left: 0; 
+    z-index: 5;
+    /* Grid for desktop icons */
+    display: grid;
+    grid-template-columns: repeat(auto-fill, 100px);
+    grid-template-rows: repeat(auto-fill, 110px);
+    grid-auto-flow: column;/* Desktop icons stack vertically first */
+    gap: 15px;
+    padding: 0px;
+    flex-grow: 1;    /* Automatically calculates width: 100% minus --dock-width */
+    height: 100%;
+    width: 100vw; /* Full width to prevent gaps */ 
 }
 
 .desktop-icon {
+    width: 80px;
+    height: 90px;
     display: flex;
-    flex-direction: column;
-    align-items: center;
     text-align: center;
     cursor: pointer;
     padding: 10px;
-    border-radius: 6px;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    border-radius: 4px;
+    transition: background 0.2s;
+    border: 1px solid transparent;
 }
 
-.desktop-icon:hover { background: rgba(255,255,255,0.1); }
+.desktop-icon:hover { 
+    background: rgba(255,255,255,0.1); 
+    border: 1px solid rgba(0, 255, 65, 0.2);
+}
+
 .desktop-icon span { font-size: 2.5rem; }
 
-.icon-label {
-    margin-top: 8px;
-    font-size: 11px;
-    text-shadow: 1px 1px 2px black;
+.icon-glyph {
+    font-size: 2.2rem;
+    filter: drop-shadow(0 0 5px rgba(0, 255, 65, 0.2));
 }
+
+.icon-label {
+    margin-top: 5px;
+    font-size: 11px;
+    color: #fff;
+    text-shadow: 1px 1px 2px #000;
+    max-width: 75px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+
 /* Additional base layout styles can be added here */
+
+.sovereign-environment {
+    /* Ensures the OS content stays within the visible screen area */
+    padding-top: env(safe-area-inset-top);
+    padding-bottom: env(safe-area-inset-bottom);
+    padding-left: env(safe-area-inset-left);
+    padding-right: env(safe-area-inset-right);
+}

@@ -1,0 +1,66 @@
+/* CRT Overlay Effect for display changes */
+.crt-effect::before {
+    content: " ";
+    display: block;
+    position: fixed;
+    top: 0; left: 0; bottom: 0; right: 0;
+    background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%), 
+                linear-gradient(90deg, rgba(255, 0, 0, 0.06), rgba(0, 255, 0, 0.02), rgba(0, 0, 255, 0.06));
+    z-index: 9999; /* Above everything */
+    background-size: 100% 4px, 3px 100%;
+    pointer-events: none; /* Allows clicking through to the OS */
+}
+
+/* Subtle Screen Flicker */
+.crt-effect {
+    animation: textShadow 1.6s infinite;
+}
+
+@keyframes textShadow {
+    0% { text-shadow: 0.43px 0 1px rgba(0,30,255,0.5), -0.43px 0 1px rgba(255,0,80,0.3), 0 0 3px; }
+    5% { text-shadow: 0.8px 0 1px rgba(0,30,255,0.5), -0.8px 0 1px rgba(255,0,80,0.3), 0 0 3px; }
+    /* ... add more steps for a jittery feel ... */
+    100% { text-shadow: 0.43px 0 1px rgba(0,30,255,0.5), -0.43px 0 1px rgba(255,0,80,0.3), 0 0 3px; }
+}
+
+
+/* --- SECURITY PULSE FX --- */
+.pulse-container {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    z-index: 1;
+    pointer-events: none;
+}
+
+.ring {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 300px;
+    height: 300px;
+    border: 1px solid #00ff41;
+    border-radius: 50%;
+    opacity: 0;
+    animation: sovereign-pulse 4s cubic-bezier(0.215, 0.61, 0.355, 1) infinite;
+}
+
+/* Offset the second ring for a staggered ripple */
+.ring:nth-child(2) {
+    animation-delay: 2s;
+}
+
+@keyframes sovereign-pulse {
+    0% {
+        width: 300px;
+        height: 300px;
+        opacity: 0.4;
+    }
+    100% {
+        width: 1000px;
+        height: 1000px;
+        opacity: 0;
+    }
+}

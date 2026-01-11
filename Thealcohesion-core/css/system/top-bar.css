@@ -1,24 +1,176 @@
-/* Top Bar Styles:#top-bar, #top-bar-time, holiday pulses */
+/* --- SYSTEM BARS --- */
 #top-bar {
-    background-color: var(--ubuntu-purple);
-    color: white;
-    padding: 10px;
+    background: rgba(0, 0, 0, 0.85);
     display: flex;
     justify-content: space-between;
     align-items: center;
+    height: var(--top-bar-h);
+    backdrop-filter: blur(10px);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    padding: 0 15px;
+    font-size: 0.85rem;
+    color: white;
+    position: fixed;
+    top: 0;
+    width: 100%;
+    box-sizing: border-box;
+    z-index: 1000;
 }
 
+/* This container holds the VPU and the Time together on the right */
+.top-bar-right-group {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-left: auto; /* Pushes everything in this group to the right */
+}
+
+/* --- TOP BAR TIME (THE CLOCK) --- */
 #top-bar-time {
+    font-family: 'Monaco', monospace;
+    font-weight: bold;
+    color: #a445ff;
+    letter-spacing: 1px;
+    font-variant-numeric: tabular-nums; 
+    background: rgba(164, 69, 255, 0.05);
+    padding: 2px 10px;
+    border-radius: 4px;
+    border: 1px solid rgba(164, 69, 255, 0.2);
+    cursor: pointer;
     font-size: 14px;
+    transition: background 0.2s;
+    white-space: nowrap;
+    flex-shrink: 0; /* CRITICAL: Prevents memory from squishing clock */
+    min-width: 80px; /* Ensures space for 00:00:00 */
+    text-align: center;
 }
 
-.holiday-pulse {
-    animation: pulse 2s infinite;
+/* --- TOP BAR MEMORY METER --- */
+#vpu-resource-monitor {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding-right: 5px;
 }
 
-@keyframes pulse {
-    0% { box-shadow: 0 0 0 0 rgba(255, 255, 255, 0.7); }
-    70% { box-shadow: 0 0 0 10px rgba(255, 255, 255, 0); }
-    100% { box-shadow: 0 0 0 0 rgba(255, 255, 255, 0); }
+.monitor-label {
+    font-family: 'Consolas', monospace;
+    font-size: 10px;
+    color: #888;
 }
-/* Additional Top Bar Styles can be added here */
+
+.meter-container {
+    width: 80px;
+    height: 8px;
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 2px;
+    overflow: hidden;
+}
+
+#memory-bar {
+    height: 100%;
+    width: 0%;
+    background: #00ff41;
+    box-shadow: 0 0 10px #00ff41;
+    transition: width 0.5s cubic-bezier(0.4, 0, 0.2, 1), background 0.3s;
+}
+
+#memory-bar.warning { background: #ffcc00; box-shadow: 0 0 10px #ffcc00; }
+#memory-bar.critical { background: #ff4444; box-shadow: 0 0 10px #ff4444; }
+
+/* --- MOBILE OPTIMIZATION --- */
+@media (max-width: 768px) {
+    #vpu-resource-monitor .meter-container {
+        display: none !important; /* Hide the bar */
+    }
+
+    .monitor-label {
+        display: block !important; /* Force text to show */
+        font-family: 'Monaco', monospace;
+        color: #00ff41; /* Make it Matrix Green so it stands out */
+        font-weight: bold;
+        font-size: 12px;
+        min-width: 35px; /* Prevents layout jump between 9% and 10% */
+    }
+}
+
+/* --- TOP BAR BATTERY --- */
+#top-battery-monitor {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-right: 5px;
+}
+
+#top-battery-percent {
+    font-family: 'Monaco', monospace;
+    font-size: 11px;
+    color: #a445ff; /* Matches your clock color */
+}
+
+.battery-icon-mini {
+    width: 16px;
+    height: 9px;
+    border: 1px solid rgba(164, 69, 255, 0.4);
+    border-radius: 1px;
+    padding: 1px;
+    position: relative;
+}
+
+/* The Battery Nub */
+.battery-icon-mini::after {
+    content: '';
+    position: absolute;
+    right: -3px;
+    top: 2px;
+    width: 2px;
+    height: 3px;
+    background: rgba(164, 69, 255, 0.4);
+}
+
+#top-battery-fill {
+    height: 100%;
+    width: 0%; /* Managed by JS */
+    background: #a445ff;
+    transition: width 0.3s ease;
+}
+
+/* Mobile Tweak: Hide the icon, show only % */
+@media (max-width: 768px) {
+    .battery-icon-mini {
+        display: none;
+    }
+    #top-battery-percent {
+        font-size: 12px;
+        color: #a445ff;
+    }
+}
+
+/* --- SOVEREIGN ITOP-BAR CON SYSTEM --- */
+.sys-icon {
+    width: 16px;
+    height: 16px;
+    transition: all 0.3s ease;
+    filter: drop-shadow(0 0 3px rgba(164, 69, 255, 0.4));
+    cursor: pointer;
+}
+
+.sys-icon:hover {
+    filter: drop-shadow(0 0 8px rgba(164, 69, 255, 0.8));
+    transform: translateY(-1px);
+}
+
+.sys-icon.chevron {
+    width: 12px;
+    height: 12px;
+    opacity: 0.7;
+    margin-left: -4px;
+}
+
+/* Container for the group */
+.status-group {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 0 10px;
+}

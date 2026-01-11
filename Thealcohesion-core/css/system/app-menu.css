@@ -1,0 +1,254 @@
+/* App Menu Styles: #app-menu-overlay, search-box, launcher-cards */
+/* --- APP MENU OVERLAY --- */
+#app-menu-overlay {
+    position: fixed;
+    top: var(--top-bar-h);
+    /* Start exactly where the dock ends using the variable */
+    left: var(--dock-width);
+    /* Calculate remaining width dynamically */
+    width: calc(100vw - var(--dock-width));
+    height: calc(100vh - var(--top-bar-h));
+    background: rgba(0, 0, 0, 0.4); /* Dark tint */
+    backdrop-filter: blur(25px); /* Strong glass effect */
+    z-index: 9998;
+    display: none; /* JS toggles this */
+    justify-content: center;
+    transition: opacity 0.3s ease;
+    margin: 0; /* Remove any accidental margins */
+    padding: 0;
+    border: none;
+}
+
+.overlay-content {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    padding: 20px 15px; /* Tighter padding for mobile */
+    box-sizing: border-box;
+}
+
+/* --- SEARCH BOX REFINEMENT --- */
+.search-container {
+    display: flex;
+    justify-content: center; /* Keeps bar centered in the overlay */
+    width: 100%;
+    margin-bottom: 20px;
+    padding: 0 20px; /* Prevents touching edges on mobile */
+    box-sizing: border-box;
+}
+
+.search-box {
+    background: rgba(15, 14, 14, 0.15);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 12px;
+    padding: 8px 15px;
+    
+    /* WIDTH LOGIC: Flexible but capped */
+    width: 100%; 
+    max-width: 600px; /* Optimal width for desktop/tablet */
+    
+    display: flex;
+    align-items: center;
+}
+
+.search-box:focus-within {
+    border-color: var(--running-accent);
+}
+
+.search-box input {
+    background: none;
+    border: none;
+    color: white;
+    font-size: 1rem;
+    margin-left: 10px;
+    width: 100%; /* Ensures the input field uses all box space */
+    outline: none;
+}
+
+/* MOBILE SPECIFIC WIDTH */
+@media (max-width: 768px) {
+    .search-box {
+        max-width: 90%; /* Allows it to breathe on small screens */
+        padding: 6px 12px;
+    }
+}
+/* App Grid */
+#app-grid-container {
+    flex: 1;
+    overflow-y: auto;
+    display: grid;
+    /* Adjusted for a cleaner Ubuntu-style grid */
+    grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+    gap: 20px;
+    
+    margin-top: 20px;
+    justify-items: center;
+    overflow-y: auto;
+}
+
+.launcher-card {
+    width: 100px; 
+    aspect-ratio: 1 / 1; /* Forces the perfect square */
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    cursor: pointer;
+    border-radius: 12px;
+    transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+    padding: 10px;
+    text-decoration: none;
+}
+
+/* Perfect Square Hover Background */
+.launcher-card:hover {
+    transform: scale(1.05);
+    background: rgba(255, 255, 255, 0.1);
+    backdrop-filter: blur(10px);
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+}
+
+.launcher-card .icon {
+    font-size: 3.5rem;
+    margin-bottom: 8px;
+    line-height: 1;
+    filter: drop-shadow(0 4px 10px rgba(0,0,0,0.3));
+}
+
+.launcher-card .name {
+    font-size: 0.85rem;
+    text-align: center;
+    width: 100%;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* Bottom Nav */
+/* Force the nav to the absolute bottom of the overlay-content */
+.overlay-nav {
+    margin-top: auto; /* This pushes the nav down */
+    display: flex;
+    justify-content: center;
+    padding: 20px 0;
+    width: 100%;
+    background: linear-gradient(to top, rgba(0,0,0,0.5), transparent);
+}
+
+.nav-links {
+    display: flex;
+    gap: 40px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.nav-item {
+    background: none;
+    border: none;
+    color: #888;
+    font-size: 0.9rem;
+    padding: 10px 5px;
+    cursor: pointer;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+.nav-item.active {
+    color: white;
+    border-bottom: 2px solid #E95420; /* Ubuntu Orange */
+}
+
+/* Highlight the menu button when overlay is active */
+#os-root:has(#app-menu-overlay:not(.hidden)) .dock-bottom-trigger {
+    background: rgba(233, 84, 32, 0.6); /* Ubuntu Orange */
+    box-shadow: 0 0 15px rgba(233, 84, 32, 0.4);
+}
+
+/* App Menu Overlay Transitions */
+#app-menu-overlay.hidden {
+    opacity: 0;
+    pointer-events: none;
+    transform: translateX(-10px); /* Slight slide out */
+}
+
+#app-menu-overlay:not(.hidden) {
+    opacity: 1;
+    transform: translateX(0); /* Slide in to dock */
+}
+
+/* --- APP GRID MOBILE OPTIMIZATION --- */
+@media (max-width: 768px) {
+    #app-grid-container {
+        /* Force exactly 3 columns per row */
+        grid-template-columns: repeat(3, 1fr) !important;
+        gap: 15px; /* Tighter gap for smaller screens */
+        padding: 20px 10px;
+    }
+
+    .launcher-card .icon {
+        font-size: 2.5rem; /* Slightly smaller icons for mobile 3-row layout */
+    }
+
+    .launcher-card .name {
+        font-size: 0.75rem;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        width: 100%;
+    }
+
+    .overlay-content {
+        padding: 20px 15px; /* Reduce padding to give grid more room */
+    }
+}
+
+/* Further mobile tweaks for very small screens */
+@media (max-width: 768px) {
+    #app-grid-container {
+        /* Force 3 columns and prevent them from shrinking */
+        grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+        gap: 20px;
+        padding: 10px;
+        width: 100%;
+        box-sizing: border-box;
+    }
+
+    .launcher-card {
+        width: 100%;
+        /* Ensure the tap area is large enough for mobile fingers */
+        padding: 10px 0; 
+    }
+
+    .launcher-card .icon {
+        font-size: 2.8rem; /* Slightly larger for touch clarity */
+    }
+}
+
+
+/* --- LOADING INDICATOR FOR APPS --- */
+.app-loading {
+    font-family: 'Consolas', monospace;
+    color: #a445ff;
+    padding: 20px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.app-loading::after {
+    content: "";
+    width: 10px;
+    height: 10px;
+    background: #00ff41;
+    border-radius: 50%;
+    animation: pulse 1s infinite;
+}
+
+@keyframes pulse {
+    0% { opacity: 1; }
+    50% { opacity: 0.3; }
+    100% { opacity: 1; }
+}
+
+/* Additional app menu styles can be added here */

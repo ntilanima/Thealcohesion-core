@@ -16,6 +16,24 @@ class TLC_Kernel {
         this.sessionKey = null; // The AES-GCM key derived at login
         this.pinnedApps = ['time', 'tnfi', 'terminal', 'files', 'browser', 'messages', 'camera','vscode', 'settings']; 
         this.idleTimer = null;
+        // --- NEW MEMORY TRACKING ---
+        this.maxMemory = 100; 
+        this.currentMemory = 0;
+
+        //OVERVIEW TRACKER
+        this.isOverviewActive = false;
+        // Ensure we listen for the "Escape" key to toggle overview
+        window.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') this.toggleOverview();
+        });
+
+        // --- MEMORY RESIZE SENSOR ---
+        window.addEventListener('resize', () => {
+            this.updateMemoryMeter();
+        });
+
+        // Initialize the meter at 0 on boot
+        this.updateMemoryMeter();
 
         console.log("Kernel: Initializing Sovereign Core...");
         
@@ -207,8 +225,103 @@ class TLC_Kernel {
         // 3. Initialize immediately
         this.initAudioEngine();
 
+        this.renderMenuContent = this.renderMenuContent.bind(this);
+
+        this.initBattery(); //FOR TOPBAR BATTERY
+        
     }
 
+    // TOPBAR ICONS
+    createSystemIcons() {
+        const trayGroup = document.createElement('div');
+        trayGroup.className = 'status-group';
+
+        // Simplified template for an icon
+        const getIcon = (path) => `
+            <svg class="sys-icon" viewBox="0 0 24 24" fill="none" stroke="#a445ff" stroke-width="2">
+                <path d="${path}" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>`;
+
+        const wifiPath = "M2 20h.01M7 20v-4m5 4V11m5 9V7m5 13V3";
+        const audioPath = "M11 5L6 9H2v6h4l5 4V5zM15.54 8.46a5 5 0 0 1 0 7.07";
+        const chevronPath = "M6 9l6 6 6-6";
+
+        trayGroup.innerHTML = `
+            ${getIcon(wifiPath)}
+            ${getIcon(audioPath)}
+            <span class="chevron-wrapper">${getIcon(chevronPath)}</span>
+        `;
+
+        return trayGroup;
+    }
+
+    //TOPBAR BATTERY
+    initBattery() {
+    // Check if the API is available
+    if (navigator.getBattery) {
+        navigator.getBattery().then(battery => {
+            const updateUI = () => {
+                const level = Math.round(battery.level * 100);
+                
+                // Get the elements
+                const topPercent = document.getElementById('top-battery-percent');
+                const topFill = document.getElementById('top-battery-fill');
+
+                if (topPercent) {
+                    topPercent.innerText = `${level}%`;
+                    console.log("Battery Updated:", level); // Check your console for this!
+                }
+                
+                if (topFill) {
+                    topFill.style.width = `${level}%`;
+                    // Visual status
+                    topFill.style.background = (level <= 20) ? '#ff4444' : '#a445ff';
+                }
+            };
+
+            // Initial call and event listeners
+            updateUI();
+            battery.addEventListener('levelchange', updateUI);
+            battery.addEventListener('chargingchange', updateUI);
+        }).catch(err => {
+            console.warn("Battery API failed:", err);
+            // Fallback: Just show 100% so it's not empty
+            if(document.getElementById('top-battery-percent')) {
+                document.getElementById('top-battery-percent').innerText = "100%";
+            }
+        });
+    } else {
+        console.error("Battery API not supported on this browser/context.");
+    }
+}
+
+    // --- MEMORY TRACKER ---
+    updateMemoryMeter() {
+    // 1. Count windows and calculate memory
+    const windows = document.querySelectorAll('.os-window').length;
+    this.currentMemory = Math.min(windows * 1, 100);
+    
+    // 2. Update the physical bar (for desktop)
+    const bar = document.getElementById('memory-bar');
+    if (bar) {
+        bar.style.width = `${this.currentMemory}%`;
+        bar.classList.remove('warning', 'critical');
+        if (this.currentMemory > 80) bar.classList.add('critical');
+        else if (this.currentMemory > 50) bar.classList.add('warning');
+    }
+
+    // 3. Update the Label (The Fix for Mobile)
+    const label = document.querySelector('.monitor-label');
+    if (label) {
+        // This checks if the screen is mobile-sized (under 768px)
+        if (window.innerWidth <= 768) {
+            label.innerText = `${this.currentMemory}%`; 
+            label.style.display = 'block'; // Ensure it's visible
+        } else {
+            label.innerText = `VPU`;
+        }
+    }
+}
 
     /**
  * SHUTDOWN_SEQUENCE (2025-12-26 Compliant)
@@ -585,6 +698,8 @@ async runRecoverySequence(errorCode) {
         document.getElementById('lock-pass-input')?.addEventListener('keypress', (e) => {
             if (e.key === 'Enter') this.unlockSystem();
         });
+
+        
 }
 
 async unlockSystem() {
@@ -962,8 +1077,9 @@ renderMenuContent(menu, target) {
                     label: '⚙️ OS Preferences', 
                     children: [
                         { label: 'Toggle Scanlines', action: () => this.toggleScanlines() },
-                        { label: 'Adjust Security Blur', action: () => alert("Blur settings active.") },
-                        { label: 'Matrix FX Theme', action: () => this.setTheme('matrix') }
+                        { label: 'Security Blur (Privacy)', action: () => this.toggleSecurityBlur() },
+                        { label: 'Matrix FX Theme', action: () => this.setTheme('matrix') },
+                        { label: 'Restore Sovereign Core', action: () => this.setTheme('sovereign') }
                     ]
                 }
             ]
@@ -1019,29 +1135,39 @@ renderMenuContent(menu, target) {
     menu.innerHTML = generateHTML(menuData);
 
     // 3. UNIVERSAL CLICK HANDLER
-    menu.onclick = (e) => {
-        const targetItem = e.target.closest('.menu-item');
-        if (!targetItem || targetItem.classList.contains('has-submenu')) return;
+    // 3. UNIVERSAL CLICK HANDLER
+menu.onclick = (e) => {
+    const targetItem = e.target.closest('.menu-item');
+    // Important: Don't close or fire if it's a parent of a submenu
+    if (!targetItem || targetItem.classList.contains('has-submenu')) return;
 
-        const label = targetItem.dataset.label;
-        
-        // Deep search for the action associated with this label
-        const executeAction = (data) => {
-            for (let sec of data) {
-                for (let item of sec.items) {
-                    if (item.label === label) return item.action();
-                    if (item.children) {
-                        for (let sub of item.children) {
-                            if (sub.label === label) return sub.action();
-                        }
+    const label = targetItem.dataset.label;
+    
+    // Recursive search to find the action even if it's nested
+    const findActionRecursive = (data) => {
+        for (let sec of data) {
+            // Check top level items
+            for (let item of sec.items) {
+                if (item.label === label) return item.action;
+                // Check children (submenus)
+                if (item.children) {
+                    for (let child of item.children) {
+                        if (child.label === label) return child.action;
+                        // Optional: Add one more loop if you have sub-sub menus
                     }
                 }
             }
-        };
-
-        executeAction(menuData);
-        menu.style.display = 'none';
+        }
+        return null;
     };
+
+    const action = findActionRecursive(menuData);
+    if (action) {
+        action(); // Run the function
+        menu.style.display = 'none'; // Close menu
+    }
+};
+document.addEventListener('click', () => menu.style.display = 'none');
 }
 
 //creates folder
@@ -1128,6 +1254,71 @@ closeAllWindows() {
     const processes = Object.keys(this.runningApps);
     processes.forEach(appId => this.closeApp(appId, `win-${appId}`));
 }
+
+toggleScanlines() {
+    let scanlineOverlay = document.getElementById('vpu-scanlines');
+    
+    if (!scanlineOverlay) {
+        scanlineOverlay = document.createElement('div');
+        scanlineOverlay.id = 'vpu-scanlines';
+        // Ensure it sits behind UI but above wallpaper
+        scanlineOverlay.style.cssText = `
+            position: fixed;
+            inset: 0;
+            pointer-events: none;
+            z-index: 1;
+            background: linear-gradient(
+                rgba(18, 16, 16, 0) 50%, 
+                rgba(0, 0, 0, 0.1) 50%
+            ), linear-gradient(
+                90deg, 
+                rgba(255, 0, 0, 0.02), 
+                rgba(0, 255, 0, 0.01), 
+                rgba(0, 0, 255, 0.02)
+            );
+            background-size: 100% 4px, 3px 100%;
+            opacity: 0.3;
+        `;
+        document.body.appendChild(scanlineOverlay);
+        this.logEvent('UI', 'CRT Scanline Emulation: ENABLED');
+    } else {
+        scanlineOverlay.remove();
+        this.logEvent('UI', 'CRT Scanline Emulation: DISABLED');
+    }
+}
+
+toggleSecurityBlur() {
+    const root = document.getElementById('sovereign-shell');
+    const isBlurred = root.style.filter.includes('blur');
+    
+    if (!isBlurred) {
+        root.style.filter = 'blur(10px) grayscale(0.5)';
+        root.style.transition = 'filter 0.5s ease';
+        this.logEvent('SEC', 'Privacy Cloak: ACTIVE');
+    } else {
+        root.style.filter = 'none';
+        this.logEvent('SEC', 'Privacy Cloak: DEACTIVATED');
+    }
+}
+
+setTheme(themeName) {
+    const root = document.documentElement;
+    
+    if (themeName === 'matrix') {
+        root.style.setProperty('--primary-accent', '#00ff41');
+        root.style.setProperty('--bg-color', '#000500');
+        root.style.setProperty('--window-border', 'rgba(0, 255, 65, 0.3)');
+        
+        // If you have a Matrix background script, start it here
+        this.startMatrixRain(); 
+        this.logEvent('SYS', 'Visual Protocol: MATRIX_FX loaded.');
+    } else {
+        // Reset to Thealcohesion Purple
+        root.style.setProperty('--primary-accent', '#a445ff');
+        this.logEvent('SYS', 'Visual Protocol: SOVEREIGN_CORE restored.');
+    }
+}
+
 // SECURITY PROTOCOL: LOCK SYSTEM
 lockSystem() {
     console.warn("Kernel: SECURITY PROTOCOL ACTIVE. Purging Session Key...");
@@ -1267,136 +1458,307 @@ suspendSession() {
     dock.appendChild(menuBtn);
 }
 
-   toggleTaskOverview() {
+toggleTaskOverview() {
     const workspace = document.getElementById('workspace');
-    const windows = document.querySelectorAll('.os-window');
-    
-    // Toggle the state
+    const realWindows = document.querySelectorAll('.os-window:not(.in-overview)');
     const isEntering = !document.body.classList.contains('task-overview-active');
-    document.body.classList.toggle('task-overview-active');
 
-    if (isEntering) {
-        // 1. Create Blur Overlay
-        const blur = document.createElement('div');
-        blur.id = 'overview-blur';
-        blur.innerHTML = `
-            <div id="overview-search-wrap">
-                <input type="text" id="overview-search" placeholder="FILTER ENCLAVES..." autofocus>
-            </div>
-            <button id="purge-all-btn" style="background:#ff4444; color:white; border:none; padding:8px 15px; border-radius:4px; cursor:pointer; font-weight:bold; margin-bottom:20px;">
-                ⏻ TERMINATE ALL
-            </button>
-            <div id="overview-grid"></div>
-        `;
-        workspace.appendChild(blur);
-
-        // 2. Setup Purge All Functionality
-        document.getElementById('purge-all-btn').onclick = (e) => {
-            e.stopPropagation();
-            if(confirm("FORCE QUIT ALL APPLICATIONS?")) {
-                this.runningApps.forEach(appId => {
-                    this.closeApp(appId, `win-${appId}`);
-                });
-                this.exitOverview();
-            }
-        };
-
-        const grid = document.getElementById('overview-grid');
-
-        // 3. Prepare Windows for Grid & Add Kill Buttons
-        windows.forEach((win) => {
-            // Save state for restoration
-            win.dataset.oldTransform = win.style.transform;
-            win.dataset.oldLeft = win.style.left;
-            win.dataset.oldTop = win.style.top;
-            win.dataset.oldWidth = win.style.width;
-
-            const now = Date.now();
-            const lastUsed = parseInt(win.dataset.lastUsed || now);
-            const idleTime = now - lastUsed;
-            const FIVE_MINUTES = 300000; 
-
-            if (idleTime > FIVE_MINUTES) {
-                win.classList.add('ghost-process');
-                // Add an idle timer badge
-                const minutes = Math.floor(idleTime / 60000);
-                const badge = document.createElement('div');
-                badge.className = 'idle-badge';
-                badge.innerText = `IDLE: ${minutes}m`;
-                win.appendChild(badge);
-            } else {
-                win.classList.remove('ghost-process');
-            }
-
-            // --- ADD FORCE QUIT BUTTON ---
-            const killBtn = document.createElement('div');
-            killBtn.className = 'overview-kill-btn';
-            killBtn.innerHTML = '×';
-            killBtn.onclick = (e) => {
-                e.stopPropagation();
-                const appId = win.id.replace('win-', '');
-                this.closeApp(appId, win.id); // Triggers destruct() and cleanup
-            };
-            win.appendChild(killBtn);
-            // ------------------------------
-
-            win.classList.add('in-overview');
-            grid.appendChild(win); 
-
-            win.onclick = (e) => {
-                e.stopPropagation();
-                this.exitOverview(win.id);
-            };
-        });
-
-        // Setup Search
-        const searchInput = document.getElementById('overview-search');
-        searchInput.oninput = (e) => {
-            const query = e.target.value.toLowerCase();
-            windows.forEach(win => {
-                const titleText = win.querySelector('.title').innerText.toLowerCase();
-                win.style.display = titleText.includes(query) ? "flex" : "none";
-            });
-        };
-
-    } else {
+    if (!isEntering) {
         this.exitOverview();
+        return;
     }
-} 
 
-// 3. New Helper to Restore Windows Properly
-exitOverview(focusId = null) {
-    const workspace = document.getElementById('workspace');
-    const windows = document.querySelectorAll('.os-window');
-    const blur = document.getElementById('overview-blur');
-
-    //clear the badges when leaving the overview.
-    const badges = win.querySelectorAll('.idle-badge');
-    badges.forEach(b => b.remove());
-    win.classList.remove('ghost-process');
-
-    windows.forEach(win => {
-        win.classList.remove('in-overview');
+    document.body.classList.add('task-overview-active');
     
-        // Remove the overview-specific kill buttons
-        const killBtn = win.querySelector('.overview-kill-btn');
-        if (killBtn) killBtn.remove();
-        // Restore original geometry
-        win.style.transform = win.dataset.oldTransform || "";
-        win.style.left = win.dataset.oldLeft || "50px";
-        win.style.top = win.dataset.oldTop || "50px";
-        win.style.width = win.dataset.oldWidth || "clamp(320px, 65vw, 900px)";
-        win.style.display = "block";
-        
-        workspace.appendChild(win); // Move back to main workspace
+    // Log visibility fix: Log before the blur covers everything or ensure blur is a child of workspace
+    this.logSystemEvent("VPU PROXY VIRTUALIZATION", "info");
+
+    const blur = document.createElement('div');
+    blur.id = 'overview-blur';
+    blur.innerHTML = `
+        <div id="overview-search-wrap">
+            <input type="text" id="overview-search" placeholder="FILTER ENCLAVES..." autocomplete="off">
+        </div>
+        <button id="purge-all-btn">TERMINATE ALL ACTIVE ENCLAVES</button>
+        <div id="overview-grid"></div>
+    `;
+    workspace.appendChild(blur);
+
+    const grid = document.getElementById('overview-grid');
+
+    realWindows.forEach(realWin => {
+        // 1. Hide real window
+        realWin.style.visibility = 'hidden';
+
+        // 2. Create Proxy
+        const proxy = realWin.cloneNode(true);
+        proxy.id = `proxy-${realWin.id}`;
+        proxy.classList.add('in-overview');
+        // Grab the title from the real window and save it on the proxy
+        const winTitle = realWin.querySelector('.title')?.innerText || "Enclave";
+        proxy.setAttribute('data-search-term', winTitle.toLowerCase());
+        proxy.style.cssText = `
+            position: relative !important;
+            left: auto !important;
+            top: auto !important;
+            width: 100% !important;
+            height: 200px !important;
+            visibility: visible !important;
+            display: flex !important;
+            transform: none !important;
+        `;
+
+        // --- 3. FILTER CONTROLS & ADD CONFIRMATION ---
+        const controls = proxy.querySelector('.window-controls');
+        if (controls) {
+            Array.from(controls.children).forEach(btn => {
+                if (!btn.classList.contains('close') && !btn.classList.contains('close-btn')) {
+                    btn.remove();
+                } else {
+                    btn.style.display = 'flex';
+                    btn.style.pointerEvents = 'all';
+                    
+                    btn.onclick = (e) => {
+                        e.stopPropagation();
+                        
+                        // --- THE CONFIRMATION OVERLAY ---
+                        const confirmOverlay = document.createElement('div');
+                        confirmOverlay.className = 'proxy-confirm-overlay';
+                        confirmOverlay.innerHTML = `
+                            <div class="confirm-box">
+                                <p>TERMINATE ENCLAVE?</p>
+                                <div class="confirm-btns">
+                                    <button class="yes">YES</button>
+                                    <button class="no">NO</button>
+                                </div>
+                            </div>
+                        `;
+                        proxy.appendChild(confirmOverlay);
+
+                        // Handle NO
+                        confirmOverlay.querySelector('.no').onclick = (ev) => {
+                            ev.stopPropagation();
+                            confirmOverlay.remove();
+                        };
+
+                        // Handle YES
+                        confirmOverlay.querySelector('.yes').onclick = (ev) => {
+                            ev.stopPropagation();
+                            const appId = realWin.id.replace('win-', '');
+                            
+                            this.logSystemEvent(`TERMINATING: ${appId}`, "warn");
+                            this.closeApp(appId, realWin.id); 
+                            
+                            proxy.style.transform = "scale(0.9)";
+                            proxy.style.opacity = "0";
+                            setTimeout(() => {
+                                proxy.remove();
+                                if (grid.querySelectorAll('.os-window').length === 0) {
+                                    this.exitOverview();
+                                }
+                            }, 200);
+                        };
+                    };
+                }
+            });
+        }
+
+        proxy.onclick = () => this.exitOverview(realWin.id);
+        grid.appendChild(proxy);
     });
 
-    document.body.classList.remove('task-overview-active');
-    if (blur) blur.remove();
+    // --- TERMINATE ALL LOGIC ---
+    document.getElementById('purge-all-btn').onclick = (e) => {
+    e.stopPropagation();
     
-    if (focusId) this.focusWindow(focusId);
+    const proxies = grid.querySelectorAll('.os-window');
+    if (proxies.length === 0) return;
+
+    const massConfirm = document.createElement('div');
+    massConfirm.id = 'mass-purge-overlay';
+    massConfirm.innerHTML = `
+        <div class="mass-confirm-box">
+            <h2 class="critical-text">⚠ ENCLAVE PURGE INITIATED</h2>
+            <div id="purge-countdown">10</div>
+            <p>PURGING ${proxies.length} ACTIVE PROCESSES...</p>
+            <div class="mass-confirm-btns">
+                <button class="cancel-purge">ABORT SEQUENCE</button>
+            </div>
+        </div>
+    `;
+    document.getElementById('overview-blur').appendChild(massConfirm);
+
+    let count = 10; // Increased to 10
+    const countdownEl = massConfirm.querySelector('#purge-countdown');
+    
+    const timer = setInterval(() => {
+        count--;
+        countdownEl.innerText = count;
+        
+        // Visual warning: Turn text red when under 4 seconds
+        if (count <= 3) {
+            countdownEl.style.color = "#ff4444";
+            countdownEl.style.fontSize = "100px";
+        }
+        
+        if (count === 0) {
+            clearInterval(timer);
+            executeFinalPurge();
+        }
+    }, 1000);
+
+    massConfirm.querySelector('.cancel-purge').onclick = () => {
+        clearInterval(timer);
+        this.logSystemEvent("ENCLAVE PURGE INITIATED", "info");
+        massConfirm.remove();
+    };
+
+    const executeFinalPurge = () => {
+        countdownEl.innerText = "PURGING";
+        this.logSystemEvent(`EXECUTING MASS PURGE: ${proxies.length} PROCESSES`, "critical");
+
+        proxies.forEach((p, i) => {
+            setTimeout(() => {
+                const realId = p.id.replace('proxy-', '');
+                const appId = realId.replace('win-', '');
+                
+                this.closeApp(appId, realId);
+                p.style.transform = "scale(0) rotate(15deg)";
+                p.style.opacity = "0";
+                
+                setTimeout(() => p.remove(), 300);
+
+                if (i === proxies.length - 1) {
+                    setTimeout(() => {
+                        massConfirm.remove();
+                        this.exitOverview();
+                    }, 500);
+                }
+            }, i * 60);
+        });
+    };
+};
+ 
+
+    // Search Logic
+    // Search Logic (Inside toggleTaskOverview)
+    const searchInput = document.getElementById('overview-search');
+    if (searchInput) {
+        searchInput.focus();
+        searchInput.oninput = (e) => {
+            const query = e.target.value.toLowerCase().trim();
+            const proxies = grid.querySelectorAll('.os-window.in-overview');
+
+            proxies.forEach(p => {
+                const term = p.getAttribute('data-search-term') || "";
+                if (term.includes(query)) {
+                    p.style.display = 'flex';
+                } else {
+                    p.style.display = 'none';
+                }
+            });
+        };
+    }
 }
+
+//PURGE BUTTON
+
+renderOverviewControls() {
+    const controls = document.createElement('div');
+    controls.id = 'overview-hud';
+    controls.innerHTML = `
+        <button onclick="os.purgeAll()">
+            <svg class="sys-icon" viewBox="0 0 24 24" fill="none" stroke="#ff4444" stroke-width="2">
+                <path d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+            </svg>
+            CLEANSE SYSTEM
+        </button>
+    `;
+    document.body.appendChild(controls);
+}
+
+exitOverview(focusId = null) {
+    const blur = document.getElementById('overview-blur');
+    const realWindows = document.querySelectorAll('.os-window:not(.in-overview)');
+
+    document.body.classList.remove('task-overview-active');
+
+    // 1. Show all real windows again
+    realWindows.forEach(win => {
+        win.style.visibility = 'visible';
+        win.style.pointerEvents = 'all';
+        // Note: left/top/width/height are exactly where the user left them!
+    });
+
+    // 2. Remove the overview (and all proxies inside it)
+    if (blur) {
+        blur.style.opacity = '0';
+        setTimeout(() => blur.remove(), 300);
+    }
+
+    // 3. Focus the selected window
+    if (focusId) {
+        this.focusWindow(focusId);
+    }
+}
+   
+    initGhostReaper() {
+        const CRITICAL_IDLE = 600000; // 10 Minutes in ms
+        
+        setInterval(() => {
+            // Only reap while the user is looking at the Overview
+            if (!document.body.classList.contains('task-overview-active')) return;
+
+            const now = Date.now();
+            const ghostWindows = document.querySelectorAll('.os-window.in-overview');
+
+            ghostWindows.forEach(win => {
+                const lastUsed = parseInt(win.dataset.lastUsed || now);
+                const idleTime = now - lastUsed;
+
+                // If idle for more than 10 mins, start auto-termination
+                if (idleTime > CRITICAL_IDLE && !win.classList.contains('terminating')) {
+                    this.reapProcess(win);
+                } else if (idleTime > (CRITICAL_IDLE * 0.8)) {
+                    // At 8 minutes, turn the badge red as a warning
+                    win.querySelector('.idle-badge')?.classList.add('critical');
+                }
+            });
+        }, 5000); // Check every 5 seconds
+    }
+
+    reapProcess(win) {
+        win.classList.add('terminating');
+        const appId = win.id.replace('win-', '');
+        
+        // Find dock icon to pulse it (reclaiming resources)
+        const dockIcon = document.querySelector(`.dock-icon[data-app-id="${appId}"]`);
+
+        setTimeout(() => {
+            if (dockIcon) {
+                dockIcon.classList.add('pulse-reception');
+                setTimeout(() => dockIcon.classList.remove('pulse-reception'), 600);
+            }
+            
+            this.closeApp(appId, win.id);
+            win.remove();
+            
+            console.log(`[Sovereign OS] Reclaimed resources from idle process: ${appId}`);
+        }, 2000); // Matches the 'ghostZap' animation duration
+    
+        // Trigger the Log
+        this.logSystemEvent(`RECLAIMED IDLE PROCESS: ${appId.toUpperCase()}`, 'critical');
+
+        setTimeout(() => {
+            // ... closeApp logic ...
+        }, 2000);
+    }
     launchApp(appId) {
+
+        // 1. OVERVIEW EXIT: If launching while in overview, exit it first
+        if (document.body.classList.contains('task-overview-active')) {
+            this.exitOverview(); 
+        }
 
         // TRIPWIRE: Check process count
         if (this.runningApps.size >= 10) {
@@ -1479,6 +1841,8 @@ exitOverview(focusId = null) {
             </div>`;
 
         workspace.appendChild(win);
+        // Call meter update
+        this.updateMemoryMeter();
         
         // --- RESTORED ANIMATION SEQUENCE ---
         requestAnimationFrame(() => {
@@ -1502,6 +1866,8 @@ exitOverview(focusId = null) {
         this.makeDraggable(win);
         this.injectAppContent(appId);
         win.dataset.lastUsed = Date.now();
+
+
     }
 
     /**
@@ -1604,18 +1970,24 @@ exitOverview(focusId = null) {
         let startLeft = 0, startTop = 0;
 
         const onDown = (e) => {
-            if (e.target.closest('.win-btn')) return;
-            dragging = true;
-            this.isDraggingWindow = true;
-            el.style.transition = 'none';
-            el.style.transform = 'none';
-            startX = e.clientX;
-            startY = e.clientY;
-            startLeft = el.offsetLeft;
-            startTop  = el.offsetTop;
-            try { el.setPointerCapture(e.pointerId); } catch (_) {}
-            e.preventDefault();
-        };
+    if (e.target.closest('.win-btn')) return;
+    if (el.classList.contains('in-overview')) return;
+
+    dragging = true;
+    this.isDraggingWindow = true;
+
+    // Use getComputedStyle to get the ACTUAL pixel position on the screen
+    const style = window.getComputedStyle(el);
+    startLeft = parseFloat(style.left);
+    startTop = parseFloat(style.top);
+    
+    startX = e.clientX;
+    startY = e.clientY;
+
+    el.style.transition = 'none'; // Essential for smooth dragging
+    try { el.setPointerCapture(e.pointerId); } catch (_) {}
+    e.preventDefault();
+};
 
         const onMove = (e) => {
     if (!dragging) return;
@@ -1659,6 +2031,7 @@ exitOverview(focusId = null) {
         el.addEventListener('pointermove', onMove, { passive: false });
         el.addEventListener('pointerup', onUp);
         el.addEventListener('pointercancel', onUp);
+    
     }
 
      checkDockCollision() {
@@ -1765,6 +2138,9 @@ exitOverview(focusId = null) {
         win.remove();
         this.checkDockCollision(); // Adjust the dock if needed
     }, 300);
+
+    // ... removed window update memory...
+    this.updateMemoryMeter(); 
 }
 
 // Ensure closeWindow also uses the correct Set syntax
@@ -2194,8 +2570,30 @@ triggerEscapeWarning() {
     console.log(`System Volume set to: ${value}%`);
 }
 
-
+//LOGS AT THE BOTTOM OF THE WORKSPACE
+ logSystemEvent(message, type = 'info') {
+    let container = document.getElementById('kernel-log-container');
     
+    // Create container if it doesn't exist
+    if (!container) {
+        container = document.createElement('div');
+        container.id = 'kernel-log-container';
+        document.getElementById('workspace').appendChild(container);
+    }
+
+    const entry = document.createElement('div');
+    entry.className = `log-entry ${type}`;
+    const timestamp = new Date().toLocaleTimeString([], { hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit' });
+    entry.innerHTML = `[${timestamp}] ${message}`;
+
+    container.appendChild(entry);
+
+    // Auto-remove after 4 seconds
+    setTimeout(() => {
+        entry.classList.add('log-fade-out');
+        setTimeout(() => entry.remove(), 500);
+    }, 4000);
+}   
 }
 
 

@@ -1,0 +1,322 @@
+/* --- 1. THE MAIN CONTAINER --- */
+#overview-blur {
+    position: fixed;
+    top: var(--top-bar-h) !important; 
+    left: var(--dock-width) !important; 
+    width: calc(100vw - var(--dock-width)) !important;
+    height: calc(100vh - var(--top-bar-h)) !important;
+    background: rgba(10, 10, 15, 0.96); 
+    backdrop-filter: blur(20px);
+    z-index: 9999;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    overflow: hidden;
+    border-top: 1px solid rgba(164, 69, 255, 0.2);
+}
+
+/* --- 2. BOTTOM FADE MASK --- */
+/* This creates the "Dissolve" effect at the bottom edge */
+#overview-blur::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    height: 80px;
+    background: linear-gradient(to top, rgba(10,10,15,1), rgba(10,10,15,0));
+    pointer-events: none; /* Allows clicking through the mask */
+    z-index: 100;
+}
+
+/* --- 3. HEADER & PURGE UI --- */
+#overview-search-wrap {
+    width: 100%;
+    padding: 30px 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 20px;
+    z-index: 101; /* Above the grid */
+    background: linear-gradient(to bottom, rgba(10,10,15,1) 80%, rgba(10,10,15,0));
+}
+
+#overview-search {
+    background: rgba(164, 69, 255, 0.1);
+    border: 1px solid rgba(164, 69, 255, 0.4);
+    color: #fff;
+    padding: 12px 25px;
+    border-radius: 20px;
+    width: 350px;
+    font-family: 'Monaco', monospace;
+    text-align: center;
+    transition: all 0.3s;
+}
+
+#overview-search:focus {
+    outline: none;
+    border-color: #00ff41;
+    box-shadow: 0 0 15px rgba(0, 255, 65, 0.3);
+}
+
+#purge-all-btn {
+    background: rgba(255, 68, 68, 0.15);
+    color: #ff4444;
+    border: 1px solid #ff4444;
+    padding: 8px 20px;
+    font-family: 'Consolas', monospace;
+    font-size: 11px;
+    cursor: pointer;
+    transition: all 0.3s;
+    letter-spacing: 2px;
+}
+
+#purge-all-btn:hover {
+    background: #ff4444;
+    color: #000;
+    box-shadow: 0 0 20px rgba(255, 68, 68, 0.5);
+}
+
+/* --- 4. THE GRID --- */
+#overview-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 30px;
+    width: 100%;
+    max-width: 1400px;
+    padding: 20px 40px 120px 40px; /* 120px bottom buffer */
+    overflow-y: auto;
+    box-sizing: border-box;
+    position: relative;
+}
+
+/* --- 5. ENCLAVE WINDOW THUMBNAILS --- */
+.os-window.in-overview {
+    position: relative !important;
+    top: 0 !important;
+    left: 0 !important;
+    transform: none !important; 
+    width: 100% !important;
+    height: 180px !important; 
+    border: 2px solid #a445ff !important;
+    background: #000;
+    overflow: hidden;
+}
+
+
+/* --- 7. IDLE BADGES --- */
+.idle-badge {
+    position: absolute;
+    bottom: 10px;
+    left: 10px;
+    background: rgba(0, 0, 0, 0.8);
+    color: #888;
+    padding: 4px 8px;
+    font-size: 10px;
+    font-family: 'Monaco', monospace;
+    border: 1px solid #444;
+    z-index: 10;
+}
+
+.ghost-process .idle-badge {
+    color: #ffcc00;
+    border-color: #ffcc00;
+}
+
+/* --- 8. SCROLLBAR --- */
+#overview-grid::-webkit-scrollbar { width: 4px; }
+#overview-grid::-webkit-scrollbar-thumb { background: #a445ff; }
+
+
+#overview-grid .os-window.in-overview {
+    position: relative !important;
+    width: 100% !important;
+    height: 180px !important;
+    border: 2px solid var(--accent-color);
+    background: #000;
+    cursor: pointer;
+    overflow: hidden;
+}
+
+/* Ensure the content inside the proxy isn't interactive */
+.in-overview .window-content {
+    pointer-events: none;
+    zoom: 0.5; /* Optional: Scale down the app content inside the thumb */
+}
+
+
+/* Positioning the confirmation inside the proxy */
+.proxy-confirm-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.85);
+    backdrop-filter: blur(4px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+    animation: fadeIn 0.2s ease;
+}
+
+.confirm-box {
+    text-align: center;
+    font-family: 'Monaco', monospace;
+    color: #ff4444;
+}
+
+.confirm-box p {
+    font-size: 12px;
+    margin-bottom: 10px;
+    letter-spacing: 1px;
+}
+
+.confirm-btns {
+    display: flex;
+    gap: 10px;
+    justify-content: center;
+}
+
+.confirm-btns button {
+    background: transparent;
+    border: 1px solid #ff4444;
+    color: #ff4444;
+    padding: 4px 12px;
+    cursor: pointer;
+    font-size: 10px;
+    transition: all 0.2s;
+}
+
+.confirm-btns button.yes:hover {
+    background: #ff4444;
+    color: white;
+}
+
+.confirm-btns button.no:hover {
+    background: white;
+    color: black;
+    border-color: white;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+
+/* Full screen overlay within the overview */
+#mass-purge-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background: rgba(20, 0, 0, 0.9);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 20000;
+    backdrop-filter: blur(10px);
+}
+
+.mass-confirm-box {
+    background: #000;
+    border: 1px solid #ff4444;
+    padding: 40px;
+    text-align: center;
+    box-shadow: 0 0 50px rgba(255, 68, 68, 0.2);
+    max-width: 400px;
+}
+
+.critical-text {
+    color: #ff4444;
+    font-family: 'Monaco', monospace;
+    margin-bottom: 15px;
+    text-shadow: 0 0 10px #ff4444;
+}
+
+.mass-confirm-box {
+    position: relative;
+    overflow: hidden;
+    background: #050000;
+    border: 3px double #ff4444;
+    padding: 50px;
+}
+
+.mass-confirm-btns {
+    display: flex;
+    gap: 20px;
+    justify-content: center;
+}
+
+.mass-confirm-btns button {
+    padding: 12px 24px;
+    font-family: 'Monaco', monospace;
+    cursor: pointer;
+    background: transparent;
+    transition: all 0.3s;
+}
+
+.confirm-purge {
+    border: 1px solid #ff4444;
+    color: #ff4444;
+}
+
+.confirm-purge:hover {
+    background: #ff4444;
+    color: #000;
+    box-shadow: 0 0 20px #ff4444;
+}
+
+.cancel-purge {
+    border: 1px solid #fff;
+    color: #fff;
+}
+
+.cancel-purge:hover {
+    background: #fff;
+    color: #000;
+}
+
+#purge-countdown {
+    font-size: 85px;
+    font-weight: 900;
+    color: #00ff00; /* Starts green for "Safe" */
+    text-shadow: 0 0 25px currentColor;
+    margin: 15px 0;
+    font-family: 'Courier New', Courier, monospace;
+    transition: all 0.3s ease;
+}
+
+@keyframes pulseCount {
+    0% { transform: scale(1); opacity: 1; }
+    50% { transform: scale(1.1); opacity: 0.8; }
+    100% { transform: scale(1); opacity: 1; }
+}
+
+.mass-confirm-box {
+    border: 2px solid #ff4444;
+    padding: 60px;
+    background: radial-gradient(circle, #200 0%, #000 100%);
+}
+
+
+/* Adding a scanning line effect */
+.mass-confirm-box::after {
+    content: "";
+    position: absolute;
+    top: -100%;
+    left: 0;
+    width: 100%;
+    height: 10px;
+    background: rgba(255, 68, 68, 0.2);
+    box-shadow: 0 0 15px #ff4444;
+    animation: scanLine 4s linear infinite;
+}
+
+@keyframes scanLine {
+    0% { top: -10%; }
+    100% { top: 110%; }
+}

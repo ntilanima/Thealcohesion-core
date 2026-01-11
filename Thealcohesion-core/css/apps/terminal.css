@@ -1,37 +1,124 @@
 /* Terminal App Styles:terminal-app-window, terminal-output, terminal-input: #vpu-terminal, term-output, input-line */
-#terminal-app-window {
-    width: 600px;
-    height: 400px;
+/* --- SOVEREIGN TERMINAL UI --- */
+#vpu-terminal {
+    background: #000;
+    color: #00ff41;
+    font-family: 'Consolas', 'Monaco', 'Lucida Console', 'Courier New', monospace !important;
+    height: 100%;
     display: flex;
     flex-direction: column;
-    background: black;
-    border-radius: 8px;
-    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
-    overflow: hidden;
-}
-#terminal-header {
-    background: var(--ubuntu-purple);
-    color: white;
-    padding: 15px;
-    font-size: 20px;
-    text-align: center;
-}
-#terminal-output {
-    flex-grow: 1;
-    padding: 15px;
-    overflow-y: auto;
-}
-#terminal-input {
-    padding: 15px;
-}
-#terminal-input input {
-    width: calc(100% - 30px);
     padding: 10px;
-    border: none;
-    border-radius: 6px;
-    font-size: 16px;
-    background: #222;
-    color: white;
+    box-sizing: border-box;
+    overflow: hidden; 
+    animation: terminal-flicker 0.2s infinite;
+    position: relative;
 }
+
+#vpu-terminal #term-output {
+    flex: 1;
+    /* Fluid scaling + Zoom transition */
+    font-size: clamp(9px, 1.5vw, 14px); 
+    transition: font-size 0.2s ease-out;
+    
+    /* Alignment & Fit */
+    white-space: pre; 
+    line-height: 1.1;
+    letter-spacing: -0.5px;
+    
+    /* Scrolling */
+    overflow-y: auto;
+    overflow-x: auto;
+    scrollbar-width: thin;
+    scrollbar-color: #004411 #000;
+    
+    /* Layering for Matrix */
+    position: relative;
+    z-index: 2;
+}
+
+/* Chrome/Safari Scrollbar */
+#vpu-terminal #term-output::-webkit-scrollbar { width: 6px; }
+#vpu-terminal #term-output::-webkit-scrollbar-track { background: #000; }
+#vpu-terminal #term-output::-webkit-scrollbar-thumb { background: #004411; border-radius: 3px; }
+
+/* Input & Interaction */
+#vpu-terminal .input-line {
+    display: flex;
+    position: relative;
+    z-index: 2;
+    font-size: clamp(10px, 1.5vw, 14px);
+    gap: 10px;
+}
+
+#vpu-terminal input {
+    background: transparent;
+    border: none;
+    outline: none;
+    color: #00ff41;
+    font-family: inherit;
+    font-size: inherit;
+    caret-color: #00ff41;
+    width: 100%;
+    min-width: 0;
+}
+
+/* Visual Effects: Glow & Flickers */
+#vpu-terminal span[style*="#a445ff"] { text-shadow: 0 0 8px rgba(164, 69, 255, 0.6); }
+#vpu-terminal .output-area, #vpu-terminal span, #vpu-terminal input {
+    text-shadow: 0 0 5px rgba(0, 255, 65, 0.4);
+}
+
+@keyframes terminal-flicker {
+    0% { opacity: 0.98; }
+    5% { opacity: 0.95; }
+    10% { opacity: 0.98; }
+    100% { opacity: 1; }
+}
+
+#vpu-terminal canvas {
+    position: absolute;
+    top: 0; left: 0;
+    z-index: 1;
+    pointer-events: none;
+}
+
+/* --- RESPONSIVE ADJUSTMENTS FOR SMALL SCREENS --- */
+@media (max-width: 768px) {
+    #term-output {
+        font-size: 11px !important;
+        white-space: pre-wrap !important; /* Forces text to wrap instead of stretching window */
+        word-break: break-all;
+    }
+    
+    .os-window {
+        /* Prevents the window from expanding beyond its boundaries */
+        max-width: calc(100vw - 95px) !important; 
+    }
+}
+
+/* MOBILE WINDOW OVERRIDE */
+@media (max-width: 768px) {
+    .os-window {
+        width: 100% !important;
+        height: calc(100% - 40px) !important; /* Leave room for top bar */
+        border-radius: 20px 20px 0 0 !important; /* Rounded tops like mobile apps */
+        box-shadow: 0 -5px 15px rgba(0,0,0,0.5);
+        transition: transform 0.3s cubic-bezier(0.1, 0.7, 1.0, 0.1), z-index 0s;
+        max-width: calc(100vw - 10px);
+        max-height: calc(100vh - 40px);
+        border-radius: 14px;
+    }
+}
+
+@media (max-width: 430px) {
+    .os-window {
+        width: 100% !important;
+        height: calc(100% - 40px) !important; /* Leave room for top bar */
+        border-radius: 20px 20px 0 0 !important; /* Rounded tops like mobile apps */
+        box-shadow: 0 -5px 15px rgba(0,0,0,0.5);
+        transition: transform 0.3s cubic-bezier(0.1, 0.7, 1.0, 0.1), z-index 0s;
+    }
+}
+
 
 /* Additional terminal app styles can be added here */

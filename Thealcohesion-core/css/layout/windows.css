@@ -4,28 +4,53 @@
     0%, 100% { opacity: 1; }
     50% { opacity: 0.95; }
 }   
-/* --- OS WINDOW STYLES --- */
+/* --- WINDOW SYSTEM (Unified & Optimized) --- */
 .os-window {
-    background: rgba(255, 255, 255, 0.9);
-    border: 1px solid rgba(0, 0, 0, 0.1);
-    border-radius: 8px;
-    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
     position: absolute;
-    overflow: hidden;
     display: flex;
     flex-direction: column;
+    background: rgba(10, 10, 12, 0.85);
+    backdrop-filter: blur(20px) saturate(160%);
+    border: 1px solid rgba(164, 69, 255, 0.3);
+    border-radius: 12px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+    box-sizing: border-box;
+    overflow: hidden;
+    z-index: 100;
     animation: debian-launch 0.4s ease forwards;
+    user-select: none;  /* Prevents text selection while dragging */
+    -webkit-user-select: none;
+    touch-action: none;
+    will-change: left, top; /* Optimizes for mobile GPU */
+    /* Remove fixed top/left here to let JS handle stagger */
 }
+
 .window-header {
-    background: var(--ubuntu-purple);
-    color: white;
-    padding: 10px;
-    font-size: 16px;
+    height: 42px;
+    background: rgba(255, 255, 255, 0.03);
     display: flex;
     justify-content: space-between;
     align-items: center;
-    cursor: move;
+    padding: 0 16px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    touch-action: none;
+    user-select: none;
+    -webkit-user-select: none;
+    cursor: grab;
 }
+
+.window-header:active {
+    cursor: grabbing;
+}
+
+
+.title {
+    font-size: 0.85rem;
+    font-weight: 500;
+    letter-spacing: 0.5px;
+    color: rgba(255, 255, 255, 0.9);
+}
+
 .window-header .window-controls {
     display: flex;
     gap: 10px;
@@ -49,7 +74,229 @@
     flex-grow: 1;
     padding: 15px;
     overflow: auto;
-    background: white;
-    color: black;
+    background: rgb(1, 0, 0);
 }
 /* Additional window styles can be added here */
+
+
+/* --- LAUNCH ANIMATION FOR WINDOWS --- */
+@keyframes debian-launch {
+    0% {
+        opacity: 0;
+        transform: scale(0.92) translateY(10px);
+        filter: blur(4px);
+    }
+    100% {
+        opacity: 1;
+        transform: scale(1) translateY(0);
+        filter: blur(0);
+    }
+}
+
+.os-window {
+    will-change: left, top, opacity;
+    animation: fade-in 0.2s ease forwards;
+}
+
+@keyframes fade-in {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+
+/* Minimize (Shrink to Dock) */
+.os-window.minimizing {
+pointer-events: none;
+    opacity: 0;
+    /* Scale down and shift slightly left to match the dock direction */
+    transform: scale(0.2) translateX(-200px);
+    transition: 
+        transform 0.4s cubic-bezier(0.6, -0.28, 0.735, 0.045),
+        opacity 0.3s ease;
+}
+
+@keyframes damian-minimize {
+    to {
+        opacity: 0;
+        transform: scale(0.2) translateY(100px);
+    }
+}
+
+
+/* Maximize logic */
+.os-window.maximized {
+    width: 100% !important;
+    height: 100% !important;
+    top: 0 !important;
+    left: 0 !important;
+    border-radius: 0;
+}
+
+.win-btn:hover {
+    transform: scale(1.2);
+}
+
+.window-controls {
+    display: flex;
+    gap: 8px;
+}
+
+/* Industrial Style Window Buttons */
+.win-btn {
+    width: 32px;  /* Larger size as requested */
+    height: 28px;
+    border-radius: 4px; /* Industrial square-ish look */
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    color: #eee;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s ease;
+}
+
+/* Specific Industrial Hover Colors */
+.win-btn.hide:hover { background: rgba(255, 255, 255, 0.15); }
+.win-btn.expand:hover { background: rgba(255, 255, 255, 0.15); }
+.win-btn.close:hover { background: #e95420; color: white; border-color: #ff6e3b; }
+
+/* Closing Animation Class */
+.os-window.closing {
+    transform: scale(0.9);
+    opacity: 0;
+    transition: 0.3s cubic-bezier(0.6, -0.28, 0.735, 0.045);
+}
+
+.window-content {
+    flex-grow: 1;
+    overflow: auto;
+    color: #fff;
+    padding: 0; /* Added padding for content readability */
+}
+
+/* --- RESPONSIVE ADJUSTMENTS --- */
+@media (max-width: 600px) {
+    .os-window {
+        width: 95% !important;
+        height: 85% !important;
+        min-width: 95%;
+    }
+}
+
+
+/* --- RESPONSIVE WINDOW ADJUSTMENTS XS (320–479) --- */
+@media (max-width: 479px) {
+    :root {
+        --app-size: 48px;
+    }
+
+    .window-header {
+        height: 52px;
+    }
+
+    #side-dock {
+        width: 56px;
+    }
+}
+
+/* --- RESPONSIVE WINDOW ADJUSTMENTS SM (480–767) --- */
+@media (min-width: 480px) and (max-width: 767px) {
+    :root {
+        --app-size: 52px;
+    }
+}
+
+/* --- RESPONSIVE WINDOW ADJUSTMENTS MD (768–1199) --- */
+@media (min-width: 768px) and (max-width: 1199px) {
+    :root {
+        --app-size: 56px;
+    }
+}
+
+
+/* --- RESPONSIVE WINDOW ADJUSTMENTS LG (1200+) --- */
+@media (min-width: 1200px) {
+    :root {
+        --app-size: 64px;
+    }
+}
+
+
+/* Maximize snap animation */
+.os-window.maximized {
+    top: 0 !important;
+    left: 0 !important;
+    width: 100% !important;
+    height: 100% !important;
+    border-radius: 0;
+    transition: all 0.3s cubic-bezier(0.2, 1, 0.3, 1);
+}
+
+/* Snap Preview Overlay */
+#snap-preview {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(164, 69, 255, 0.1); /* Your accent color */
+    border: 2px solid var(--running-accent);
+    backdrop-filter: blur(4px);
+    z-index: 1; /* Behind the windows but in the workspace */
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.2s ease, transform 0.2s ease;
+    border-radius: 8px;
+    display: none;
+}
+
+#snap-preview.active {
+    display: block;
+    opacity: 1;
+}
+
+/* Snap positions */
+.os-window.snap-left {
+    top: 0 !important;
+    left: 0 !important;
+    width: 50% !important;
+    height: 100% !important;
+    border-radius: 0 !important;
+}
+    
+.os-window.snap-right {
+    top: 0 !important;
+    left: 50% !important;
+    width: 50% !important;
+    height: 100% !important;
+    border-radius: 0 !important;
+}
+
+.os-window.snap-top {
+    top: 50% !important;
+    left: 0 !important;
+    width: 100% !important;
+    height: 100% !important;
+    border-radius: 0 !important;
+}
+.os-window.snap-bottom {
+    top: 50vh !important;
+    left: 0 !important;
+    width: 100vw !important;
+    height: 50vh !important;
+    border-radius: 0 !important;
+}
+
+
+/* Ensure windows in the workspace never inherit Grid properties */
+#workspace .os-window {
+    position: absolute !important;
+    display: flex !important;
+    /* This prevents the window from being trapped by grid-area styles */
+    grid-area: auto !important; 
+}
+
+/* Specific class to handle the smooth return */
+.os-window.returning {
+    transition: all 0.4s cubic-bezier(0.165, 0.84, 0.44, 1) !important;
+}
