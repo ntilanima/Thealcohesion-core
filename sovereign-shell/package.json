@@ -1,0 +1,19 @@
+{
+  "name": "sovereign-shell",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+  "dev": "serve src -p 1420",
+  "build": "echo 'No build step needed for vanilla JS'",
+  "tauri": "tauri"
+},
+  "devDependencies": {
+    "@tauri-apps/cli": "^2",
+    "serve": "^14.2.5"
+  },
+  "dependencies": {
+    "xterm": "^5.3.0",
+    "xterm-addon-webgl": "^0.16.0"
+  }
+}
