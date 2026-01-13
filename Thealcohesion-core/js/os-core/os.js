@@ -10,6 +10,7 @@ import { SovereignVFS } from '../apps/vfs.js'; // Ensure VFS is imported for sec
 import { startBootSequence } from './boot.js'; // Refined boot sequence
 class TLC_Kernel {
     constructor() {
+        this.isTilingActive = false;
         this.isDraggingWindow = false;
         this.runningApps = new Set(); // Track active processes
         this.isBooted = false;
@@ -25,6 +26,22 @@ class TLC_Kernel {
         // Ensure we listen for the "Escape" key to toggle overview
         window.addEventListener('keydown', (e) => {
             if (e.key === 'Escape') this.toggleOverview();
+            if (e.altKey && e.code === 'KeyG') {
+        e.preventDefault();
+        this.isTilingActive = !this.isTilingActive;
+        
+        if (this.isTilingActive) {
+            this.updateTilingGrid();
+        } else {
+            // Restore Windows to floating state
+            document.querySelectorAll('.os-window').forEach(win => {
+                win.style.transition = 'all 0.5s ease';
+                win.style.width = "clamp(320px, 65vw, 900px)";
+                win.style.height = "clamp(300px, 65vh, 720px)";
+            });
+            this.logSystemEvent("Tiling Engine: DISENGAGED", "warn");
+        }
+    }
         });
 
         // --- MEMORY RESIZE SENSOR ---
@@ -855,6 +872,22 @@ async unlockSystem() {
                 // this.lockSystem(); 
             }
         });
+
+        // Initialize the Preview Layer for window
+    if (!document.getElementById('snap-preview')) {
+        const preview = document.createElement('div');
+        preview.id = 'snap-preview';
+        preview.style.cssText = `
+            position: absolute;
+            background: rgba(0, 255, 65, 0.05);
+            border: 2px dashed rgba(0, 255, 65, 0.3);
+            pointer-events: none;
+            display: none;
+            z-index: 50;
+            transition: all 0.2s cubic-bezier(0.2, 0.8, 0.2, 1);
+        `;
+        workspace.appendChild(preview);
+    }
     }
 
     async provisionInitialFiles() {
@@ -1062,6 +1095,38 @@ renderMenuContent(menu, target) {
                 { label: '📝 Task Manager', action: () => this.launchApp('taskman') }
             ]
         },
+
+        {
+        section: "WORKSPACE_LAYOUT",
+        items: [
+            { 
+                label: this.isTilingActive ? '🟢 Tiling: ACTIVE' : '⚪ Tiling: FLOATING', 
+                kbd: 'Alt+G',
+                action: () => {
+                    this.isTilingActive = !this.isTilingActive;
+                    if (this.isTilingActive) {
+                        this.updateTilingGrid();
+                    } else {
+                        // Reset windows to floating state
+                        document.querySelectorAll('.os-window').forEach(win => {
+                            win.style.transition = 'all 0.4s ease';
+                            win.style.width = "clamp(320px, 65vw, 900px)";
+                            win.style.height = "clamp(300px, 65vh, 720px)";
+                        });
+                        this.logSystemEvent("Layout: Floating Mode Restored", "info");
+                    }
+                }
+            },
+            {
+                label: '📐 Layout Options',
+                visible: this.isTilingActive,
+                children: [
+                    { label: 'Master-Stack (Default)', action: () => { this.updateTilingGrid(); } },
+                    { label: 'Force Refresh Grid', action: () => this.updateTilingGrid() }
+                ]
+            }
+        ]
+    },
         {
             section: "VFS_OPERATIONS",
             items: [
@@ -1389,6 +1454,40 @@ suspendSession() {
 }
     setupTopBarInteractions() {
         const topBarTime = document.getElementById('top-bar-time');
+        
+        // --- ADD THIS SECTION BELOW ---
+    // This finds the container holding your time/status icons
+    const tBarRight = topBarTime?.parentElement; 
+    
+    if (tBarRight) {
+        const tilingIndicator = document.createElement('div');
+        tilingIndicator.id = 'tiling-status-hub';
+        tilingIndicator.className = 'status-item'; // Matches your Top Bar styling
+        tilingIndicator.style.display = 'flex';
+        tilingIndicator.style.alignItems = 'center';
+        tilingIndicator.style.gap = '5px';
+        tilingIndicator.style.cursor = 'pointer';
+        tilingIndicator.style.marginRight = '15px';
+        
+        tilingIndicator.title = "Workspace Layout Engine [Alt+G]";
+        tilingIndicator.innerHTML = `
+            <svg id="tiling-icon" viewBox="0 0 24 24" width="14" height="14" stroke="#a445ff" fill="none" stroke-width="2">
+                <rect x="3" y="3" width="18" height="18" rx="2" opacity="0.3"></rect>
+                <path d="M12 3v18M3 12h18" stroke-dasharray="2 2"></path>
+            </svg>
+            <span id="tiling-label" style="font-size: 10px; color: #a445ff; font-weight: bold;">FLOAT</span>
+        `;
+        
+        tilingIndicator.onclick = () => {
+            this.isTilingActive = !this.isTilingActive;
+            this.updateTilingGrid();
+        };
+
+        // Put it before the time
+        tBarRight.insertBefore(tilingIndicator, topBarTime);
+    }
+    // --- END OF ADDITION ---
+
         if (topBarTime) {
             topBarTime.style.cursor = 'pointer';
             topBarTime.onclick = async () => {
@@ -1754,6 +1853,12 @@ exitOverview(focusId = null) {
         }, 2000);
     }
     launchApp(appId) {
+        if (this.isTilingActive) {
+        this.showSnapPreview(); // Show where it will go
+        setTimeout(() => {
+            document.getElementById('snap-preview').style.display = 'none';
+        }, 500);
+    }
 
         // 1. OVERVIEW EXIT: If launching while in overview, exit it first
         if (document.body.classList.contains('task-overview-active')) {
@@ -1792,18 +1897,26 @@ exitOverview(focusId = null) {
         win.id = winId;
 
         // --- RESTORED GOLD GEOMETRY ---
+       // --- UPDATED CASCADE GEOMETRY ---
+        const activeCount = this.runningApps.size - 1; // Number of other windows
+        const offset = activeCount * 25; // 25px offset per window
+
         win.style.position = "absolute"; 
-        win.style.top = "10px";
-        win.style.left = "5px";
         
-        // Use clamp to ensure windows don't get too small or too large
+        // Start 5px below the Top Bar, then add the cascade offset
+        // We use 'px' values for the initial spawn to ensure stability
+        const spawnTop = 40 + 5 + offset; // 40 (TopBar) + 5 (Gap) + Cascade
+        const spawnLeft = 75 + 5 + offset; // 75 (Dock) + 5 (Gap) + Cascade
+
+        win.style.top = `${spawnTop}px`;
+        win.style.left = `${spawnLeft}px`;
+        
+        // Maintain your clamp logic for size
         win.style.width = "clamp(320px, 65vw, 900px)";
         win.style.height = "clamp(300px, 65vh, 720px)";
 
-        // Responsive mobile override
-        if (window.innerWidth < 480) {
-            win.style.width = "calc(100vw - (var(--dock-width, 70px) + 10px))";
-        }
+        // Ensure new window is on top
+        win.style.zIndex = this.getTopZIndex();
 
         // NEW: SECURITY AUDIT LOG FOR SENSITIVE APPS
         if (appId === 'syslog') {
@@ -1841,6 +1954,7 @@ exitOverview(focusId = null) {
             </div>`;
 
         workspace.appendChild(win);
+        this.updateTilingGrid();
         // Call meter update
         this.updateMemoryMeter();
         
@@ -1869,6 +1983,158 @@ exitOverview(focusId = null) {
 
 
     }
+
+    /**
+ * RE-ALIGN ENCLAVES (Tiling Engine)
+ * Automatically organizes open windows into a Master-Stack or Quad-Grid.
+ */
+updateTilingGrid() {
+    const label = document.getElementById('tiling-label');
+    const icon = document.getElementById('tiling-icon');
+    const ws = document.getElementById('workspace');
+    
+    // 1. Filter out proxies (Task Overview) and minimized windows
+    const activeWins = Array.from(ws.querySelectorAll('.os-window:not(.minimized):not(.in-overview)'));
+    const count = activeWins.length;
+
+    // 2. Handle Deactivated State
+    if (!this.isTilingActive) {
+        if (label) {
+            label.innerText = "FLOAT";
+            label.style.color = "#a445ff"; // Purple
+        }
+        if (icon) icon.setAttribute('stroke', '#a445ff');
+        
+        activeWins.forEach(win => {
+            win.style.transition = 'all 0.4s ease';
+            // Return to natural floating state
+            win.style.width = "clamp(320px, 65vw, 900px)";
+            win.style.height = "clamp(300px, 65vh, 720px)";
+        });
+        return;
+    }
+
+    // 3. Update UI for Active Tiling
+    if (label) {
+        label.innerText = count >= 4 ? "QUAD" : "STACK";
+        label.style.color = "#00ff41"; // Green
+    }
+    if (icon) icon.setAttribute('stroke', '#00ff41');
+
+    if (count === 0) return;
+
+    // 4. Geometry Constants (Respecting Dock and Top Bar)
+    const dockW = 75;  
+    const topBarH = 40; 
+    const gap = 10;
+    const usableW = ws.clientWidth - dockW - (gap * 2);
+    const usableH = ws.clientHeight - topBarH - (gap * 2);
+
+    // 5. Apply Layouts
+    activeWins.forEach(win => {
+        win.style.transition = 'all 0.4s cubic-bezier(0.165, 0.84, 0.44, 1)';
+        win.classList.remove('maximized'); 
+    });
+
+    
+    if (count < 4) {
+        // MASTER-STACK MODE
+        const masterW = count === 1 ? usableW : usableW * 0.65;
+        const stackW = usableW - masterW - gap;
+
+        activeWins.forEach((win, i) => {
+            if (i === 0) {
+                // Master Enclave
+                win.style.left = `${dockW + gap}px`;
+                win.style.top = `${topBarH + gap}px`;
+                win.style.width = `${masterW}px`;
+                win.style.height = `${usableH}px`;
+            } else {
+                // Stack Enclaves
+                const stackH = (usableH - (gap * (count - 2))) / (count - 1);
+                win.style.left = `${dockW + masterW + (gap * 2)}px`;
+                win.style.top = `${topBarH + gap + ((i - 1) * (stackH + gap))}px`;
+                win.style.width = `${stackW}px`;
+                win.style.height = `${stackH}px`;
+            }
+        });
+    } else {
+        // QUAD-GRID MODE (2-column layout)
+        
+        const cols = 2;
+        const rows = Math.ceil(count / cols);
+        const cellW = (usableW - gap) / cols;
+        const cellH = (usableH - (gap * (rows - 1))) / rows;
+
+        activeWins.forEach((win, i) => {
+            const row = Math.floor(i / cols);
+            const col = i % cols;
+            win.style.left = `${dockW + gap + (col * (cellW + gap))}px`;
+            win.style.top = `${topBarH + gap + (row * (cellH + gap))}px`;
+            win.style.width = `${cellW}px`;
+            win.style.height = `${cellH}px`;
+        });
+    }
+
+    this.logSystemEvent(`Layout Synchronized: ${count} Enclaves Active`, 'info');
+}
+showSnapPreview(targetIndex = null) {
+    const preview = document.getElementById('snap-preview');
+    const ws = document.getElementById('workspace');
+    if (!preview || !this.isTilingActive) return;
+
+    // 1. Get current active windows + 1 (the one being dragged or launched)
+    const activeWins = Array.from(ws.querySelectorAll('.os-window:not(.minimized)'));
+    const count = activeWins.length + (targetIndex === null ? 1 : 0);
+    
+    // 2. Constants matching your updateTilingGrid
+    const dockW = 75;
+    const topBarH = 40;
+    const gap = 10;
+    const usableW = ws.clientWidth - dockW - (gap * 2);
+    const usableH = ws.clientHeight - topBarH - (gap * 2);
+
+    // 3. Calculate the "Predicted" geometry for the new slot
+    let geom = { left: 0, top: 0, width: 0, height: 0 };
+
+    if (count < 4) {
+        const masterW = count === 1 ? usableW : usableW * 0.65;
+        const stackW = usableW - masterW - gap;
+        
+        // If it's the first window, preview the Master slot
+        if (count === 1) {
+            geom = { left: dockW + gap, top: topBarH + gap, width: masterW, height: usableH };
+        } else {
+            // Preview the next available stack slot
+            const stackH = (usableH - (gap * (count - 2))) / (count - 1);
+            geom = { 
+                left: dockW + masterW + (gap * 2), 
+                top: topBarH + gap + ((count - 2) * (stackH + gap)), 
+                width: stackW, 
+                height: stackH 
+            };
+        }
+    } else {
+        // Quad Grid Preview logic
+        const cellW = (usableW - gap) / 2;
+        const cellH = (usableH - gap) / 2; // Simplified for 2x2
+        const row = Math.floor((count - 1) / 2);
+        const col = (count - 1) % 2;
+        geom = { 
+            left: dockW + gap + (col * (cellW + gap)), 
+            top: topBarH + gap + (row * (cellH + gap)), 
+            width: cellW, 
+            height: cellH 
+        };
+    }
+
+    // 4. Apply to Preview Element
+    preview.style.display = 'block';
+    preview.style.left = `${geom.left}px`;
+    preview.style.top = `${geom.top}px`;
+    preview.style.width = `${geom.width}px`;
+    preview.style.height = `${geom.height}px`;
+}
 
     /**
      * UPDATED INJECTOR: This version combines hardcoded routes 
@@ -2017,6 +2283,15 @@ exitOverview(focusId = null) {
     el.style.top = `${newTop}px`;
     this.checkDockCollision(); // Call the collision logic here
     e.preventDefault();
+
+    if (this.isTilingActive) {
+        // If window is dragged near the top/left, show the grid intention
+        if (e.clientX < 150) {
+            this.showSnapPreview(0); // Show master slot preview
+        } else {
+            document.getElementById('snap-preview').style.display = 'none';
+        }
+    }
 };
 
         const onUp = () => {
@@ -2036,7 +2311,7 @@ exitOverview(focusId = null) {
 
      checkDockCollision() {
     const windows = document.querySelectorAll('.os-window');
-    const threshold = 100; // Pixels from left edge
+    const threshold = 70; // Pixels from left edge
     let shouldHide = false;
 
     windows.forEach(win => {
@@ -2137,10 +2412,24 @@ exitOverview(focusId = null) {
     setTimeout(() => {
         win.remove();
         this.checkDockCollision(); // Adjust the dock if needed
+        this.updateTilingGrid();
     }, 300);
 
     // ... removed window update memory...
     this.updateMemoryMeter(); 
+    this.runningApps.delete(appId);
+    this.bootShell();
+
+    win.style.opacity = '0';
+    win.style.transform = 'scale(0.95)';
+
+    setTimeout(() => {
+        win.remove();
+        // FORCE Dock check now that the window is physically gone
+        this.updateDockSafety(); 
+        this.checkDockCollision();
+        if (this.isTilingActive) this.updateTilingGrid();
+    }, 200);
 }
 
 // Ensure closeWindow also uses the correct Set syntax
@@ -2154,16 +2443,30 @@ closeWindow(appId) {
 
 
     minimizeWindow(id) {
-        const el = document.getElementById(id);
-        if (el) {
-            el.classList.add('minimizing');
-            setTimeout(() => {
-                el.style.display = 'none';
-                el.classList.remove('minimizing');
-                this.updateDockSafety();
-            }, 400);
-        }
-    }
+    const el = document.getElementById(id);
+    if (!el) return;
+
+    // 1. Force state cleanup
+    el.classList.add('minimizing');
+    el.classList.remove('maximized'); // Crucial for dock safety
+
+    // 2. Immediate visual squash (The animation)
+    el.style.transform = "scale(0.8) translateY(40px)";
+    el.style.opacity = "0";
+    el.style.pointerEvents = "none";
+
+    // 3. Physical hide after animation completes
+    setTimeout(() => {
+        el.style.display = 'none'; // Now we can safely remove from flow
+        el.classList.remove('minimizing');
+        
+        // 4. Update the system state
+        this.updateDockSafety();
+        if (this.isTilingActive) this.updateTilingGrid();
+        
+        this.logSystemEvent(`Minimized: ${id.replace('win-', '')}`, 'info');
+    }, 300); 
+}
 
     getTopZIndex() {
     const windows = document.querySelectorAll('.os-window');
@@ -2178,26 +2481,41 @@ closeWindow(appId) {
     toggleMaximize(id) {
         const el = document.getElementById(id);
         if (!el) return;
+        // If we maximize a window, tiling should probably suspend for that window
+    if (!el.classList.contains('maximized') && this.isTilingActive) {
+        this.logSystemEvent("Tiling suspended for maximized enclave", "warn");
+    }
         el.classList.toggle('maximized');
+        // If we un-maximize and tiling is on, snap it back
+    if (!el.classList.contains('maximized') && this.isTilingActive) {
+        this.updateTilingGrid();
+    }
         this.updateDockSafety();
     }
 
     updateDockSafety() {
-        const dock = document.getElementById('side-dock');
-        const osRoot = document.getElementById('os-root');
-        const windows = document.querySelectorAll('.os-window:not(.closing):not(.minimizing)');
-        const shouldHide = [...windows].some(win => win.classList.contains('maximized'));
+    const osRoot = document.getElementById('os-root');
+    const dock = document.getElementById('side-dock');
+    
+    // Check ONLY for windows that are currently visible AND maximized
+    const visibleMaximized = document.querySelectorAll('.os-window.maximized:not([style*="display: none"])');
+    
+    const shouldHide = visibleMaximized.length > 0;
 
-        if (shouldHide) {
-            osRoot.classList.add('dock-hidden');
+    if (shouldHide) {
+        osRoot.classList.add('dock-hidden');
+        if (dock) {
             dock.style.opacity = '0';
             dock.style.pointerEvents = 'none';
-        } else {
-            osRoot.classList.remove('dock-hidden');
+        }
+    } else {
+        osRoot.classList.remove('dock-hidden');
+        if (dock) {
             dock.style.opacity = '1';
             dock.style.pointerEvents = 'auto';
         }
     }
+}
 
     getTopZIndex() {
         const wins = document.querySelectorAll('.os-window');
@@ -2211,15 +2529,23 @@ closeWindow(appId) {
 
     focusWindow(winId) {
     const el = document.getElementById(winId);
-    if (el) {
-        // Ensure the window is visible if it was previously minimized
-        el.style.display = 'block'; 
-        el.style.zIndex = this.getTopZIndex();
-        
-        // Optional: remove any 'minimizing' classes if you use them for animations
-        el.classList.remove('minimizing');
+    if (!el) return;
+
+    // Restore visibility
+    if (el.style.display === 'none') {
+        el.style.display = 'block';
+        requestAnimationFrame(() => {
+            el.style.transform = "scale(1) translateY(0)";
+            el.style.opacity = "1";
+            el.style.pointerEvents = "all";
+        });
     }
-    win.dataset.lastUsed = Date.now();
+
+    el.style.zIndex = this.getTopZIndex();
+    el.dataset.lastUsed = Date.now();
+    
+    // If tiling is on, snapping should happen automatically
+    if (this.isTilingActive) this.updateTilingGrid();
 }
 
     /**

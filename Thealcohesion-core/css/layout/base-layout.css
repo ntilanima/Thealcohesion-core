@@ -5,7 +5,7 @@
     --ubuntu-dark-aubergine: #2c001e;
     --running-accent: #a445ff; /* Sovereign Purple */
     --matrix-green: #00ff41;
-    --top-bar-h: 35px;
+    --top-bar-h: clamp(32px, 2vh + 20px, 35px); /*35px*/
     --font-ubuntu: 'Ubuntu', 'Cantarell', sans-serif;
     --glass-bg: rgba(255, 255, 255, 0.05);
     --app-size: clamp(48px, 6vh, 64px); /* Optimized for mobile/desktop scaling */

@@ -1,6 +1,6 @@
 export const registry = [
     // CORE SYSTEM APPS
-    { id: 'terminal', name: 'Terminal', icon: '📟', file: 'apps/terminal.js' },
+    { id: 'terminal', name: 'Terminal', icon: '📟', file: '../apps/terminal.js' },
     { id: 'files', name: 'Files', icon: '📁', file: 'apps/vfs.js' },
     { id: 'browser', name: 'Web', icon: '🌐', file: 'apps/browser.js' },
     { id: 'vscode', name: 'Code Editor', icon: '💻',file: './apps/vscode.js'},

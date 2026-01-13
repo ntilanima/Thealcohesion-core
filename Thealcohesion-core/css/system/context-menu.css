@@ -143,3 +143,16 @@ kbd {
     animation: battery-pulse 1s infinite;
 }
 
+/* Add to your Context Menu CSS */
+
+/* Highlight active toggle in the menu */
+.menu-item[data-label^="🟢"] {
+    color: #00ff41;
+    text-shadow: 0 0 8px rgba(0, 255, 65, 0.4);
+}
+
+/* Ensure the grid transition doesn't conflict with dragging */
+.os-window.tiling-transition {
+    transition: all 0.4s cubic-bezier(0.165, 0.84, 0.44, 1) !important;
+}
+

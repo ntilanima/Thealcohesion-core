@@ -18,11 +18,18 @@ window.vpu = {
     }
 };
 
+let osReady = false;
+
+// Simulate kernel readiness after intro animation
+setTimeout(() => {
+    osReady = true;
+    console.log("Kernel: Sovereign environment ready.");
+}, 3500);
+
+
 const h1Text = "Welcome to Thealcohesion Space Native Kiosk";
 const pText = "The Secured Decoupled Enclave Architecture";
 
-let osReady = false;
-const iframe = document.getElementById('os-frame');
 const enterBtn = document.getElementById('enter-btn');
 const errorMsg = document.getElementById('error-msg');
 const syncText = document.getElementById('sync-text');
@@ -99,15 +106,16 @@ function checkSystemStatus() {
         errorMsg.style.display = "block";
         errorMsg.innerHTML = `[!] CONNECTION INTERRUPTED: Please verify your uplink.`;
         enterBtn.classList.add('hidden-element');
-        return false;
+        return;
     }
 
     if (!osReady) {
         nodeStatus.innerText = "SYNCING";
+        nodeStatus.style.color = "#ffaa00";
         errorMsg.style.display = "block";
-        errorMsg.innerHTML = `[i] Kiosk not ready: Binding Sovereign Kernel...`;
-        setTimeout(checkSystemStatus, 1000);
-        return false;
+        errorMsg.innerHTML = `[i] Binding Sovereign Kernel…`;
+        setTimeout(checkSystemStatus, 800);
+        return;
     }
 
     nodeStatus.innerText = "ENCLAVE_ACTIVE";
@@ -115,10 +123,11 @@ function checkSystemStatus() {
     errorMsg.style.display = "none";
     syncText.innerText = "SYNCHRONIZATION COMPLETE";
     updateProgressBar(100);
-    
+
     enterBtn.classList.remove('hidden-element');
     enterBtn.style.display = "inline-block";
 }
+
 
 // 4. Main Access Navigation
 enterBtn.addEventListener('click', async (e) => {
@@ -217,11 +226,6 @@ enterBtn.addEventListener('click', async (e) => {
         }
     }, 6500); // 6.5s buffer to allow the manifest typing to finish
 });
-
-iframe.onload = () => { 
-    osReady = true; 
-    console.log("Sovereign OS Loaded in Background.");
-};
 
 // 8. Ambient Mouse Tracking
     document.addEventListener('mousemove', (e) => {

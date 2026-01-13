@@ -138,7 +138,7 @@
 /* --- UPDATED 9-DOT TRIGGER --- */
 .dock-bottom-trigger {
     margin-top: auto !important; 
-    margin-bottom: 30px; /* Added extra space below the icon */
+    margin-bottom: 40px; /* Added extra space below the icon */
     width: var(--app-size);
     height: var(--app-size);
     display: grid !important;
