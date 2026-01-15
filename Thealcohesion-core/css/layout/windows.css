@@ -9,6 +9,7 @@
     position: absolute;
     display: flex;
     flex-direction: column;
+    position: relative; /* Add this for resize handles positioning */
     background: rgba(10, 10, 12, 0.85);
     backdrop-filter: blur(20px) saturate(160%);
     border: 1px solid rgba(164, 69, 255, 0.3);
@@ -355,3 +356,149 @@ pointer-events: none;
     background: rgba(0, 255, 65, 0.05);
 }
 
+/* Resize Handles */
+.resize-handle {
+    position: absolute;
+    background: transparent;
+    z-index: 1001;
+    pointer-events: auto; /* CRITICAL */
+}
+
+.resize-handle:hover {
+    background: rgba(164, 69, 255, 0.3);
+}
+
+.resize-handle.resize-se {
+    bottom: 0;
+    right: 0;
+    width: 16px;
+    height: 16px;
+    cursor: se-resize;
+}
+
+.resize-handle.resize-se::after {
+    content: '';
+    position: absolute;
+    bottom: 2px;
+    right: 2px;
+    width: 6px;
+    height: 6px;
+    border-right: 2px solid rgba(164, 69, 255, 0.4);
+    border-bottom: 2px solid rgba(164, 69, 255, 0.4);
+}
+
+.resize-handle.resize-e {
+    right: 0;
+    top: 50%;
+    width: 4px;
+    height: 50%;
+    cursor: e-resize;
+}
+
+.resize-handle.resize-s {
+    bottom: 0;
+    left: 50%;
+    height: 4px;
+    width: 50%;
+    cursor: s-resize;
+}
+
+.resize-handle:hover {
+    background: rgba(164, 69, 255, 0.1);
+}
+
+.os-window.floating-extra {
+    position: absolute !important;
+    z-index: 9999 !important;
+    visibility: visible !important;
+    display: flex !important;
+    opacity: 1 !important;
+    pointer-events: auto !important;
+}
+
+.os-window.floating-extra:not([style*="left"]) {
+    left: 100px !important;
+    top: 100px !important;
+}
+
+/* --- RESIZE HANDLES --- */
+.resize-handle {
+    position: absolute;
+    background: transparent;
+    z-index: 1001;
+}
+
+.resize-handle:hover {
+    background: rgba(164, 69, 255, 0.3);
+}
+
+/* Top/Bottom handles */
+.resize-n {
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 5px;
+    cursor: ns-resize;
+    width: 100%;
+}
+
+.resize-s {
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 5px;
+    cursor: ns-resize;
+    width: 100%;
+}
+
+/* Left/Right handles */
+.resize-e {
+    right: 0;
+    top: 0;
+    bottom: 0;
+    width: 5px;
+    cursor: ew-resize;
+    height: 100%;
+}
+
+.resize-w {
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 5px;
+    cursor: ew-resize;
+    height: 100%;
+}
+
+/* Corner handles */
+.resize-ne {
+    top: 0;
+    right: 0;
+    width: 10px;
+    height: 10px;
+    cursor: nesw-resize;
+}
+
+.resize-nw {
+    top: 0;
+    left: 0;
+    width: 10px;
+    height: 10px;
+    cursor: nwse-resize;
+}
+
+.resize-se {
+    bottom: 0;
+    right: 0;
+    width: 10px;
+    height: 10px;
+    cursor: nwse-resize;
+}
+
+.resize-sw {
+    bottom: 0;
+    left: 0;
+    width: 10px;
+    height: 10px;
+    cursor: nesw-resize;
+}
