@@ -2610,6 +2610,7 @@ showSnapPreview(targetIndex = null) {
         document.addEventListener('pointermove', onMove, { passive: false });
         document.addEventListener('pointerup', onUp);
         document.addEventListener('pointercancel', onUp);
+        header.addEventListener('pointerdown', onDown);
     
     }
 
