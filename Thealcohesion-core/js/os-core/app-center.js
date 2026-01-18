@@ -12,7 +12,9 @@ export class HiveCenter {
         }
         this.container = container;
         this.api = api;
-        this.registry = registry;
+        // Merge hardcoded registry with locally created apps
+        const localApps = JSON.parse(localStorage.getItem('vpu_local_registry') || '[]');
+        this.registry = [...registry, ...localApps];
         this.currentCategory = 'All';
         this.searchQuery = '';
     }
@@ -20,6 +22,7 @@ export class HiveCenter {
     init() {
         this.renderShell();
         this.renderMesh();
+        this.updateSidebarTelemetry(); // INITIAL SYNC
         this.setupListeners();
         window.hive = this;
     }
@@ -64,7 +67,10 @@ export class HiveCenter {
                             </li>
                         </ul>
                     </nav>
-
+                    <div class="cat-item dev-portal-trigger" onclick="window.hive.provisionNode('vscode')" 
+    style="margin-top: 20px; border: 1px solid #a445ff; background: rgba(164,69,255,0.1); color: #fff; justify-content: center; font-weight: bold;">
+    <span class="nav-indicator">◈</span> OPEN DEV_CENTER
+</div>
                     <div class="sidebar-footer">
                         <div class="build-ver">BUILD_GENESIS_2025.12.26</div>
                         <div class="security-tag">🛡️ SOVEREIGN_ENCLAVE</div>
@@ -89,22 +95,20 @@ export class HiveCenter {
     
     initBubbles() {
         const field = this.container.querySelector('#bubble-field');
-        field.innerHTML = ''; // Clear existing
+        field.innerHTML = '';
         
-        // CREATE A BUBBLE FOR EVERY REGISTERED APP
         this.registry.forEach((app, i) => {
             const bubble = document.createElement('div');
             bubble.className = `proto-bubble ${app.category.toLowerCase()}`;
             bubble.id = `bubble-${app.id}`;
             bubble.innerHTML = `<span>${app.name.toUpperCase()}</span>`;
             
-            // Randomized tactical positioning across the background
-            bubble.style.left = `${Math.random() * 80 + 5}%`;
-            bubble.style.top = `${Math.random() * 80 + 5}%`;
+            // TACTICAL POSITIONING: 10% to 70% range to keep them centered
+            bubble.style.left = `${10 + Math.random() * 60}%`;
+            bubble.style.top = `${10 + Math.random() * 60}%`;
             bubble.style.animationDelay = `${i * 0.5}s`;
             
-            // Initial size weighted by manifest resources
-            const initialSize = 80 + (app.manifest.resources.cpu * 10);
+            const initialSize = 100 + (app.manifest.resources.cpu * 5);
             bubble.style.setProperty('--size', `${initialSize}px`);
             
             field.appendChild(bubble);
@@ -112,28 +116,104 @@ export class HiveCenter {
     }
 
     provisionNode(appId) {
-        const app = this.registry.find(a => a.id === appId);
-        const node = this.container.querySelector(`#node-${appId}`);
-        const bubble = this.container.querySelector(`#bubble-${appId}`); 
+    const app = this.registry.find(a => a.id === appId);
+    const node = this.container.querySelector(`#node-${appId}`);
+    const bubble = this.container.querySelector(`#bubble-${appId}`); 
+
+    // 1. UI RESET
+    this.closeInspector();
+
+    // 2. SCENARIO A: THE APP IS NOT IN THE CURRENT FILTER (e.g., Dev Center)
+    if (!node && app) {
+        console.log(`[VPU_OS]: DIRECT_LAUNCH -> ${appId}`);
+        // Visual feedback even for silent launch
+        this.container.style.opacity = '0';
+        setTimeout(() => {
+            if (window.kernel) window.kernel.launchApp(appId);
+            this.container.style.opacity = '1';
+        }, 500);
+        return; // Stop here
+    }
+
+    // 3. SCENARIO B: THE NODE IS VISIBLE (Standard Animation)
+    if (node) {
+        // Resource Allotment Calculation
+        const currentWidth = parseInt(getComputedStyle(node).getPropertyValue('--hex-width')) || 150;
+        const newSize = currentWidth + 40;
         
-        if (bubble && node) {
-            this.createParticleStream(node, bubble);
+        node.style.setProperty('--hex-width', `${newSize}px`);
+        if (bubble) {
+            bubble.style.setProperty('--size', `${newSize}px`);
             bubble.classList.add('expanding');
-            
-            // Persistent growth: The app "claims" more permanent space in the VPU
-            const currentSize = parseFloat(bubble.style.getPropertyValue('--size'));
-            bubble.style.setProperty('--size', `${currentSize + 60}px`);
         }
 
-        if (node) node.classList.add('launching');
+        this.saveSystemState(appId, newSize);
+        this.updateSidebarTelemetry();
+        this.createParticleStream(node, bubble);
+
+        // THE CLASSIC "FRONT-AND-CENTER" SEQUENCE
+        node.classList.add('launching');
+        
         setTimeout(() => {
-            window.kernel.launchApp(appId);
-            this.closeInspector();
-        }, 800);
+            if (window.kernel && typeof window.kernel.launchApp === 'function') {
+                window.kernel.launchApp(appId);
+            }
+            node.classList.remove('launching');
+        }, 900); 
+    }
+}
+
+closeInspector() {
+        const inspector = this.container.querySelector('#inspector-panel');
+        // Stop the telemetry interval to save VPU cycles
+        if (this.telemetryInterval) {
+            clearInterval(this.telemetryInterval);
+            this.telemetryInterval = null;
+        }
+        // Retract the panel
+        inspector.classList.add('hidden');
+    }
+
+    updateSidebarTelemetry() {
+        const savedState = this.loadSystemState();
+        const baseLoad = this.api.getMemory(); // Initial allotment 2025-12-26
+        
+        // Calculate "Expansion Load" based on how much the nodes have grown
+        let expansionLoad = 0;
+        Object.values(savedState).forEach(size => {
+            if (size > 150) expansionLoad += (size - 150) / 10;
+        });
+
+        const totalLoad = Math.min(Math.round(baseLoad + expansionLoad), 100);
+        
+        // Update DOM Elements
+        const display = this.container.querySelector('#vpu-mem-display');
+        const bar = this.container.querySelector('.mini-progress .bar');
+        
+        if (display) display.innerText = `${totalLoad}%`;
+        if (bar) bar.style.width = `${totalLoad}%`;
+        
+        // Visual warning if load is critical
+        if (totalLoad > 85) {
+            display.style.color = '#ff3366';
+            bar.style.background = '#ff3366';
+        }
+    }
+
+    //State Persistence Logic
+    saveSystemState(appId, newSize) {
+    const state = JSON.parse(sessionStorage.getItem('vpu_hive_state') || '{}');
+    state[appId] = newSize;
+    sessionStorage.setItem('vpu_hive_state', JSON.stringify(state));
+}
+
+    loadSystemState() {
+        return JSON.parse(sessionStorage.getItem('vpu_hive_state') || '{}');
     }
 
     renderMesh() {
         const mesh = this.container.querySelector('#mesh-container');
+        const savedState = this.loadSystemState();
         const filteredApps = this.registry.filter(app => {
             const catMatch = this.currentCategory === 'All' || app.category === this.currentCategory;
             const searchMatch = app.name.toLowerCase().includes(this.searchQuery.toLowerCase());
@@ -142,6 +222,8 @@ export class HiveCenter {
 
         mesh.innerHTML = filteredApps.map(app => {
             const isGenesis = app.id === 'resource-pool';
+            // Retrieve saved size or use default 150
+            const savedSize = savedState[app.id] || 150;
             return `
                 <div class="hex-node ${isGenesis ? 'genesis' : ''}" 
                      id="node-${app.id}"
@@ -212,7 +294,7 @@ inspectNode(appId) {
         <div class="provision-footer">
             <button class="provision-btn" onclick="window.hive.provisionNode('${app.id}')" 
                 style="width:100%; padding:15px; background:#a445ff; color:#fff; border:none; border-radius:4px; font-weight:bold; cursor:pointer; box-shadow:0 4px 15px rgba(164,69,255,0.3);">
-                PROVISION CAPABILITY
+                PROVISION NODE
             </button>
         </div>
     `;
@@ -266,9 +348,6 @@ inspectNode(appId) {
         setTimeout(() => stream.remove(), 800); // Cleanup after launch
     }
 
-    closeInspector() {
-        this.container.querySelector('#inspector-panel').classList.add('hidden');
-    }
 
     getCategoryColor(cat) {
         const colors = { System: '#a445ff', Finance: '#00ff41', Social: '#00ccff', Infrastructure: '#ff3366' };
@@ -292,5 +371,13 @@ inspectNode(appId) {
                 this.renderMesh();
             };
         });
+    }
+
+    launchDevCenter() {
+        console.log("[VPU_OS]: SYSTEM_GATEWAY_INIT -> DEV_CENTER");
+
+        // We point the Hive's internal provision logic to the 'dev-center' ID
+        // This triggers the Masonry expansion, the Flash, and the Kernel launch
+        this.provisionNode('vscode');
     }
 }

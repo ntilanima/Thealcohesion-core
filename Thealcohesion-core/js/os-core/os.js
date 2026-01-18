@@ -15,6 +15,7 @@ class TLC_Kernel {
         this.isDraggingWindow = false;
         this.runningApps = new Set(); // Track active processes
         this.isBooted = false;
+        this.registry = [...registry, ...JSON.parse(localStorage.getItem('vpu_local_registry') || '[]')];//For DevCenter
         this.sessionKey = null; // The AES-GCM key derived at login
         this.pinnedApps = ['time', 'tnfi', 'terminal', 'files', 'browser', 'messages', 'camera','vscode', 'settings']; 
         this.idleTimer = null;
@@ -299,6 +300,26 @@ class TLC_Kernel {
         
     }
 
+
+    // For testing new Apps by Devs
+
+        executeTemporary(code, manifest) {
+            const tempId = `live-view-${Date.now()}`;
+            
+            // 1. Create a dummy app object
+            const tempApp = {
+                id: tempId,
+                name: `PREVIEW: ${manifest.name || 'UNNAMED'}`,
+                icon: '🧪',
+                file: 'local_module',
+                code: code
+            };
+
+            // 2. Launch a special temporary window
+            this.launchAppInstance(tempApp);
+            this.logEvent('INFO', `LIVE_VIEW_INITIATED: Sandboxing temporary logic.`);
+        }
+
         /**
      * DEBOUNCED_updateTilingGrid
      * Prevents rapid duplicate calls during resize/drag operations
@@ -499,10 +520,16 @@ async shutdown() {
     get APP_ROUTES() {
         return {
             'terminal': async (container) => {
-                const m = await import('./terminal.js');
-                const instance = new m.TerminalApp(container);
-                instance.init();
-                return instance;
+            const m = await import('../apps/terminal.js');
+            // You MUST pass the api object as the second argument
+            const apiBridge = {
+                signature: 'SOVEREIGN_CORE_V1',
+                identity: 'Admin',
+                vfs: this.vfs // Ensure this exists in your kernel
+            };
+            const instance = new m.TerminalApp(container, apiBridge);
+            instance.init();
+            return instance;
             },
             'time': async (container) => {
                 const m = await import('../apps/time.js');
@@ -540,6 +567,30 @@ async shutdown() {
                 instance.init();
                 return instance;
             },
+
+            'vscode': async (container) => {
+                // Adjust the path to where your logic-forge.js (Dev Center) is stored
+                const { LogicForge } = await import('./logic-forge.js'); 
+                
+                const apiBridge = {
+                    signature: 'SOVEREIGN_CORE_V1',
+                    // LogicForge specifically needs crypto for Local Signing (Art 13.2)
+                    crypto: {
+                        sign: async (code, manifest) => {
+                            console.log("[VPU_SEC]: LOCAL_SIGNING_SEQUENCER_START");
+                            // Simple mock signature; in production, use WebCrypto API
+                            return btoa(code.length + manifest.id + Date.now()).substring(0, 16);
+                        }
+                    },
+                    getMemory: () => Math.round((this.currentMemory / this.maxMemory) * 100)
+                };
+
+                const instance = new LogicForge(container, apiBridge);
+                instance.init();
+                return instance;
+            },
+
+            
         };
     }
 
@@ -1955,6 +2006,7 @@ exitOverview(focusId = null) {
         }, 2000);
     }
     launchApp(appId) {
+        
         if (this.isTilingActive) {
         this.showSnapPreview(); // Show where it will go
         setTimeout(() => {
@@ -2129,10 +2181,43 @@ exitOverview(focusId = null) {
         }
 
         this.makeDraggable(win);
-        this.injectAppContent(appId);
+        // --- NEW INJECTION LOGIC ---
+        // We check if the app is a local synthesis or a standard file, for demo will be removed when app are not local
+        if (app.file === 'local_module') {
+            this.executeLocalApp(appId, app);
+        } else {
+            // Standard loading for pre-installed apps
+            this.injectAppContent(appId);
+        }
         win.dataset.lastUsed = Date.now();
 
 
+    }
+//For demo will be removed later
+    executeLocalApp(appId, app) {
+        const container = document.getElementById(`canvas-${appId}`);
+        if (!container) return;
+
+        try {
+            container.innerHTML = ''; // Clear the "System: Initializing..." text
+            
+            /* We wrap the stored code in a function. 
+               app.code is the string captured from the LogicForge editor.
+            */
+            const ModuleClass = new Function('container', 'api', `return ${app.code}`)(); 
+            const instance = new ModuleClass(container, this.api);
+            
+            if (instance.init) {
+                instance.init();
+                console.log(`[KERNEL]: LOCAL_MODULE_VPU_READY -> ${appId}`);
+            }
+        } catch (err) {
+            container.innerHTML = `<div style="color:#ff3366; padding:20px;">
+                <h3>0xSYNTAX_ERROR</h3>
+                <p>${err.message}</p>
+            </div>`;
+            console.error("[KERNEL]: LOCAL_EXECUTION_FAILED", err);
+        }
     }
 
     //For app center
