@@ -5,7 +5,8 @@
  */
 
 import { SystemTray } from './tray.js';
-import { registry } from './registry.js';
+import { NeuralWallpaper } from './wallpaper.js';
+import { registry } from './registry-v2.js';
 import { SovereignVFS } from '../apps/vfs.js'; // Ensure VFS is imported for secure file handling
 import { startBootSequence } from './boot.js'; // Refined boot sequence
 class TLC_Kernel {
@@ -109,6 +110,12 @@ class TLC_Kernel {
 
         // 2. HIDE UI INITIALLY
         const osRoot = document.getElementById('os-root');
+        // Ensure the background canvas exists for the Neural Wallpaper
+        if (!document.getElementById('neural-canvas')) {
+            const canvas = document.createElement('canvas');
+            canvas.id = 'neural-canvas';
+            document.body.prepend(canvas); // Place it at the very back
+        }
         const loginGate = document.getElementById('login-gate');
         const topBar = document.getElementById('top-bar');
         
@@ -492,7 +499,7 @@ async shutdown() {
     get APP_ROUTES() {
         return {
             'terminal': async (container) => {
-                const m = await import('../apps/terminal.js');
+                const m = await import('./terminal.js');
                 const instance = new m.TerminalApp(container);
                 instance.init();
                 return instance;
@@ -516,12 +523,35 @@ async shutdown() {
                 this.activeProcesses['vault'] = instance;
 
                 return instance;
-            }
+            },
+
+            'app-store': async (container) => {
+                // If app-center.js is in /js/os-core/apps/
+                const { HiveCenter } = await import('./app-center.js'); 
+                
+                const apiBridge = {
+                    signature: 'SOVEREIGN_CORE_V1',
+                    getMemory: () => Math.round((this.currentMemory / this.maxMemory) * 100),
+                    getRoles: () => this.userRole || ['ANY'],
+                    getLiveResourceLoad: (id) => 10 // Added to prevent 'undefined' errors
+                };
+
+                const instance = new HiveCenter(container, apiBridge);
+                instance.init();
+                return instance;
+            },
         };
     }
 
-    async boot() {
+    async boot() {   
     console.log("Kernel: Ignition sequence initiated...");
+
+    // 2. Start the wallpaper immediately
+    try {
+        this.wallpaper = new NeuralWallpaper('neural-canvas', this);
+    } catch (e) {
+        console.error("Wallpaper failed to start:", e);
+    }
         
     // 1. HARDWARE HANDSHAKE / PROVISIONING
     const hasHardwareKey = await this.verifyHardwareSignature();
@@ -915,7 +945,7 @@ async unlockSystem() {
                 top.style.opacity = '1';
             });
         }
-        
+        this.wallpaper = new NeuralWallpaper('neural-canvas', this);
         this.setupTopBarInteractions(); 
         this.bootShell();
         this.logEvent('INFO', 'Identity Verified. Session Started.');
@@ -2104,6 +2134,12 @@ exitOverview(focusId = null) {
 
 
     }
+
+    //For app center
+    getAppMetadata(appId) {
+    // This looks into your imported registry object
+    return registry[appId]; 
+}
 
     /**
  * RE-ALIGN ENCLAVES (Tiling Engine)

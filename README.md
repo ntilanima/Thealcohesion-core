@@ -87,3 +87,65 @@ The Core is designed to be hosted on private, sovereign infrastructure (e.g., a 
 6. Development Philosophy
 
     "Developers are not building a product for users. They are implementing a governed collective operating environment. Technical decisions must always defer to the Charter."
+
+    # 🏛️ Thealcohesion VPU App Center
+**Status:** Core Capability | **Version:** 1.0.0-STABLE
+
+## Overview
+The VPU App Center is the official distribution hub for all governed internal capabilities within Thealcohesion OS. It serves as the single source of truth for validated software, ensuring all tools align with the **Formation Charter**.
+
+## 🛡️ Governance Standards (Article 13)
+All applications listed here have passed the following criteria:
+- **Rule 13.1:** Documented Purpose and Role-based Access Control (RBAC).
+- **Rule 13.3.2:** Zero External Data Export (Internal Only).
+- **Rule 13.3.3:** Zero Behavioral Tracking or Attention Monetization.
+
+## 📂 Category Directory
+| Category | Primary App | Mandate |
+| :--- | :--- | :--- |
+| **Governance** | `Ethics` | Compliance & Integrity Monitoring |
+| **Finance** | `TNFI` | Central Banking & Member Ledger |
+| **Operations** | `Office` | Executive Directives & FROs |
+| **Logistics** | `Swift Hub` | Rapid Deployment & Mobilization |
+
+## 🚀 Lifecycle Verification
+The App Center UI displays the current stage of every app:
+1. `VETTED`: Fully approved for organizational use.
+2. `PROBATION`: New capability under monitoring.
+3. `LEGACY`: Scheduled for retirement/replacement.
+
+---
+*Authorized access only. All downloads and installations are logged via the MEGA Integrity Engine.*
+
+# 🛠️ Thealcohesion VPU Dev Center
+**Role:** Sovereign Development Kit (SDK) | **Target:** Members/Natives
+
+## Overview
+The Dev Center is a "Logic Bindery" that empowers members to create internal apps using **Thealcohesion Logic** (`os.js`). Apps created here are natively bound to the Sovereign Core and cannot function outside this environment.
+
+## ⚙️ Development Principles
+To ensure compatibility with the OS, developers must adhere to the following logic:
+
+### 1. The API Bridge
+Never use global browser APIs. Use the provided `api` object:
+- ✅ `this.api.vfs.write()` instead of `localStorage`
+- ✅ `this.api.clock.getTLCTime()` instead of `new Date()`
+- ✅ `this.api.ui.createWindow()` for consistent glassmorphism.
+
+### 2. Prohibited Logic (Rule 13.3)
+The following will trigger an automatic reject during **Technical Review**:
+- Use of `fetch()` to external domains.
+- Inclusion of 3rd-party tracking scripts.
+- Creation of sub-processes outside the Enclave.
+
+## 🔄 The Submission Pipeline (Rule 13.2)
+1. **DRAFT:** Code written and tested in the Dev Sandbox.
+2. **PROPOSAL:** Submit for Technical Review (Automatic scan).
+3. **GOVERNANCE:** Human review by MEGA Personnel in the `Ethics` app.
+4. **SIGNING:** Kernel applies the `SOVEREIGN_CORE_V1` signature.
+5. **DEPLOY:** App becomes visible in the App Center.
+
+---
+
+
+*Empowering the community through secure, ethical, and unified innovation.*

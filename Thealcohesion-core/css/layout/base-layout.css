@@ -44,7 +44,7 @@ body, html {
     height: calc(100vh - var(--top-bar-h));
     left: 0;
     background: transparent; /* Ensure no solid color is hidden behind UI */
-    z-index: 10;
+    z-index: 1;
 }
 
 /* --- THE WORKSPACE (The Content Area) --- */
@@ -52,9 +52,9 @@ body, html {
     position: absolute;
     top: var(--top-bar-h);
     left: 0;
-    right: var(--dock-w); /* Respects the Right Dock */
+    right: var(--dock-width); /* Respects the Right Dock */
     bottom: 0;
-    background: linear-gradient(135deg, #5E2750 0%, #2c001e 100%); /* Ubuntu Purple */
+    background: transparent !important;
     overflow: hidden;
     z-index: 5;
     /* Grid for desktop icons */

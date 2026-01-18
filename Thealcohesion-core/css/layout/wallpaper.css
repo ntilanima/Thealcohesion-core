@@ -1,0 +1,10 @@
+#neural-canvas {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    z-index: 0; /* Behind icons and windows */
+    pointer-events: none; /* Let clicks pass through to icons */
+    background: #000;
+}

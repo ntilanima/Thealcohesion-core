@@ -4,7 +4,7 @@
  * Security: Sovereign Enclave Protected
  */
 
-import { registry } from '../os-core/registry.js'; // Ensure path is correct
+import { registry } from './registry-v2'; // Ensure path is correct
 
 export class TerminalApp {
     constructor(container, api) {

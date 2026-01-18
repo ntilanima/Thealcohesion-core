@@ -10,10 +10,10 @@
     display: flex;
     flex-direction: column;
     position: relative; /* Add this for resize handles positioning */
-    background: rgba(10, 10, 12, 0.85);
+    background: rgba(10, 10, 10, 0.5) !important;
     backdrop-filter: blur(20px) saturate(160%);
     border: 1px solid rgba(164, 69, 255, 0.3);
-    border-radius: 12px;
+    border-radius: 5px;
     box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
     box-sizing: border-box;
     overflow: hidden;
@@ -38,7 +38,8 @@
 
 .window-header {
     height: 42px;
-    background: rgba(255, 255, 255, 0.03);
+    background: rgba(164, 69, 255, 0.1) !important;
+    backdrop-filter: blur(5px);
     display: flex;
     justify-content: space-between;
     align-items: center;
