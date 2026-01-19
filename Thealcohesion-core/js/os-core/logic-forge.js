@@ -313,7 +313,20 @@ export class LogicForge {
     async handleCommit() {
     // 1. Capture the current buffer
     const code = this.container.querySelector('#logic-editor').value;
-
+    
+    // Invoke SOVEREIGN for a Philosophy Audit
+    this.log("SOVEREIGN: Auditing code for Article 13.2 compliance...", "info");
+    
+    const audit = await window.SOVEREIGN.auditCode(code);
+    if (audit.violations.length > 0) {
+        this.log(`SOVEREIGN_VETO: ${audit.violations.join(', ')}`, "critical");
+        const proceed = await this.sovereignPrompt("COMPLIANCE_WARNING", 
+            "This code violates Sovereign limits. Proceed anyway?", 
+            [{id: 'fix', label: 'FIX_CODE'}, {id: 'ignore', label: 'FORCE_COMMIT'}]
+        );
+        if (proceed === 'fix') return;
+    }
+    
     // --- NEW: SYSTEM HEALTH CHECK ---
     this.log("PERFORMING_CORE_INTEGRITY_CHECK...", "info");
     

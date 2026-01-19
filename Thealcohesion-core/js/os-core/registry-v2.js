@@ -29,6 +29,29 @@ export const registry = [
         ethics: { tracking: false, manipulation: false, consent: true },
         lifecycle: 'VETTED'
     },
+
+    { 
+        id: 'vpu-sovereign-ai-core', 
+        name: 'Sovereign-AI-Core', 
+        icon: '🧠', 
+        file: 'sovereign-ai-core.js', // The cognitive bridge logic
+        protocol: 'CORE://intelligence',
+        category: 'Infrastructure',
+        roles: ['NATIVE', 'SYSTEM_SERVICE', 'COG'],
+        manifest: { 
+            purpose: 'OS-level cognitive coordination and workflow automation (Article 13.2).', 
+            resources: { cpu: 'High', ram: 64 }, // High RAM for local model context
+            permissions: { fs: true, ai: true, kernel_bridge: true }
+        },
+        ethics: { 
+            tracking: false, 
+            manipulation: false, 
+            consent: true,
+            localInference: true 
+        },
+        lifecycle: 'SYSTEM_SERVICE'
+    },
+
     { 
         id: 'terminal', 
         name: 'VPU Terminal', 

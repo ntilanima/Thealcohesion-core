@@ -591,6 +591,35 @@ async shutdown() {
             },
 
             
+            'vpu-sovereign-ai-core': async (container) => {
+                // Ensure the path matches your deployment location
+                const { SovereignAI } = await import('./sovereign-ai-core.js'); 
+                
+                const apiBridge = {
+                    signature: 'SOVEREIGN_CORE_V1',
+                    ssi: window.vpu_ssi, // Access to the Ethical Guard
+                    ai: {
+                        getWorkspaceContext: () => {
+                            return Object.values(this.registry).map(app => ({
+                                id: app.id,
+                                name: app.name,
+                                purpose: app.manifest?.purpose
+                            }));
+                        }
+                    },
+                    fs: this.vfs, // Persistence for ai_memory.json
+                    getMemory: () => Math.round((this.currentMemory / this.maxMemory) * 100)
+                };
+
+                const instance = new SovereignAI(container, apiBridge);
+                await instance.init();
+
+                // Track process in the Kernel
+                this.activeProcesses = this.activeProcesses || {};
+                this.activeProcesses['vpu-sovereign-ai-core'] = instance;
+
+                return instance;
+            },
         };
     }
 

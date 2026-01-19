@@ -1,0 +1,33 @@
+/* Sovereign Command Interface */
+.sovereign-cmd-bar {
+    position: fixed;
+    top: 20%;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 600px;
+    background: #000;
+    border: 1px solid #a445ff;
+    box-shadow: 0 0 30px rgba(0,0,0,1), 0 0 10px rgba(164, 69, 255, 0.2);
+    z-index: 9999;
+    padding: 10px;
+    display: flex;
+    flex-direction: column;
+}
+
+.sovereign-input {
+    background: transparent;
+    border: none;
+    color: #fff;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 18px;
+    outline: none;
+    padding: 10px;
+}
+
+.sovereign-feedback {
+    font-size: 10px;
+    color: #a445ff;
+    padding: 5px 10px;
+    border-top: 1px solid #111;
+    letter-spacing: 1px;
+}
