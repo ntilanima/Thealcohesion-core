@@ -648,11 +648,35 @@
     display: flex;
     align-items: center;
     gap: 10px;
-    background: rgba(0, 0, 0, 0.3);
     padding: 5px 12px;
     border-radius: 4px;
     margin-bottom: 15px;
-    border: 1px solid rgba(255, 255, 255, 0.05);
+    position: relative;
+    overflow: hidden;
+    background: rgba(10, 10, 15, 0.8);
+    border: 1px solid rgba(164, 69, 255, 0.3);
+    box-shadow: inset 0 0 15px rgba(164, 69, 255, 0.1);
+}
+
+/* The Animated Scanline */
+.system-log-ticker::after {
+    content: "";
+    position: absolute;
+    top: 0; left: 0; width: 100%; height: 2px;
+    background: rgba(164, 69, 255, 0.2);
+    animation: scanline 4s linear infinite;
+    pointer-events: none;
+}
+
+@keyframes scanline {
+    0% { top: -10%; }
+    100% { top: 110%; }
+}
+
+.ticker-stream {
+    text-shadow: 0 0 8px var(--mtaa-green);
+    letter-spacing: 1px;
+    font-weight: 500;
 }
 
 .ticker-label {
@@ -682,4 +706,15 @@
     color: var(--accent);
     font-weight: bold;
     text-shadow: 0 0 8px var(--accent);
+}
+
+/* Special treatment for the Genesis Node */
+.hex-node.genesis {
+    border: 1px solid var(--liquid-gold);
+    box-shadow: 0 0 20px rgba(255, 215, 0, 0.2);
+    background: radial-gradient(circle, rgba(255,215,0,0.1) 0%, transparent 70%);
+}
+
+.hex-node.genesis .hex-icon {
+    filter: drop-shadow(0 0 10px var(--liquid-gold));
 }

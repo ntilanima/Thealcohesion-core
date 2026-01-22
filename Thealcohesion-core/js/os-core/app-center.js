@@ -15,6 +15,7 @@ export class HiveCenter {
         // Merge hardcoded registry with locally created apps
         const localApps = JSON.parse(localStorage.getItem('vpu_local_registry') || '[]');
         this.registry = [...registry, ...localApps];
+        this.registry = validRegistry;
         this.currentCategory = 'All';
         this.searchQuery = '';
     }
@@ -433,12 +434,23 @@ inspectNode(appId) {
 
     setupListeners() {
         const searchInput = this.container.querySelector('#hive-search');
-        if (searchInput) {
-            searchInput.oninput = (e) => {
-                this.searchQuery = e.target.value;
-                this.renderMesh();
-            };
-        }
+    const tickerLabel = this.container.querySelector('.ticker-label');
+
+    if (searchInput) {
+        searchInput.oninput = (e) => {
+            this.searchQuery = e.target.value;
+            this.renderMesh();
+            
+            // SOVEREIGN MOD: Change ticker label to "SEARCHING..." when typing
+            if(this.searchQuery.length > 0) {
+                tickerLabel.innerText = "QUERY_ACTIVE:";
+                tickerLabel.style.color = "#00ff41";
+            } else {
+                tickerLabel.innerText = "LIVE_LOG:";
+                tickerLabel.style.color = "#a445ff";
+            }
+        };
+    }
 
         this.container.querySelectorAll('.cat-item').forEach(item => {
             item.onclick = () => {
@@ -457,4 +469,14 @@ inspectNode(appId) {
         // This triggers the Masonry expansion, the Flash, and the Kernel launch
         this.provisionNode('vscode');
     }
+
+    sanitizeRegistry() {
+    // Filter out any null, undefined, or apps missing critical IDs
+    const validRegistry = this.registry.filter(app => app && app.id && app.name);
+    
+    if (validRegistry.length !== this.registry.length) {
+        console.warn(`[VPU_SYSTEM]: Purged ${this.registry.length - validRegistry.length} orphaned nodes.`);
+    }
+    this.registry = validRegistry;
+}
 }
