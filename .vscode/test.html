@@ -1,0 +1,524 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+<title>Sovereign VPU Master</title>
+
+<style>
+:root {
+  --bg: #020406;
+  --liquid-gold: #ffcc33;
+  --mtaa-green: #00ff41;
+  --vpu-blue: #00d4ff;
+  --accent: #a855f7;
+  --glass: rgba(255, 255, 255, 0.02);
+}
+
+* { box-sizing: border-box; -webkit-tap-highlight-color: transparent; outline: none; }
+
+body {
+  margin: 0;
+  background-color: var(--bg);
+  color: #fff;
+  font-family: 'Segoe UI', Roboto, sans-serif;
+  overflow: hidden;
+  height: 100vh;
+  cursor:  crosshair;
+}
+
+/* === TOP INTERFACE: SEARCH & FILTERS === */
+#command-center {
+  position: fixed;
+  top: 25px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 100;
+  width: 90%;
+  max-width: 460px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+}
+
+#search-input {
+  width: 100%;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 30px;
+  padding: 12px 25px;
+  color: var(--liquid-gold);
+  text-align: center;
+  backdrop-filter: blur(15px);
+  letter-spacing: 2px;
+  font-size: 11px;
+}
+
+#search-input:focus-visible { 
+  outline: 2px solid var(--accent);
+  border-color: var(--accent); 
+  box-shadow: 0 0 20px rgba(168, 85, 247, 0.3);
+  background: rgba(168, 85, 247, 0.05);
+  color: var(--liquid-gold);
+}
+
+#filter-bar {
+  display: flex;
+  background: rgba(255, 255, 255, 0.03);
+  padding: 4px;
+  border-radius: 20px;
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.filter-btn {
+  background: transparent;
+  border: none;
+  color: #fff;
+  padding: 6px 16px;
+  border-radius: 15px;
+  font-size: 9px;
+  font-weight: 900;
+  cursor: pointer;
+  opacity: 0.3;
+  transition: 0.3s;
+}
+
+.filter-btn.active { 
+  opacity: 1; 
+  color: var(--accent); 
+  text-shadow: 0 0 8px var(--accent); 
+}
+
+/* === HUD & NODES === */
+#hud { position: fixed; inset: 0; z-index: 1; pointer-events: none; }
+
+.node {
+  position: absolute;
+  width: 62px;
+  height: 62px;
+  border-radius: 50%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  pointer-events: auto;
+  transition: top 0.2s ease, left 0.2s ease, opacity 0.4s ease;
+}
+
+.node::before {
+  content: ''; position: absolute; inset: 0; border-radius: 50%;
+  background: var(--glass); backdrop-filter: blur(6px);
+  border: 1px solid rgba(255,255,255,0.08); z-index: -1;
+}
+
+.node.power { color: var(--liquid-gold); }
+.node.utility { color: var(--mtaa-green); }
+.node.bg-service { color: var(--vpu-blue); opacity: 0.7; }
+.node.dimmed { opacity: 0.04 !important; pointer-events: none; }
+
+.icon { font-size: 20px; pointer-events: none; }
+.label { font-size: 8px; font-weight: 900; letter-spacing: 1px; margin-top: 4px; text-transform: uppercase; text-align: center; width: 140%; pointer-events: none; }
+
+/* === INTERACTION LAYER === */
+.intent-ring {
+  position: absolute;
+  inset: -8px;
+  border-radius: 50%;
+  border: 2px solid var(--accent);
+  opacity: 0;
+  transform: scale(0.8);
+  transition: transform 0.6s ease-out, opacity 0.3s;
+}
+.active .intent-ring { opacity: 1; transform: scale(1.1); box-shadow: 0 0 15px var(--accent); }
+
+/* === CORE MONITOR === */
+/* === CORE MONITOR === */
+#core-display {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    text-align: center;
+    pointer-events: auto; /* Changed from none to auto */
+    z-index: 10;           /* Increased to ensure it's clickable over the canvas */
+    cursor: pointer;       /* Added to indicate interactivity */
+    transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+#core-display:hover {
+    transform: translate(-50%, -50%) scale(1.1);
+}
+.core-stat { font-size: 8px; font-weight: 800; color: var(--accent); letter-spacing: 2px; margin: 3px; opacity: 0.5; font-family: monospace;}
+
+canvas { position: fixed; inset: 0; z-index: 0; }
+
+/* === MEMBER IDENTITY OVERLAY === */
+/* ADD THIS: Controls the container for the card */
+#identity-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(2, 4, 6, 0.9); /* Darken background */
+    backdrop-filter: blur(15px);
+    z-index: 2000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0;
+    pointer-events: none;
+    transition: all 0.4s cubic-bezier(0.19, 1, 0.22, 1);
+}
+
+/* When the 'active' class is added via JS, show it */
+#identity-overlay.active {
+    opacity: 1;
+    pointer-events: auto;
+}
+
+/* Add a close button style for the X */
+.close-x {
+    background: transparent;
+    border: none;
+    color: var(--accent);
+    font-size: 20px;
+    cursor: pointer;
+}
+.epos-card {
+    width: 580px;
+    background: rgba(10, 15, 25, 0.95);
+    border: 1px solid var(--accent);
+    padding: 25px;
+    position: relative;
+    box-shadow: 0 0 30px rgba(168, 85, 247, 0.2);
+}
+
+.card-header {
+    display: flex;
+    justify-content: space-between;
+    border-bottom: 1px solid rgba(168, 85, 247, 0.3);
+    padding-bottom: 15px;
+    margin-bottom: 20px;
+}
+
+.card-header h2 {
+    margin: 0;
+    font-size: 18px;
+    letter-spacing: 3px;
+    font-style: italic;
+    color: #fff;
+}
+
+.security-text {
+    font-size: 9px;
+    color: var(--mtaa-green);
+    margin: 5px 0 0 0;
+    letter-spacing: 1px;
+}
+
+.card-body {
+    display: grid;
+    grid-template-columns: 1.2fr 1fr;
+    gap: 20px;
+}
+
+/* Allotment Box Styling */
+.allotment-box {
+    background: rgba(0, 212, 255, 0.05);
+    border: 1px solid rgba(0, 212, 255, 0.3);
+    padding: 15px;
+}
+
+.box-header {
+    font-size: 10px;
+    color: var(--vpu-blue);
+    margin-bottom: 15px;
+}
+
+.label { font-size: 8px; color: rgba(255,255,255,0.5); display: block; }
+.value { font-size: 11px; font-family: monospace; color: #fff; }
+.value-large { font-size: 18px; font-weight: bold; color: #fff; }
+.value-cyan { font-size: 14px; color: var(--vpu-blue); font-weight: bold; }
+
+.id-row { display: flex; align-items: center; gap: 15px; margin-bottom: 20px; }
+.id-icon { 
+    width: 35px; height: 35px; border: 1px solid var(--accent); 
+    display: flex; align-items: center; justify-content: center;
+    background: rgba(168, 85, 247, 0.1);
+}
+
+.confirm-btn {
+    float: right;
+    margin-top: 20px;
+    background: #fff;
+    color: #000;
+    border: none;
+    padding: 10px 25px;
+    font-size: 10px;
+    font-weight: bold;
+    letter-spacing: 1px;
+    cursor: none;
+}
+</style>
+</head>
+<body>
+<div id="coord-log">X: 000 | Y: 000</div>
+  <div id="identity-overlay">
+  <div class="epos-card">
+    <div class="card-header">
+      <div class="header-main">
+        <h2>EPOS_CORE_IDENTITY</h2>
+        <p class="security-text">SECURITY CLEARANCE: LEVEL_7 // ACCESS_GRANTED</p>
+      </div>
+      <button class="close-x" onclick="toggleID()">✕</button>
+    </div>
+
+    <div class="card-body">
+      <div class="id-section">
+        <div class="id-row">
+          <div class="id-icon">🆔</div>
+          <div class="id-data">
+            <span class="label">MEMBER HASH</span>
+            <span class="value">A7x9_F122_4K9B_EPOS_SYS_AUTH</span>
+          </div>
+        </div>
+        <div class="id-row">
+          <div class="id-icon">🛡️</div>
+          <div class="id-data">
+            <span class="label">SYSTEM PROTOCOLS</span>
+            <span class="value">ACTIVE: VIRTUAL_VOIDS_1.0</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="allotment-box">
+        <div class="box-header">🔒 ALLOTMENT DATA</div>
+        <div class="box-content">
+          <div class="allotment-row">
+            <span class="label">NEXT_CYCLE</span>
+            <span class="value-large">2025-12-26</span>
+          </div>
+          <div class="allotment-row">
+            <span class="label">ALLOTMENT_QUOTA</span>
+            <span class="value-cyan">14,200_EPX</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card-footer">
+      <button class="confirm-btn">CONFIRM AUTH</button>
+    </div>
+  </div>
+</div>
+
+<div id="core-display" onclick="toggleID()">
+    <div class="core-stat" style="color: var(--liquid-gold); font-weight: 900; opacity: 1;">EPOS 2025-12-26</div>
+    <div class="core-stat" id="mem-usage">MEM: 31%</div>
+    <div class="core-stat">SYSTEM: STABLE</div>
+    <div class="core-stat" style="font-size: 6px; margin-top: 5px;">[ CLICK TO IDENTIFY ]</div>
+</div>
+
+<div id="command-center">
+    <input type="text" id="search-input" placeholder="ACCESSING SOVEREIGN VPU..." aria-label="Search apps" autocomplete="off">
+    <div id="filter-bar">
+      <button class="filter-btn active" onclick="setFilter('all', this)" aria-pressed="true">ALL</button>
+      <button class="filter-btn" onclick="setFilter('active', this)" aria-pressed="false">ACTIVE</button>
+      <button class="filter-btn" onclick="setFilter('power', this)" aria-pressed="false">POWER</button>
+      <button class="filter-btn" onclick="setFilter('utility', this)" aria-pressed="false">UTILITY</button>
+    </div>
+</div>
+
+<canvas id="wallpaper"></canvas>
+<div id="hud"></div>
+
+<script>
+/* === CROSSHAIR COORDINATES === */
+  const coordLog = document.getElementById('coord-log');
+
+window.onmousemove = e => { 
+  mouse.x = e.clientX; 
+  mouse.y = e.clientY;
+  
+  // Update the log to follow the plus-shaped cursor
+  coordLog.innerText = `X: ${Math.floor(e.clientX)} | Y: ${Math.floor(e.clientY)}`;
+};
+
+/* === CONSTANTS & DATA === */
+const INTENT_TIME = 600;
+function toggleID() {
+    document.getElementById('identity-overlay').classList.toggle('active');
+}
+const runningApps = new Set(['TERMINAL', 'BROWSER', 'CODE', 'ARCHIVES']);
+const apps = [
+  { name: "Archives", icon: "📜", type: "power" },
+  { name: "Terminal", icon: "📟", type: "power" },
+  { name: "TNFI", icon: "💎", type: "power" },
+  { name: "Wallet", icon: "💰", type: "power" },
+  { name: "VFS Secure", icon: "🛡️", type: "power" },
+  { name: "Browser", icon: "🌐", type: "utility" },
+  { name: "Files", icon: "📁", type: "utility" },
+  { name: "Camera", icon: "📸", type: "utility" },
+  { name: "Code", icon: "⌨️", type: "utility" },
+  { name: "Settings", icon: "⚙️", type: "utility" },
+  { name: "Messages", icon: "💬", type: "utility" },
+  { name: "Notes", icon: "📝", type: "utility" },
+  { name: "Calculator", icon: "🧮", type: "utility" },
+  { name: "Music", icon: "🎵", type: "utility" },
+  { name: "Photos", icon: "🖼️", type: "utility" },
+  { name: "Calendar", icon: "📅", type: "utility" },
+  { name: "System", icon: "🖥️", type: "bg-service" },
+  { name: "Network", icon: "📡", type: "bg-service" },
+  { name: "Logs", icon: "📑", type: "bg-service" },
+  { name: "CPU", icon: "🧠", type: "bg-service" },
+  { name: "Memory", icon: "💾", type: "bg-service" },
+  { name: "Battery", icon: "🔋", type: "bg-service" },
+  { name: "Display", icon: "🔆", type: "bg-service" },
+  { name: "Sound", icon: "🔊", type: "bg-service" },
+  { name: "Bluetooth", icon: "💠", type: "bg-service" },
+  { name: "GPS", icon: "📍", type: "bg-service" },
+  { name: "Cloud", icon: "☁️", type: "bg-service" },
+  { name: "Security", icon: "🔒", type: "bg-service" },
+  { name: "Update", icon: "🔄", type: "bg-service" }
+];
+
+const hud = document.getElementById("hud");
+const canvas = document.getElementById("wallpaper");
+const ctx = canvas.getContext("2d");
+const searchInput = document.getElementById("search-input");
+const iconMap = new Map();
+
+/* === FILTER HANDLING === */
+function setFilter(type, btn) {
+  currentFilter = type;
+  document.querySelectorAll('.filter-btn').forEach(b => {
+    b.classList.remove('active');
+    b.setAttribute('aria-pressed', 'false');
+  });
+  btn.classList.add('active');
+  btn.setAttribute('aria-pressed', 'true');
+}
+
+/* === NODE CREATION & HUD LAYOUT === */
+function createNode(app, angle, radius, speed) {
+  const node = document.createElement("div");
+  node.className = `node ${app.type}`;
+  node.innerHTML = `<span class="icon">${app.icon}</span><span class="label">${app.name}</span><div class="intent-ring"></div>`;
+
+  let timer = null;
+  const start = () => { if(!node.classList.contains('dimmed')) { node.classList.add("active"); timer = setTimeout(() => console.log("LAUNCHED:", app.name), INTENT_TIME); }};
+  const stop = () => { clearTimeout(timer); node.classList.remove("active"); };
+
+  node.onmousedown = node.ontouchstart = node.onpointerdown = start;
+  node.onmouseup = node.onmouseleave = node.ontouchend = node.onpointerup = stop;
+
+  hud.appendChild(node);
+  return { baseAngle: angle, radius, type: app.type, el: node, speed };
+}
+
+function layoutHUD() {
+  hud.innerHTML = "";
+  iconMap.clear();
+  const scale = window.innerWidth < 768 ? 0.45 : 1;
+
+  const rings = [
+    { r: 150*scale, data: apps.filter(a => a.type==='power'), speed: 0.001 },
+    { r: 275*scale, data: apps.filter(a => a.type==='utility'), speed: -0.0006 },
+    { r: 410*scale, data: apps.filter(a => a.type==='bg-service'), speed: 0.0003 }
+  ];
+
+  rings.forEach(ring => {
+    ring.data.forEach((app, i) => {
+      const angleOffset = (Math.PI*2/ring.data.length) * i;
+      iconMap.set(app.name, createNode(app, angleOffset, ring.r, ring.speed));
+    });
+  });
+}
+
+/* === SEARCH HANDLING === */
+searchInput.addEventListener('input', (e) => { searchQuery = e.target.value.toUpperCase(); });
+
+/* === MOUSE TRACKING === */
+window.onmousemove = e => { mouse.x = e.clientX; mouse.y = e.clientY; };
+window.ontouchmove = e => { mouse.x = e.touches[0].clientX; mouse.y = e.touches[0].clientY; };
+
+/* === RENDER LOOP === */
+function update() {
+  ctx.fillStyle = "rgba(2,4,6,0.25)";
+  ctx.fillRect(0,0,canvas.width,canvas.height);
+
+  const cx = window.innerWidth/2;
+  const cy = window.innerHeight/2;
+  globalRotation += 1;
+
+  iconMap.forEach((pos, name) => {
+    const angle = pos.baseAngle + (globalRotation * pos.speed);
+    const x = Math.min(window.innerWidth - pos.el.offsetWidth/2, Math.max(pos.el.offsetWidth/2, cx + Math.cos(angle) * pos.radius));
+const y = Math.min(window.innerHeight - pos.el.offsetHeight/2, Math.max(pos.el.offsetHeight/2, cy + Math.sin(angle) * pos.radius));
+
+
+    pos.el.style.left = `${x-31}px`;
+    pos.el.style.top = `${y-31}px`;
+
+    const matchesSearch = name.toUpperCase().includes(searchQuery);
+    const matchesFilter = (currentFilter==='all') || 
+                          (currentFilter==='active' && runningApps.has(name.toUpperCase())) ||
+                          (currentFilter===pos.type);
+    
+    const isDimmed = !matchesSearch || !matchesFilter;
+    const newClass = `node ${pos.type} ${isDimmed?'dimmed':''}`;
+    if(pos.el.className !== newClass) pos.el.className = newClass;
+
+    if(!isDimmed){
+      const dist = Math.hypot(mouse.x-x, mouse.y-y);
+      const maxDist = Math.min(260, window.innerWidth/3);
+      if(dist < maxDist){
+        const alpha = (1-dist/maxDist)*0.45;
+        ctx.beginPath();
+        ctx.moveTo(mouse.x, mouse.y);
+        ctx.lineTo(x, y);
+        let color = pos.type==='power'?'255,204,51': pos.type==='utility'?'0,255,65':'0,212,255';
+        ctx.strokeStyle = `rgba(${color},${alpha})`;
+        ctx.stroke();
+
+        if(alpha>0.3){
+          ctx.fillStyle = `rgba(${color},${alpha})`;
+          ctx.font = "6px monospace";
+          ctx.fillText(`0x${Math.random().toString(16).slice(2,5).toUpperCase()}`, x+38, y);
+        }
+      }
+    }
+  });
+
+  // Singularity Core Pulse
+  ctx.beginPath();
+  ctx.arc(cx, cy, 75+Math.sin(globalRotation*0.02)*4, 0, Math.PI*2);
+  ctx.strokeStyle = "rgba(168,85,247,0.1)";
+  ctx.setLineDash([5,15]);
+  ctx.stroke();
+  ctx.setLineDash([]);
+
+  requestAnimationFrame(update);
+}
+
+function toggleID() {
+    const overlay = document.getElementById('identity-overlay');
+    overlay.classList.toggle('active');
+    if(overlay.classList.contains('active')) {
+        document.getElementById('search-input').blur(); // Hides keyboard on mobile
+    }
+}
+
+/* === INITIALIZATION === */
+function resizeCanvas(){
+  canvas.width = window.innerWidth;
+  canvas.height = window.innerHeight;
+  layoutHUD();
+}
+window.addEventListener('resize', resizeCanvas);
+resizeCanvas();
+update();
+</script>
+</body>
+</html>

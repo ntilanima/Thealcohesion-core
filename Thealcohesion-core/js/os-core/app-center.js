@@ -20,6 +20,8 @@ export class HiveCenter {
     }
 
     init() {
+        // KILL GHOST TICKERS BEFORE RE-STARTING
+        if (this.tickerInterval) clearInterval(this.tickerInterval);
         this.renderShell();
         this.renderMesh();
         this.updateSidebarTelemetry(); // INITIAL SYNC
@@ -27,7 +29,49 @@ export class HiveCenter {
         window.hive = this;
     }
 
-  
+  startLiveTicker() {
+    // Clear any previous interval if it exists (Double Protection)
+    if (this.tickerInterval) clearInterval(this.tickerInterval);
+
+    const logs = [
+        "PROVISIONING NODE: TERMINAL [SECURE]",
+        "ALLOCATING RESOURCE: CPU_01 -> 14.5%",
+        "IDENTITY_VERIFIED: THC-99X2",
+        "SYNCING GENESIS_STATE: 2025.12.26",
+        "ENCRYPTING NEURAL_STREAM: ACTIVE",
+        "HIVE_MESH: RE-INDEXING NODES...",
+        "ACCESSING ENCLAVE: VFS_SECURE"
+    ];
+    
+    const logStream = this.container.querySelector('#log-stream');
+    const topNode = this.container.querySelector('#top-node-display');
+    
+    if (!logStream || !topNode) {
+        console.warn("[VPU_HIVE]: TICKER_DOM_MISSING - Retrying...");
+        return; 
+    }
+    
+    this.tickerInterval = setInterval(() => {
+        const randomLog = logs[Math.floor(Math.random() * logs.length)];
+        logStream.style.opacity = '0';
+        
+        setTimeout(() => {
+            logStream.innerHTML = `> ${randomLog}`;
+            logStream.style.opacity = '1';
+        }, 200);
+
+        // Professional check for registry existence
+        // Update "Most Provisioned" ONLY if registry is valid
+        if (this.registry && this.registry[0] && this.registry[0].name) {
+            const currentTop = this.registry[0].name.toUpperCase();
+            const load = (Math.random() * (0.95 - 0.40) + 0.40).toFixed(2);
+            topNode.innerText = `${currentTop} [${load}%]`;
+        } else {
+            // Fallback if registry data is missing or corrupted
+            topNode.innerText = `SYS_CORE [1.00%]`;
+        }
+    }, 3500); 
+}
 
     renderShell() {
         this.container.innerHTML = `
@@ -79,6 +123,32 @@ export class HiveCenter {
 
                 <main class="hive-main">
                     <div class="command-header">
+<div class="informative-cover">
+    <div class="cover-content">
+        <div class="header-main">
+            <span class="protocol-status">PROTOCOL: SOVEREIGN_ENCLAVE_V1</span>
+            <div class="most-provisioned">
+                <label>MOST_PROVISIONED:</label>
+                <span id="top-node-display" class="accent">TERMINAL [0.88%]</span>
+            </div>
+        </div>
+        
+        <p class="hive-description">
+            VPU HIVE // Distributed capability mesh. Restoring Genesis allotment <strong>2025.12.26</strong>.
+        </p>
+
+        <div class="system-log-ticker">
+            <div class="ticker-label">LIVE_LOG:</div>
+            <div id="log-stream" class="ticker-stream">INITIALIZING SYSTEM TELEMETRY...</div>
+        </div>
+
+        <div class="hive-stats-row">
+            <span class="stat-tag">NODES: ${this.registry.length}</span>
+            <span class="stat-tag">KERNEL: COHESIVE_V2</span>
+            <span class="stat-tag">SESSION: ${Math.random().toString(16).slice(2, 8).toUpperCase()}</span>
+        </div>
+    </div>
+</div>
                         <div class="search-wrapper">
                             <span class="search-icon">⌕</span>
                             <input type="text" id="hive-search" placeholder="INITIALIZE NODE SEARCH..." autocomplete="off">
@@ -91,7 +161,12 @@ export class HiveCenter {
             </div>`;
         this.setupListeners();
         this.initBubbles();
+        // ENSURE DOM PAINT BEFORE ACCESSING ELEMENTS
+        requestAnimationFrame(() => {
+            this.startLiveTicker();
+        });
     }
+
     
     initBubbles() {
         const field = this.container.querySelector('#bubble-field');
@@ -172,6 +247,8 @@ closeInspector() {
         }
         // Retract the panel
         inspector.classList.add('hidden');
+
+        if (this.tickerInterval) clearInterval(this.tickerInterval);
     }
 
     updateSidebarTelemetry() {

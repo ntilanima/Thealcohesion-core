@@ -154,4 +154,21 @@ export class NeuralWallpaper {
         ctx.fillStyle = 'rgba(255,255,255,0.8)';
         ctx.fillText(`CYCLE: ${metrics.nextCirclePercent}% | ${metrics.holidayName}: ${metrics.daysToHoliday}D`, x, y + 25);
     }
+    //THE HUD
+    drawObserver() {
+    const coords = this.kernel.iconCoordinateMap;
+    if (!coords) return;
+
+    coords.forEach((pos) => {
+        const dist = Math.hypot(this.mouse.x - pos.x, this.mouse.y - pos.y);
+        if (dist < 250) {
+            this.ctx.beginPath();
+            this.ctx.moveTo(this.mouse.x, this.mouse.y);
+            this.ctx.lineTo(pos.x, pos.y);
+            this.ctx.strokeStyle = pos.color === 'gold' ? 'rgba(255,215,0,0.3)' : 'rgba(0,255,65,0.15)';
+            this.ctx.lineWidth = pos.color === 'gold' ? 1.5 : 0.5;
+            this.ctx.stroke();
+        }
+    });
+}
 }

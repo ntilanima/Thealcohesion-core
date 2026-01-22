@@ -25,7 +25,6 @@ class TLC_Kernel {
         this.tiledWindowOrder = []; // Maintains swap order
         //OVERVIEW TRACKER
         this.isOverviewActive = false;
-
         // NEW: Debounce timer for updateTilingGrid
         this.tilingGridTimeout = null;
         this.tilingState = {};
