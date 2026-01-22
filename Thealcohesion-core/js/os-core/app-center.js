@@ -15,7 +15,6 @@ export class HiveCenter {
         // Merge hardcoded registry with locally created apps
         const localApps = JSON.parse(localStorage.getItem('vpu_local_registry') || '[]');
         this.registry = [...registry, ...localApps];
-        this.registry = validRegistry;
         this.currentCategory = 'All';
         this.searchQuery = '';
     }
@@ -469,14 +468,4 @@ inspectNode(appId) {
         // This triggers the Masonry expansion, the Flash, and the Kernel launch
         this.provisionNode('vscode');
     }
-
-    sanitizeRegistry() {
-    // Filter out any null, undefined, or apps missing critical IDs
-    const validRegistry = this.registry.filter(app => app && app.id && app.name);
-    
-    if (validRegistry.length !== this.registry.length) {
-        console.warn(`[VPU_SYSTEM]: Purged ${this.registry.length - validRegistry.length} orphaned nodes.`);
-    }
-    this.registry = validRegistry;
-}
 }
