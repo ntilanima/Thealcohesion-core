@@ -296,6 +296,23 @@ class TLC_Kernel {
         this.renderMenuContent = this.renderMenuContent.bind(this);
 
         this.initBattery(); //FOR TOPBAR BATTERY
+
+        //used for files.js 
+        this.fs = {
+            read: async (path) => {
+                if (!this.sessionKey) return null; // Return null instead of crashing
+                try {
+                    return await window.SovereignVFS.read(path, this.sessionKey);
+                } catch (e) {
+                    console.error("ALCOHESION_DECRYPT_ERROR:", e);
+                    return null;
+                }
+            },
+            write: async (path, data) => {
+                if (!this.sessionKey) return;
+                return await window.SovereignVFS.write(path, data, this.sessionKey);
+            }
+        };
         
     }
 
@@ -619,6 +636,39 @@ async shutdown() {
 
                 return instance;
             },
+
+            'files': async (container) => {
+                const { FilesApp } = await import('./files.js');
+                const { SovereignGovernance } = await import('../apps/sovereignVFS.js');
+
+                // 1. Initialize Governance with the Driver and the Kernel as the API
+                const governance = new SovereignGovernance(this, window.SovereignVFS);
+                
+                // 2. Pass the governance engine and the session key derived at login
+                const instance = new FilesApp(container, governance, this.sessionKey, 'OFFICER');
+                
+                await instance.init();
+
+                // 3. Register as an active process for memory/window management
+                this.activeProcesses = this.activeProcesses || {};
+                this.activeProcesses['files'] = instance;
+
+                return instance;
+            },
+
+            'vault': async (container) => {
+                const { VaultApp } = await import('../apps/vault.js');
+                
+                // Vault needs the Kernel itself to call this.kernel.enclaveBridge
+                // It also needs the sessionKey to decrypt the Investors.txt on the fly
+                const instance = new VaultApp(container, this);
+                await instance.init();
+
+                this.activeProcesses = this.activeProcesses || {};
+                this.activeProcesses['vault'] = instance;
+
+                return instance;
+            },
         };
     }
 
@@ -762,37 +812,47 @@ async runRecoverySequence(errorCode) {
      * gatekeeper for all VFS communication
      */
     async enclaveBridge(appId, request) {
-        // SECURITY GUARD 01: Verify App Identity
-        // Only allow registered apps to request data
-        if (!this.runningApps.has(appId)) {
-            console.error(`Security Violation: Unregistered App [${appId}] attempted VFS access.`);
-            return null;
-        }
-
-        // SECURITY GUARD 02: Session Integrity
-        if (!this.sessionKey) {
-            console.warn("Bridge Refused: No active encryption session.");
-            return null;
-        }
-
-        // SECURITY GUARD 03: Operation Routing
-        try {
-            switch (request.operation) {
-                case 'READ_SECURE':
-                    // This calls your SovereignVFS module
-                    return await SovereignVFS.read(request.path, this.sessionKey);
-                
-                case 'WRITE_SECURE':
-                    return await SovereignVFS.write(request.path, request.data, this.sessionKey);
-
-                default:
-                    return null;
-            }
-        } catch (err) {
-            this.logEvent('ERROR', `Bridge Handshake Failed: ${err.message}`);
-            return null;
-        }
+    // SECURITY GUARD 01: Verify App Identity
+    if (!this.runningApps.has(appId)) {
+        console.error(`Security Violation: Unregistered App [${appId}] attempted VFS access.`);
+        return null;
     }
+
+    // SECURITY GUARD 02: Session Integrity
+    if (!this.sessionKey) {
+        console.warn("Bridge Refused: No active encryption session.");
+        return null;
+    }
+
+    // SECURITY GUARD 03: Operation Routing
+    try {
+        switch (request.operation) {
+            case 'READ_SECURE':
+                // 1. Audit Logging (Article 13 Compliance)
+                this.logEvent('WARN', `SEC_AUDIT: [${appId}] accessed path: ${request.path}`);
+                
+                // 2. Consolidated Rank Check (The Guard Dog)
+                const isRestrictedPath = request.path.includes('SEC.TAC') || request.path.includes('vaultfiles');
+                
+                if (isRestrictedPath && this.userRole !== 'OFFICER') {
+                    this.logEvent('ERROR', `RANK_VIOLATION: ${this.userRole} denied access to ${request.path}`);
+                    throw new Error("PRIVILEGE_ESCALATION_PREVENTED: Insufficient Rank.");
+                }
+
+                // 3. Execution
+                return await SovereignVFS.read(request.path, this.sessionKey);
+                            
+            case 'WRITE_SECURE':
+                return await SovereignVFS.write(request.path, request.data, this.sessionKey);
+
+            default:
+                return null;
+        }
+    } catch (err) {
+        this.logEvent('ERROR', `Bridge Handshake Failed: ${err.message}`);
+        return null;
+    }
+}
 
     // Method to register apps when they start
     registerApp(appId) {
@@ -1059,30 +1119,52 @@ async unlockSystem() {
     }
 
     async provisionInitialFiles() {
-        try {
-            // Check if the drive is already provisioned by trying to read the readme
-            const check = await SovereignVFS.read("home/readme.txt", this.sessionKey);
+    try {
+        // 1. Check the correct folder
+        const check = await SovereignVFS.read("vaultfiles/investors.txt", this.sessionKey);
+        
+        if (!check) {
+            console.log("Kernel: Genesis Boot. Provisioning encrypted volumes...");
             
-            if (!check) {
-                console.log("Kernel: Genesis Boot. Provisioning encrypted volumes...");
-                
-                // Write the 2025-12-26 Investor Allotment Data
-                await SovereignVFS.write(
-                    "home/documents/investors.txt", 
-                    "OFFICIAL RECORD: EPOS 2025-12-26\n--------------------------------\nAllotment: 15,000,000 VPU\nStatus: Verified & Locked\nTrust Tier: Root", 
-                    this.sessionKey
-                );
+            // 2. FIXED: Write to vaultfiles, not home/documents
+            await SovereignVFS.write(
+                "vaultfiles/investors.txt", 
+                "OFFICIAL RECORD: EPOS 2025-12-26\n--------------------------------\nAllotment: 15,000,000 VPU\nStatus: Verified & Locked\nTrust Tier: Root", 
+                this.sessionKey
+            );
 
-                await SovereignVFS.write(
-                    "home/readme.txt", 
-                    "Welcome to Sovereign OS. Your data is encrypted locally using AES-GCM.", 
-                    this.sessionKey
-                );
-            }
-        } catch (err) {
-            console.warn("Provisioning skipped or drive already exists.");
+            // 3. Keep standard files in the home directory
+            await SovereignVFS.write(
+                "home/readme.txt", 
+                "Welcome to Sovereign OS. Your data is encrypted locally using AES-GCM.", 
+                this.sessionKey
+            );
+            
+            this.logEvent('SUCCESS', 'Genesis Allotment (2025-12-26) written to Enclave.');
+        } else {
+            this.logEvent('INFO', 'Genesis Allotment verified in vaultfiles.');
         }
-        this.logEvent('INFO', 'Genesis Allotment (2025-12-26) verified.');
+    } catch (err) {
+        console.warn("Provisioning skipped or drive already exists.", err);
+    }
+}
+
+
+    /**
+     * MEMBER ID GENERATOR
+     * This generates unique member id used in vault.js access log
+     */
+    generateMemberId(username) {
+        // A simple deterministic hash to create a unique ID like "INV-8A2F"
+        let hash = 0;
+        for (let i = 0; i < username.length; i++) {
+            hash = ((hash << 5) - hash) + username.charCodeAt(i);
+            hash |= 0; 
+        }
+        const id = Math.abs(hash).toString(16).toUpperCase().substring(0, 4);
+        this.memberId = `INV-${id}`;
+        this.logEvent('INFO', `Identity Derived: ${this.memberId}`);
+        return this.memberId;
     }
 
     /**

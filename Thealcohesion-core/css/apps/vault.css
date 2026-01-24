@@ -1,142 +1,315 @@
-/* Vault Root Container */
+/* VAULT CORE STYLES */
 .vault-root {
-    background: #050505;
-    height: 100%;
-    display: flex;
-    flex-direction: column;
+    background: #020204;
+    color: #a445ff;
     position: relative;
     overflow: hidden;
-    color: #e0e0e0;
+    height: 100%;
 }
 
-/* Header & Progress Bar */
+/* Scanline Effect */
+.vault-overlay {
+    position: absolute;
+    top: 0; left: 0; width: 100%; height: 100%;
+    background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%), 
+                linear-gradient(90deg, rgba(255, 0, 0, 0.06), rgba(0, 255, 0, 0.02), rgba(0, 0, 255, 0.06));
+    background-size: 100% 4px, 3px 100%;
+    pointer-events: none;
+    z-index: 10;
+}
+
 .vault-header {
+    border-bottom: 1px solid #a445ff44;
+    padding: 15px 25px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+/* Timer & Progress Bar */
+.vault-timer-box { width: 180px; text-align: right; }
+#countdown-text { font-size: 10px; font-weight: bold; letter-spacing: 1px; }
+.vault-progress-bg { height: 3px; background: #1a1a24; margin-top: 6px; border-radius: 2px; }
+#vault-bar { 
+    height: 100%; background: #00ff41; width: 100%; 
+    transition: width 1s linear, background 0.5s ease;
+    box-shadow: 0 0 8px #00ff41;
+}
+
+/* Secure Cards */
+.vault-grid { padding: 30px; display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 20px; }
+.vault-card {
+    background: #08080c;
+    border: 1px solid #a445ff33;
     padding: 20px;
-    background: rgba(15, 15, 15, 0.9);
-    border-bottom: 1px solid #222;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    cursor: pointer;
     position: relative;
+    transition: 0.2s;
 }
+.vault-card:hover { border-color: #a445ff; background: #0d0d14; }
+.card-tag { font-size: 9px; color: #00ff41; margin-top: 10px; font-weight: bold; }
 
-.session-monitor {
-    margin-top: 10px;
-    width: 200px;
+/* The Volatile Viewer */
+.vault-viewer-layer {
+    position: absolute; inset: 0;
+    background: #000;
+    z-index: 20;
+    display: flex;
+    flex-direction: column;
 }
-
-#countdown-label {
+.viewer-controls {
+    background: #0d0d14;
+    padding: 10px 20px;
+    display: flex;
+    justify-content: space-between;
     font-size: 10px;
-    color: #a445ff;
-    margin-bottom: 4px;
+    border-bottom: 1px solid #a445ff44;
+}
+.viewer-controls button {
+    background: #ff4444; color: white; border: none; padding: 2px 10px;
+    cursor: pointer; font-family: monospace;
+}
+.vault-text-stream {
+    flex-grow: 1; padding: 40px;
+    color: #00ff41; font-size: 13px; line-height: 1.6;
+    overflow-y: auto; text-shadow: 0 0 5px #00ff4144;
+}
+
+
+.vault-footer {
+    position: absolute;
+    bottom: 0;
+    left: 0; 
+    right: 0; /* Using left/right instead of width: 100% prevents bleeding */
+    padding: 8px 20px;
+    background: #08080c;
+    border-top: 1px solid #a445ff33;
+    display: flex;
+    justify-content: space-between;
+    align-items: center; /* Vertically centers the text */
+    font-size: 9px;
+    letter-spacing: 1px;
+    box-sizing: border-box; /* Crucial: includes padding in the width calculation */
+    z-index: 50;
+    backdrop-filter: blur(5px); /* Adds a premium Sovereign feel */
+}
+
+.vault-card.danger { border-color: #ff444466; }
+.vault-card.danger:hover { border-color: #ff4444; box-shadow: 0 0 15px #ff444433; }
+
+.purge-trigger {
+    background: #ff4444 !important;
+    font-weight: bold;
+    border-radius: 2px;
+}
+
+#audit-text { color: #00ff41; }
+
+
+/* Volatile Text Stream Effect */
+.vault-text-stream {
+    color: #00ff41;
+    text-shadow: 0 0 5px rgba(0, 255, 65, 0.5);
+    background: repeating-linear-gradient(
+        0deg,
+        rgba(0, 0, 0, 0.15),
+        rgba(0, 0, 0, 0.15) 1px,
+        transparent 1px,
+        transparent 2px
+    );
+    animation: text-flicker 0.05s infinite alternate;
+}
+
+/* The Shredder Animation for the Purge */
+@keyframes vault-shred {
+    0% { transform: translateY(0); opacity: 1; filter: blur(0); }
+    100% { transform: translateY(100%); opacity: 0; filter: blur(10px); }
+}
+
+.shredding {
+    animation: vault-shred 0.8s ease-in forwards !important;
+    pointer-events: none;
+}
+
+
+.nuclear-btn {
+    background: #440000;
+    color: #ff4444;
+    border: 1px solid #ff4444;
+    font-size: 10px;
+    padding: 4px 8px;
+    cursor: pointer;
+    margin-left: 15px;
+}
+
+.nuclear-btn:hover { background: #ff4444; color: #000; }
+
+.viz-bar-container {
+    display: flex;
+    height: 40px;
+    background: #111;
+    border: 1px solid #00ff41;
+    margin-top: 20px;
+    overflow: hidden;
+}
+
+.viz-segment {
+    height: 100%;
+    border-right: 1px solid #000;
+    position: relative;
+    background: #00441a;
+}
+
+.viz-segment:hover { background: #00ff41; color: #000; }
+
+.viz-label {
+    position: absolute;
+    bottom: -25px;
+    left: 0;
+    font-size: 9px;
+    white-space: nowrap;
+    color: #00ff41;
+}
+
+/* Special Matrix styling for the Audit Log */
+.audit-matrix {
+    font-family: 'Courier New', monospace;
+    font-size: 12px;
+    color: #00ff41;
+    overflow-y: auto;
+    max-height: 400px;
+    padding: 10px;
+    background: rgba(0, 10, 0, 0.9);
+    position: relative;
+    border: 1px solid #003300;
+}
+
+/* The Scanning Line Effect */
+.audit-matrix::after {
+    content: "";
+    position: absolute;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: linear-gradient(
+        to bottom,
+        transparent 50%,
+        rgba(0, 255, 65, 0.05) 50%
+    );
+    background-size: 100% 4px;
+    pointer-events: none;
+    z-index: 10;
+}
+
+.audit-entry {
+    border-bottom: 1px solid rgba(0, 255, 65, 0.1);
+    padding: 4px 0;
+    white-space: pre-wrap;
+}
+
+.audit-prefix {
+    color: #fff;
+    font-weight: bold;
+    margin-right: 10px;
+    text-transform: uppercase;
     letter-spacing: 1px;
 }
 
-.progress-track {
-    width: 100%;
-    height: 2px;
-    background: #1a1a1a;
-    overflow: hidden;
-}
+/* Scrollbar styling for the Matrix look */
+.audit-matrix::-webkit-scrollbar { width: 4px; }
+.audit-matrix::-webkit-scrollbar-thumb { background: #00ff41; }
 
-#session-bar {
-    width: 0%;
-    height: 100%;
-    background: #a445ff;
-    box-shadow: 0 0 10px #a445ff;
-    transition: width 1s linear;
-}
-
-/* File Grid */
-.file-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-    gap: 20px;
+/* Ensure the grid doesn't hide behind the footer */
+.vault-grid {
     padding: 30px;
+    padding-bottom: 80px; /* Room for the absolute footer */
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+    gap: 20px;
+    max-height: calc(100% - 120px); 
+    overflow-y: auto;
 }
 
-.vault-card {
-    background: rgba(255, 255, 255, 0.03);
-    border: 1px solid #222;
-    padding: 20px;
-    cursor: pointer;
-    transition: all 0.3s ease;
+/* Fix for the Volatile Viewer z-index */
+.vault-viewer-layer {
+    position: absolute;
+    inset: 0;
+    background: #000;
+    z-index: 100; /* Higher than header and cards */
+    display: none; /* Controlled by JS flex */
+    flex-direction: column;
+}
+
+/* Identity text glow fix to prevent bleed */
+.identity-lock {
+    color: #a445ff;
+    text-shadow: 0 0 5px rgba(164, 69, 255, 0.5);
+    white-space: nowrap;
+}
+
+
+.vault-brand {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+}
+
+.glitch {
+    font-family: 'JetBrains Mono', 'Fira Code', monospace;
+    font-size: 1.2rem;
+    font-weight: 800;
+    letter-spacing: 3px;
+    color: #a445ff;
     position: relative;
+    text-transform: uppercase;
+    /* Primary Glow */
+    text-shadow: 0 0 10px rgba(164, 69, 255, 0.5);
 }
 
-.vault-card:hover {
-    border-color: #a445ff;
-    background: rgba(164, 69, 255, 0.05);
-    transform: translateY(-2px);
-}
-
-/* The Volatile Viewer Overlay */
-.volatile-viewer {
+/* The Animated Glitch Layers */
+.glitch::before,
+.glitch::after {
+    content: attr(data-text);
     position: absolute;
     top: 0;
     left: 0;
     width: 100%;
     height: 100%;
-    background: rgba(0, 0, 0, 0.8);
-    backdrop-filter: blur(15px); /* High-end frosted glass */
-    -webkit-backdrop-filter: blur(15px);
+    opacity: 0.8;
+}
+
+.glitch::before {
+    color: #00ff41; /* Green shift */
+    z-index: -1;
+    animation: glitch-anim 0.3s infinite direction-reverse;
+}
+
+.glitch::after {
+    color: #ff00c1; /* Magenta shift */
+    z-index: -2;
+    animation: glitch-anim 0.3s infinite;
+}
+
+@keyframes glitch-anim {
+    0% { transform: translate(0); }
+    20% { transform: translate(-2px, 1px); }
+    40% { transform: translate(-2px, -1px); }
+    60% { transform: translate(2px, 1px); }
+    80% { transform: translate(2px, -1px); }
+    100% { transform: translate(0); }
+}
+
+.brand-stack {
     display: flex;
     flex-direction: column;
-    z-index: 1000;
-    animation: slideUp 0.4s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
-.viewer-nav {
-    padding: 20px;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    border-bottom: 1px solid rgba(164, 69, 255, 0.3);
-}
-
-#close-btn {
-    background: none;
-    border: 1px solid #ff4444;
-    color: #ff4444;
-    padding: 5px 15px;
-    cursor: pointer;
-    font-family: monospace;
-    font-size: 11px;
-}
-
-#close-btn:hover {
-    background: #ff4444;
-    color: #000;
-}
-
-.terminal-text {
-    flex-grow: 1;
-    padding: 40px;
-    font-family: 'Courier New', monospace;
-    color: #00ff41; /* Classic Matrix/Terminal Green */
-    font-size: 15px;
-    line-height: 1.6;
-    overflow-y: auto;
-    white-space: pre-wrap;
-}
-
-/* Animations */
-@keyframes slideUp {
-    from { transform: translateY(100%); opacity: 0; }
-    to { transform: translateY(0); opacity: 1; }
-}
-
-.glitch {
-    font-weight: bold;
-    letter-spacing: 2px;
-    color: #fff;
-    position: relative;
-}
-#vault-audit-log.handshake-active {
-    animation: flicker 0.1s infinite;
+.security-tier {
+    font-size: 7px;
     color: #00ff41;
+    letter-spacing: 2px;
+    margin-top: -2px;
+    opacity: 0.7;
+    font-family: monospace;
 }
-
-@keyframes flicker {
-    0% { opacity: 1; }
-    50% { opacity: 0.5; }
-    100% { opacity: 1; }
-}
-

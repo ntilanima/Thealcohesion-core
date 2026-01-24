@@ -68,9 +68,9 @@ export const registry = [
     // --- 2. CORE SYSTEM UTILITIES ---
     { 
         id: 'files', 
-        name: 'Sovereign VFS', 
+        name: 'File Explorer', 
         icon: '📁', 
-        file: 'vfs.js',
+        file: 'files.js',
         protocol: 'CORE://vfs',
         category: 'System',
         roles: ['ANY'],
@@ -379,5 +379,32 @@ export const registry = [
         manifest: { purpose: 'Emergency mobilization and project execution.', resources: { cpu: 'High', ram: 18 } },
         ethics: { tracking: false, manipulation: false, consent: true },
         lifecycle: 'VETTED'
-    }
+    },
+
+    // --- 4. HIGH-SECURITY ENCLAVE ---
+    { 
+        id: 'vault', 
+        name: 'Sovereign Vault', 
+        icon: '🔐', 
+        file: 'vault.js',
+        protocol: 'SEC://enclave',
+        category: 'Security',
+        roles: ['OFFICER', 'MEGA', 'TREASURY'], // Restricted access
+        manifest: { 
+            purpose: 'High-security enclave for volatile viewing of EPOS allotments and investor records.', 
+            resources: { cpu: 'Low', ram: 12 },
+            security: {
+                volatileBuffer: true,
+                deadManSwitch: '60s',
+                encryption: 'AES-GCM-256'
+            }
+        },
+        ethics: { 
+            tracking: false, 
+            manipulation: false, 
+            consent: true,
+            autoPurge: true // Article 13 compliance
+        },
+        lifecycle: 'VETTED'
+    },
 ];
