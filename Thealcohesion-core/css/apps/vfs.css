@@ -822,3 +822,217 @@
 }
 
 
+.header-actions {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+}
+
+.create-btn {
+    background: transparent;
+    border: 1px solid var(--sov-green);
+    color: var(--sov-green);
+    font-family: 'Courier New', monospace;
+    font-size: 10px;
+    padding: 6px 12px;
+    cursor: pointer;
+    text-transform: uppercase;
+    transition: all 0.3s ease;
+    white-space: nowrap;
+}
+
+.create-btn:hover {
+    background: var(--sov-green);
+    color: #000;
+    box-shadow: 0 0 15px var(--sov-green);
+}
+
+@media (max-width: 768px) {
+    .header-actions {
+        width: 100%;
+        flex-direction: column;
+        align-items: stretch;
+    }
+    
+    .create-btn {
+        width: 100%;
+        margin-bottom: 10px;
+        order: -1; /* Place button above search on mobile */
+    }
+}
+
+
+.sov-modal-overlay {
+    position: fixed;
+    top: 0; left: 0; width: 100%; height: 100%;
+    background: rgba(0,0,0,0.85);
+    backdrop-filter: blur(5px);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 2000;
+}
+
+.sov-modal {
+    background: #0a0a0f;
+    border: 1px solid var(--sov-purple);
+    width: 400px;
+    padding: 20px;
+    box-shadow: 0 0 30px rgba(164, 69, 255, 0.2);
+}
+
+.modal-header {
+    color: var(--sov-purple);
+    font-size: 14px;
+    margin-bottom: 20px;
+    border-bottom: 1px solid var(--sov-edge);
+    padding-bottom: 10px;
+}
+
+.sov-modal label {
+    display: block;
+    font-size: 9px;
+    color: #888;
+    margin-top: 15px;
+}
+
+.sov-modal select, .sov-modal input, .sov-modal textarea {
+    width: 100%;
+    background: #111;
+    border: 1px solid #333;
+    color: var(--sov-green);
+    padding: 8px;
+    margin-top: 5px;
+    font-family: 'Courier New', monospace;
+    font-size: 12px;
+}
+
+.modal-actions {
+    display: flex;
+    gap: 10px;
+    margin-top: 25px;
+}
+
+.file-input-tactical {
+    border: 1px dashed var(--sov-purple) !important;
+    padding: 15px !important;
+    text-align: center;
+    cursor: pointer;
+    margin-bottom: 10px;
+}
+
+#new-file-clearance {
+    border-left: 4px solid var(--sov-purple);
+    font-weight: bold;
+    color: #fff !important;
+}
+
+/* Color coding for clearances */
+#new-file-clearance option[value="CONFIDENTIAL"] { color: #ff4545; }
+#new-file-clearance option[value="RESTRICTED"] { color: #ff8c00; }
+#new-file-clearance option[value="UNRESTRICTED"] { color: #00ff41; }
+
+
+.success-anim-wrapper {
+    text-align: center;
+    padding: 40px 20px;
+    animation: successPulse 0.5s ease-out;
+}
+
+.success-hex {
+    font-size: 60px;
+    color: var(--sov-green);
+    text-shadow: 0 0 20px var(--sov-green);
+    margin-bottom: 20px;
+    animation: hexRotate 2s linear infinite;
+}
+
+.success-msg {
+    font-size: 18px;
+    letter-spacing: 4px;
+    color: #fff;
+    margin-bottom: 10px;
+}
+
+.success-details {
+    font-size: 10px;
+    color: var(--sov-purple);
+    margin-bottom: 5px;
+}
+
+.success-path {
+    font-size: 9px;
+    color: #555;
+    font-family: monospace;
+}
+
+@keyframes hexRotate {
+    0% { transform: rotateY(0deg); }
+    100% { transform: rotateY(360deg); }
+}
+
+@keyframes successPulse {
+    0% { transform: scale(0.8); opacity: 0; }
+    100% { transform: scale(1); opacity: 1; }
+}
+
+/* --- TACTICAL HEADER DECONGESTION --- */
+.tactical-header {
+    background: #050508;
+    border-bottom: 1px solid var(--sov-edge);
+}
+
+/* Tier 1: Identity & Breadcrumb */
+.tier-primary {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px 20px;
+    border-bottom: 1px solid rgba(164, 69, 255, 0.05);
+}
+
+.breadcrumb-zone {
+    font-family: 'Courier New', monospace;
+    font-size: 11px;
+    color: #555;
+}
+
+.current-path {
+    color: var(--sov-green);
+    font-weight: bold;
+    letter-spacing: 1px;
+}
+
+/* Tier 2: Search & Buttons */
+.tier-actions {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    padding: 8px 20px;
+    background: rgba(164, 69, 255, 0.02);
+}
+
+.search-scanner {
+    flex: 1; /* Search takes up remaining space */
+    position: relative;
+    max-width: 500px;
+}
+
+.search-scanner input {
+    width: 100%;
+    background: transparent;
+    border: none;
+    border-bottom: 1px solid #222;
+    padding: 5px 10px 5px 25px;
+    font-size: 12px;
+}
+
+/* Mobile Responsiveness */
+@media (max-width: 768px) {
+    .tier-actions {
+        flex-direction: column;
+        align-items: stretch;
+        padding: 15px;
+    }
+    .search-scanner { max-width: none; }
+}

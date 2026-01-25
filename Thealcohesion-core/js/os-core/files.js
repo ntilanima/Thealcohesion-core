@@ -14,6 +14,41 @@ export class FilesApp {
         this.updateTelemetry();
     }
 
+    calculateSize(data) {
+    // Check if data is a File object (from input) or raw string
+    const bytes = data instanceof File ? data.size : new Blob([data]).size;
+    
+    if (bytes === 0) return '0.00 KB';
+    const k = 1024;
+    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+}
+
+    async saveNewFile(name, content, category) {
+    try {
+        // 1. Integrity Check: Prevent empty/duplicate manifests
+        if (!name) throw new Error("VOID_IDENTIFIER");
+
+        // 2. VFS Write: Use MFS directly
+        // await MFS.saveFile({ name, content, category }); 
+
+        // 3. Dispatch via Kernel: Decoupled communication
+        this.kernel.emit('FILE_CREATED', {
+            name: name,
+            category: category,
+            timestamp: new Date().toISOString(),
+            clearance: 'RESTRICTED'
+        });
+
+        // 4. Atomic UI Refresh: Don't reload everything, just the folder
+        await this.navigateTo(category);
+        
+    } catch (err) {
+        this.kernel.notify(`MANIFEST_ERR: ${err.message}`, "high");
+    }
+}
+
    async navigateTo(cat, sub = null) {
     this.activeCategory = cat;
     const list = document.getElementById('file-mesh-list');
@@ -108,7 +143,7 @@ export class FilesApp {
             <div class="file-card ${f.urgency}" style="animation: slideIn 0.3s forwards ${i * 0.05}s; opacity: 0;">
                 <div class="file-card-header">
                     <span class="file-ext">${getIcon(f.type)} ${f.type.toUpperCase()}</span>
-                    <span class="clearance-tag">${getClearance(f.category)}</span>
+                    <span class="clearance-tag">${f.clearance || getClearance(f.category)}</span>
                     <span class="folio-tag">FOLIO_${folio}</span>
                 </div>
                 <div class="file-card-body">
@@ -119,10 +154,19 @@ export class FilesApp {
                     <div class="file-telemetry">
                         <div class="t-row ref-row"><span>REF:</span> <span class="val">${fullRef}</span></div>
                         <div class="t-row"><span>AUTH:</span> <span class="val">${f.author}</span></div>
+                        <div class="t-row"><span>SIZE:</span> <span class="val">${f.size || '0.00 KB'}</span></div>
                         <div class="t-row"><span>INTEGRITY:</span> <span class="val" style="font-size:7px">${fakeHash}</span></div>
                         <div class="t-row"><span>CREATED:</span> <span class="val">${f.created}</span></div>
                         <div class="t-row"><span>MODIFIED:</span> <span class="val">${f.modified}</span></div>
                         <div class="t-row"><span>VIEWS:</span> <span class="val">${f.views || 0}</span></div>
+                        <div class="route-container" id="route-box-${i}">
+                        <div class="route-progress-bar">
+                            <div class="route-progress-fill" id="fill-${i}"></div>
+                        </div>
+                        <span class="route-icon" onclick="app.tacticalRoute('${f.name}', '${f.size || '0.00 KB'}', ${i})" title="INITIATE_UPLINK">
+                            📡
+                        </span>
+                        </div>
                     </div>
                 </div>
                 <div class="file-card-footer">
@@ -147,6 +191,49 @@ export class FilesApp {
     this.applyScrambleEffect();
     this.setupTableEvents();
 }
+
+    async tacticalRoute(fileName, size, index) {
+        const routeBox = document.getElementById(`route-box-${index}`);
+        const fill = document.getElementById(`fill-${index}`);
+        const icon = routeBox.querySelector('.route-icon');
+
+        // 1. Prevent double-firing
+        if (routeBox.classList.contains('transmitting')) return;
+        
+        routeBox.classList.add('transmitting');
+        this.notify(`ESTABLISHING_UPLINK: ${fileName.toUpperCase()}`, "normal");
+
+        // 2. Calculate "Beam Time" (Best Practice: Weight based on KB/MB)
+        const sizeVal = parseFloat(size);
+        const weight = size.includes('MB') ? 1000 : 10;
+        const duration = Math.min(Math.max(sizeVal * weight, 800), 3000); // Between 0.8s and 3s
+
+        // 3. Animate the progress bar
+        fill.style.transition = `width ${duration}ms linear`;
+        setTimeout(() => { fill.style.width = '100%'; }, 50);
+
+        // 4. Wait for "Beaming" to complete
+        await new Promise(res => setTimeout(res, duration));
+
+        // 5. Secure Signal via Kernel (Unified Bridge)
+        this.kernel.emit('FILE_CREATED', { 
+            name: fileName,
+            category: this.activeCategory,
+            size: size,
+            timestamp: new Date().toISOString(),
+            isManualRoute: true
+        });
+
+        // 6. Finalize UI State
+        icon.innerHTML = '✔️';
+        this.notify(`UPLINK_SUCCESS: ${fileName.toUpperCase()}`);
+        
+        setTimeout(() => {
+            routeBox.classList.remove('transmitting');
+            fill.style.width = '0%';
+            icon.innerHTML = '📡';
+        }, 2000);
+    }
     applyScrambleEffect() {
         const elements = this.container.querySelectorAll('.scramble-text');
         elements.forEach(el => {
@@ -170,11 +257,11 @@ export class FilesApp {
         });
     }
 
-    renderBase() {
+  renderBase() {
     this.container.innerHTML = `
         <div class="explorer-wrapper">
-            <aside class="explorer-sidebar">
-                <div class="explorer-brand">FILE ENCLAVE_PRO // V1.0</div>
+            <aside class="explorer-sidebar" id="sidebar">
+                <div class="explorer-brand">ENCLAVE_PRO // V1.0</div>
                 <div class="telemetry-box" id="sys-telemetry">MESH_LOAD: ACTIVE</div>
                 <nav class="explorer-nav">
                     ${['Personal', 'Comms', 'Records', 'Finance', 'Personnel', 'Projects', 'Logistics'].map(cat => `
@@ -185,24 +272,213 @@ export class FilesApp {
                 </nav>
             </aside>
             <main class="explorer-content">
-                <header class="explorer-path">
-                    <div class="path-line">
-                        <span id="breadcrumb">ROOT</span>
+                <header class="tactical-header">
+                    <div class="tier-primary">
+                        <div class="breadcrumb-zone">
+                            <span class="root-label">STORAGE_MESH</span>
+                            <span class="path-separator">/</span>
+                            <span id="breadcrumb" class="current-path">ROOT</span>
+                        </div>
+                        <div id="quota-display" class="quota-zone"></div>
                     </div>
-                    <div class="search-scanner">
-                            <div class="scanner-line"></div>
+
+                    <div class="tier-actions">
+                        <button class="create-btn" onclick="app.openUniversalCreator()">
+                            <span class="plus-icon">+</span> INITIALIZE_FOLIO
+                        </button>
+                        <div class="search-scanner">
                             <span class="cmd-prefix">></span>
                             <input type="text" id="mesh-search" placeholder="SCAN_DATABASE..." spellcheck="false" autocomplete="off" />
+                            <div class="scanner-glow"></div>
                         </div>
+                    </div>
                 </header>
                 <div id="file-mesh-list" class="explorer-table"></div>
             </main>
         </div>
     `;
     this.setupSidebar();
-    this.setupSearch(); // Initialize the search listener
+    this.setupSearch();
+}  
+
+
+routeToComms(fileName, size = '0.00 KB') {
+    this.notify(`PREPARING_DISPATCH: ${fileName.toUpperCase()}`, "normal");
+    
+    // Secure Dispatch via Kernel
+    this.kernel.emit('FILE_CREATED', { 
+        name: fileName,
+        category: this.activeCategory,
+        size: size,
+        timestamp: new Date().toISOString(),
+        isManualRoute: true
+    });
 }
 
+async openUniversalCreator() {
+    // 1. Ensure we pull the sector keys correctly
+    const categories = Object.keys(MFS.protocols);
+    
+    const modal = document.createElement('div');
+    modal.className = 'sov-modal-overlay';
+    modal.innerHTML = `
+        <div class="sov-modal">
+            <div class="modal-header">SECURE_PROTOCOL_UPLOAD</div>
+            <div class="modal-body">
+                <label>SELECT_OBJECT</label>
+                <input type="file" id="new-file-upload" class="file-input-tactical" />
+                <div id="upload-progress-container" style="display: none; margin-top: 20px;">
+                <div class="stat-row"><span id="upload-status-text">INITIALIZING_ENCRYPTION...</span> <span id="upload-pct">0%</span></div>
+                <div class="silo-bar" style="width: 100%; height: 10px; margin-top: 5px;">
+                    <div id="upload-progress-fill" class="silo-fill" style="width: 0%; background: var(--sov-purple);"></div>
+                </div>
+                </div>
+
+                <label>TARGET_SECTOR</label>
+                <select id="new-file-cat">
+                    <option value="">-- SELECT SECTOR --</option>
+                    ${categories.map(c => `<option value="${c}">${c.toUpperCase()}</option>`).join('')}
+                </select>
+
+                <label>TARGET_VOLUME</label>
+                <select id="new-file-sub">
+                    <option value="">-- SELECT SECTOR FIRST --</option>
+                </select>
+
+                <label>SECURITY_CLEARANCE</label>
+                <select id="new-file-clearance">
+                    <option value="UNRESTRICTED">UNRESTRICTED</option>
+                    <option value="RESTRICTED">RESTRICTED</option>
+                    <option value="CONFIDENTIAL">CONFIDENTIAL</option>
+                    <option value="TOP_SECRET">TOP_SECRET</option>
+                </select>
+
+                <label>AUTHOR_SIGNATURE</label>
+                <input type="text" id="new-file-auth" value="USER_ADMIN" />
+            </div>
+            <div class="modal-actions">
+                <button class="create-btn" id="confirm-upload">UPLOAD_TO_MESH</button>
+                <button class="wipe-btn" id="abort-upload">ABORT</button>
+            </div>
+        </div>
+    `;
+    document.body.appendChild(modal);
+
+    // 2. STURDY EVENT LISTENERS (The "Correct" Way)
+    const catSelect = modal.querySelector('#new-file-cat');
+    const subSelect = modal.querySelector('#new-file-sub');
+    
+    catSelect.addEventListener('change', (e) => {
+        const selectedCat = e.target.value;
+        if (!selectedCat) {
+            subSelect.innerHTML = '<option value="">-- SELECT SECTOR FIRST --</option>';
+            return;
+        }
+        
+        // Pull sub-folders directly from MFS
+        const subs = Object.keys(MFS.protocols[selectedCat]);
+        subSelect.innerHTML = subs.map(s => `<option value="${s}">${s}</option>`).join('');
+    });
+
+    modal.querySelector('#confirm-upload').onclick = () => this.executeUpload();
+    modal.querySelector('#abort-upload').onclick = () => modal.remove();
+}
+
+async executeUpload() {
+    const fileInput = document.getElementById('new-file-upload');
+    const cat = document.getElementById('new-file-cat').value;
+    const sub = document.getElementById('new-file-sub').value;
+    const clearance = document.getElementById('new-file-clearance').value;
+
+    if (!fileInput.files[0] || !cat || !sub) {
+        alert("CRITICAL_ERR: MISSING_UPLOAD_DATA");
+        return;
+    }
+
+    const progressContainer = document.getElementById('upload-progress-container');
+    const progressFill = document.getElementById('upload-progress-fill');
+    const statusText = document.getElementById('upload-status-text');
+    const pctText = document.getElementById('upload-pct');
+    const uploadBtn = document.getElementById('confirm-upload');
+
+    // Start Simulation
+    uploadBtn.disabled = true;
+    progressContainer.style.display = 'block';
+    
+    let progress = 0;
+    const interval = setInterval(() => {
+        progress += Math.random() * 15;
+        if (progress > 100) progress = 100;
+        
+        progressFill.style.width = `${progress}%`;
+        pctText.innerText = `${Math.floor(progress)}%`;
+
+        if (progress < 40) statusText.innerText = "FRAGMENTING_OBJECT...";
+        else if (progress < 80) {
+            statusText.innerText = "ENCRYPTING_BITSTREAM...";
+            progressFill.style.background = "var(--sov-purple)";
+        } 
+        else statusText.innerText = "FINALIZING_PROTOCOL...";
+
+        if (progress === 100) {
+            clearInterval(interval);
+            this.triggerSuccessAnimation(fileInput.files[0], cat, sub, clearance);
+        }
+    }, 150);
+}
+
+
+triggerSuccessAnimation(file, cat, sub, clearance) {
+    const auth = document.getElementById('new-file-auth')?.value || "USER_ADMIN";
+    const modal = document.querySelector('.sov-modal');
+    
+    // 1. Update UI to Success State
+    modal.innerHTML = `
+        <div class="success-anim-wrapper">
+            <div class="success-hex">⬢</div>
+            <div class="success-msg">OBJECT_SECURED</div>
+            <div class="success-details">${file.name.toUpperCase()}</div>
+        </div>
+    `;
+
+    try {
+        // 2. Data Calculation
+        // Pass the actual File object from the input to calculateSize
+        const sizeStr = this.calculateSize(file); 
+        
+        const newFile = {
+            name: file.name,
+            path: MFS.getProtocolPath(cat, sub),
+            category: cat,
+            type: file.name.split('.').pop() || 'bin',
+            size: sizeStr, 
+            author: auth,
+            urgency: (clearance === 'CONFIDENTIAL' || clearance === 'TOP_SECRET') ? 'high' : 'normal',
+            clearance: clearance,
+            created: new Date().toISOString().split('T')[0],
+            modified: new Date().toISOString().split('T')[0],
+            views: 0
+        };
+
+        // 3. Update Global Manifest
+        MFS.manifest.files.push(newFile);
+        
+        // 4. Signal the Comms Hub (The Nervous System)
+        this.kernel.emit('FILE_CREATED', newFile);
+
+    } catch (err) {
+        console.error("CRITICAL_SYNC_ERROR:", err);
+        this.notify("SYNC_FAILURE: DATA_PERSISTENCE_ERR", "high");
+    }
+
+    // 5. Guaranteed Cleanup
+    setTimeout(() => {
+        const overlay = document.querySelector('.sov-modal-overlay');
+        if (overlay) overlay.remove();
+        // Go to the folder where the file was just uploaded
+        this.navigateTo(cat, sub);
+    }, 2000);
+}
 
 setupSearch() {
     const searchInput = this.container.querySelector('#mesh-search');

@@ -313,6 +313,32 @@ class TLC_Kernel {
                 return await window.SovereignVFS.write(path, data, this.sessionKey);
             }
         };
+
+        // ADD THE ROUTING LOGIC HERE
+        this.events = new EventTarget(); // Private system bus
+
+        // Best Practice: Secured Event Methods
+        this.on = (event, callback) => {
+            this.events.addEventListener(event, (e) => callback(e.detail));
+        };
+
+        this.emit = (event, data) => {
+            console.log(`[KERNEL_SIGNAL]: ${event}`, data);
+            this.events.dispatchEvent(new CustomEvent(event, { detail: data }));
+        };
+
+        // Orchestration Logic
+        this.on('FILE_CREATED', (fileData) => {
+            // Refresh FilesApp only if it's currently running to save memory
+            if (this.runningApps.has('files')) {
+                this.activeProcesses['files']?.updateUI?.();
+            }
+            
+            // Automatically prepare Comms Hub routing
+            this.activeProcesses['comms']?.queueForRouting(fileData);
+            
+            this.notify(`SYSTEM: NEW_FOLIO_DETECTED [${fileData.name}]`, "normal");
+        });
         
     }
 
@@ -536,16 +562,29 @@ async shutdown() {
     get APP_ROUTES() {
         return {
             'terminal': async (container) => {
-            const m = await import('../apps/terminal.js');
-            // You MUST pass the api object as the second argument
-            const apiBridge = {
-                signature: 'SOVEREIGN_CORE_V1',
-                identity: 'Admin',
-                vfs: this.vfs // Ensure this exists in your kernel
-            };
-            const instance = new m.TerminalApp(container, apiBridge);
-            instance.init();
-            return instance;
+                const m = await import('./terminal.js');
+                
+                // THE BYPASS: Providing the internal signature required by TerminalApp
+                const apiBridge = {
+                    signature: 'SOVEREIGN_CORE_V1',
+                    identity: 'CHIEF_ADMIN',
+                    vfs: this.vfs,
+                    // Bridge back to Kernel's notification system
+                    notify: (msg, type) => this.showNotification ? this.showNotification(msg, type) : console.log(msg),
+                    // Used for Comms Hub integration and record signing
+                    getSignature: () => 'ADMIN_CORE_' + this.sessionKey?.substring(0,4).toUpperCase(),
+                    getRole: () => 'SUPERUSER',
+                    close: () => this.closeApp('terminal')
+                };
+
+                const instance = new m.TerminalApp(container, apiBridge);
+                instance.init();
+
+                // Register process for memory management
+                this.activeProcesses = this.activeProcesses || {};
+                this.activeProcesses['terminal'] = instance;
+
+                return instance;
             },
             'time': async (container) => {
                 const m = await import('../apps/time.js');
@@ -669,6 +708,33 @@ async shutdown() {
 
                 return instance;
             },
+
+            'comms': async (container) => {
+                const { CommsApp } = await import('../apps/CommsApp.js');
+                
+                // The Comms Hub needs access to the VFS for attachments 
+                // and the Kernel's notify system for signal alerts.
+                const apiBridge = {
+                    signature: 'SOVEREIGN_CORE_V1',
+                    vfs: this.vfs,
+                    notify: (msg) => this.showNotification ? this.showNotification(msg) : console.log(msg),
+                    getRole: () => this.userRole || 'OFFICER',
+                    // Logic to bridge back to Files if user wants to pick an attachment
+                    openFilePicker: () => this.launchApp('files') 
+                };
+
+                const instance = new CommsApp(container, apiBridge);
+                
+                // Initialize internal transmission logs
+                if (instance.init) await instance.init();
+
+                // Register process for Kernel tracking
+                this.activeProcesses = this.activeProcesses || {};
+                this.activeProcesses['comms'] = instance;
+
+                return instance;
+            },
+
         };
     }
 

@@ -40,47 +40,78 @@ export class TerminalApp {
         this.matrixActive = false;
 
         this.vpuLogo = `
-        _   _  ____  _   _ 
+                _   _  ____  _   _ 
         | | | ||  _ \\| | | |
         | | | || |_) | | | |
         | |/ / |  __/| |_| |
         |___/  |_|    \\.../ 
-        VIRTUAL PRAGMATIC UNIVERSE`;
+
+   ███████╗ ██████╗ ██╗   ██╗███████╗██████╗ ███████╗██╗ ██████╗ ███╗   ██╗
+   ██╔════╝██╔═══██╗██║   ██║██╔════╝██╔══██╗██╔════╝██║██╔════╝ ████╗  ██║
+   ███████╗██║   ██║██║   ██║█████╗  ██████╔╝█████╗  ██║██║  ███╗██╔██╗ ██║
+   ╚════██║██║   ██║╚██╗ ██╔╝██╔══╝  ██╔══██╗██╔══╝  ██║██║   ██║██║╚██╗██║
+   ███████║╚██████╔╝ ╚████╔╝ ███████╗██║  ██║███████╗██║╚██████╔╝██║ ╚████║
+   ╚══════╝ ╚═════╝   ╚═══╝  ╚══════╝╚═╝  ╚═╝╚══════╝╚═╝ ╚═════╝ ╚═╝  ╚═══╝
+   [ SOVEREIGN_VIRTUAL_PRAGMATIC_UNIVERSE // ADMINISTRATIVE_TERMINAL ]`;
     }
 
     init() {
-        this.container.innerHTML = `
-            <div id="vpu-terminal" style="background:#050505; color:#00ff41; font-family: 'Courier New', monospace; height:100%; display:flex; flex-direction:column; padding:15px; box-sizing:border-box; position: relative; overflow: hidden; text-shadow: 0 0 5px rgba(0, 255, 65, 0.4);">
-                <canvas id="matrix-canvas" style="position:absolute; top:0; left:0; width:100%; height:100%; z-index:1; opacity:0; transition: opacity 2s ease; pointer-events:none;"></canvas>
-                
-                <div id="term-header" style="z-index: 5; margin-bottom: 20px; border-bottom: 1px solid rgba(0, 255, 65, 0.2); padding-bottom: 10px;">
-                    <pre style="color:#a445ff; margin:0; font-size: 10px; line-height: 1.2;">${this.vpuLogo}</pre>
-                    <div style="font-size: 12px; margin-top: 5px; opacity: 0.8;">
-                        ENCLAVE: ${this.api.identity} | KEY: ${this.api.sessionKey ? 'VERIFIED' : 'NULL'}
-                        CORE: Sovereign v1.2.8 | APPS: ${this.appRegistry.length} | KERNEL: 1.0.2-theal
-                    </div>
+    // 1. Render the HTML first
+    this.container.innerHTML = `
+        <div id="vpu-terminal" style="background:#050505; color:#00ff41; font-family: 'Courier New', monospace; height:100%; display:flex; flex-direction:column; padding:15px; box-sizing:border-box; position: relative; overflow: hidden; text-shadow: 0 0 5px rgba(0, 255, 65, 0.4);">
+            <canvas id="matrix-canvas" style="position:absolute; top:0; left:0; width:100%; height:100%; z-index:1; opacity:0; transition: opacity 2s ease; pointer-events:none;"></canvas>
+            
+            <div id="term-header" style="z-index: 5; margin-bottom: 20px; border-bottom: 1px solid rgba(0, 255, 65, 0.2); padding-bottom: 10px;">
+                <pre style="color:#a445ff; margin:0; font-size: 10px; line-height: 1.2;">${this.vpuLogo}</pre>
+                <div style="font-size: 12px; margin-top: 5px; opacity: 0.8;">
+                    ENCLAVE: ${this.api.identity} | KEY: ${this.api.sessionKey ? 'VERIFIED' : 'NULL'}
+                    CORE: Sovereign v1.2.8 | APPS: ${this.appRegistry.length} | KERNEL: 1.0.2-theal
                 </div>
+            </div>
 
-                <div id="term-output" style="flex:1; overflow-y:auto; margin-bottom:10px; font-size:13px; line-height:1.5; white-space: pre-wrap; z-index: 5; position:relative;"></div>
-                
-                <div class="input-line" style="display:flex; align-items:center; gap:10px; z-index: 5; position:relative;">
-                    <span style="color:#a445ff; font-weight:bold; white-space: nowrap;">admin@vpu:~$</span>
-                    <input type="text" id="term-input" autocomplete="off" spellcheck="false" 
-                        style="background:transparent; border:none; color:#fff; outline:none; flex:1; font-family: inherit; font-size: 13px;">
-                </div>
-                
-                <div class="terminal-overlay" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.15) 50%); background-size: 100% 4px; pointer-events: none; z-index: 10; opacity: 0.3;"></div>
-            </div>`;
+            <div id="term-output" style="flex:1; overflow-y:auto; margin-bottom:10px; font-size:13px; line-height:1.5; white-space: pre-wrap; z-index: 5; position:relative;"></div>
+            
+            <div class="input-line" style="display:flex; align-items:center; gap:10px; z-index: 5; position:relative;">
+                <span style="color:#a445ff; font-weight:bold; white-space: nowrap;">admin@vpu:~$</span>
+                <input type="text" id="term-input" autocomplete="off" spellcheck="false" 
+                    style="background:transparent; border:none; color:#fff; outline:none; flex:1; font-family: inherit; font-size: 13px;">
+            </div>
+            
+            <div class="terminal-overlay" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.15) 50%); background-size: 100% 4px; pointer-events: none; z-index: 10; opacity: 0.3;"></div>
+        </div>`;
+
+    // 2. NOW select the elements (ORDER MATTERS)
+    this.output = this.container.querySelector('#term-output');
+    this.input = this.container.querySelector('#term-input');
+    this.canvas = this.container.querySelector('#matrix-canvas');
+    
+    // 3. Set up listeners
+    if (this.input) {
         this.input.focus();
-        this.output = this.container.querySelector('#term-output');
-        this.input = this.container.querySelector('#term-input');
-        this.canvas = this.container.querySelector('#matrix-canvas');
-        
-        setTimeout(() => this.input.focus(), 50);
         this.input.onkeydown = (e) => this.handleKeyDown(e);
-        this.container.onclick = () => this.input.focus();
+    }
+    
+    this.container.onclick = () => { if(this.input) this.input.focus(); };
 
-        this.typeWrite("Hardware Telemetry Initialized...\n`Sovereign Terminal [v1.2.9] Handshake Successful.\nSecure VFS Mounted. Node: ${this.api.identity}`\nApp Engine Online. Type 'search' for apps.");
+    // 4. Start the intro sequence
+    this.typeWrite([
+    `[SYS_LOAD]: VPU_KERNEL_V1.2.9_STABLE`,
+    `[SEC_CHECK]: SIGNATURE [${this.api.signature}] VERIFIED`,
+    `[VFS_MOUNT]: HOME_DIR / DECRYPTING_NODES...`,
+    `[IDENTITY]: ${this.api.identity} // LEVEL: SUPERUSER`,
+    `--------------------------------------------`,
+    `SOVEREIGN_TERMINAL_ONLINE. READY_FOR_DIRECTIVES.`,
+    `TYPE 'search' for Apps.`
+    ].join('\n'));
+}
+
+    print(text, color = "#00ff41") {
+        const line = document.createElement('div');
+        line.style.color = color;
+        line.style.whiteSpace = "pre-wrap"; // Ensures ASCII art preserves spacing
+        line.textContent = text;
+        this.output.appendChild(line);
+        this.output.scrollTop = this.output.scrollHeight;
     }
 
     async handleCommand(cmd) {
@@ -139,10 +170,40 @@ export class TerminalApp {
                 break;
 
             case 'neofetch':
+                const logoA = [
+                    "   _____  ______      __",
+                    "  / ___/ / __  / |   / /",
+                    "  \\__ \\ / / / /| |  / / ",
+                    " ___/ // /_/ / | | / /  ",
+                    "/____/ \\____/  |__|/   ",
+                    "SOVEREIGN VPU TERMINAL"
+                ].join('\n');
+                
+                this.print(logoA, "#a445ff"); // Use the new print method
+                
                 const ramUsed = (Math.random() * 4 + 2).toFixed(1);
                 const cpuLoad = Math.floor(Math.random() * 15 + 5);
-                const stats = `\n[SYSTEM TELEMETRY]\nOS:       Sovereign OS v1.2.8\nKERNEL:   1.0.2-theal-x86_64\nCPU:      Alcohesion Quantum-Thread [${cpuLoad}%]\nMEMORY:   ${ramUsed}GB / 32GB [|||---------]\nUPTIME:   14 days, 2 hours\n`;
-                await this.typeWrite(stats);
+                const stats = `\nUSER: ${this.api.identity}\nKERNEL: TLC_1.2.9\nFORMATION: ADMIN_CORE\nUPTIME: 100%\n\n[SYSTEM TELEMETRY]\nOS:       Sovereign OS v1.2.8\nCPU:      Alcohesion Quantum-Thread [${cpuLoad}%]\nMEMORY:   ${ramUsed}GB / 32GB [|||---------]\n`;
+                
+                await this.typeWrite(stats); // Stream the stats for effect
+                break;
+
+            case 'vfs-tree':
+                const tree = [
+                    "VPU_SOVEREIGN_VFS_MAP:",
+                    "root/",
+                    " ├── etc/",
+                    " │   └── config.vpu",
+                    " ├── home/",
+                    " │   ├── readme.txt",
+                    " │   └── documents/",
+                    " │       ├── investors.txt [ENCRYPTED]",
+                    " │       └── allotment_memo.pdf",
+                    " └── bin/",
+                    "     └── auth_sequencer.sh"
+                ].join('\n');
+                
+                this.print(tree, "#a445ff");
                 break;
 
             case 'help':
@@ -150,13 +211,13 @@ export class TerminalApp {
                 break;
 
             case 'status':
-            const checkFile = await this.api.vfs.read("home/readme.txt", this.api.sessionKey);
-            if (checkFile) {
-                await this.typeWrite("VFS STATUS: VERIFIED (Integrity 100%)\nENCLAVE: SECURE");
-            } else {
-                await this.typeWrite("VFS STATUS: CORRUPTED\nWARNING: ENCLAVE KEY MISMATCH", "#ff4444");
-            }
-            break;
+                const checkFile = await this.api.vfs.read("home/readme.txt", this.api.sessionKey);
+                if (checkFile) {
+                    await this.typeWrite("VFS STATUS: VERIFIED (Integrity 100%)\nENCLAVE: SECURE");
+                } else {
+                    await this.typeWrite("VFS STATUS: CORRUPTED\nWARNING: ENCLAVE KEY MISMATCH", "#ff4444");
+                }
+                break;
 
             case 'network':
                 await this.typeWrite("SCANNING VPU NODES...\n[NODE_01]: ONLINE\n[EPOS_RELAY]: SECURE");
@@ -182,6 +243,26 @@ export class TerminalApp {
             case 'ls':
                 await this.listDirectory();
                 break;
+
+            case 'sudo':
+                if (!arg) return this.print("USAGE: sudo [ACTION] [TARGET]", "#ffaa00");
+                
+                // Example: sudo beam TX-101
+                if (arg === 'beam' && parts[2]) {
+                    const fileId = parts[2].toUpperCase();
+                    this.print(`EXECUTING_REMOTE_BEAM: ${fileId}...`, "#a445ff");
+                    
+                    // Dispatches a global event that the Comms Hub or Kernel can hear
+                    window.dispatchEvent(new CustomEvent('vpu:remote_beam', { 
+                        detail: { id: fileId, officer: this.api.identity } 
+                    }));
+                    
+                    await new Promise(r => setTimeout(r, 1000));
+                    this.print(`BEAM_SIGNAL_SENT: Handshake pending in COMMS_HUB.`);
+                } else {
+                    this.print(`ERR: Action '${arg}' requires higher clearance.`, "#ff4444");
+                }
+                break;   
 
             default:
                 // Check if user typed an app ID directly

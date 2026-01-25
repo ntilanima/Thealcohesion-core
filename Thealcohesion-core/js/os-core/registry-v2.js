@@ -79,6 +79,21 @@ export const registry = [
         lifecycle: 'VETTED'
     },
     { 
+        id: 'comms', 
+        name: 'Comms Hub', 
+        icon: '📡', 
+        file: 'comms.js',
+        protocol: 'SEC.TAC://comms',
+        category: 'Communication',
+        roles: ['ADMIN', 'OFFICER', 'LOGISTICS'],
+        manifest: { 
+            purpose: 'Secure packet broadcast and routing across manual sectors 1-8.', 
+            resources: { cpu: 'Medium', ram: 4 } 
+        },
+        ethics: { tracking: false, manipulation: false, consent: true },
+        lifecycle: 'VETTED'
+    },  
+    { 
         id: 'settings', 
         name: 'OS Settings', 
         icon: '⚙️', 

@@ -115,10 +115,10 @@ export const MFS = {
         return Object.keys(this.protocols[category] || {});
     },
 
-    getProtocolPath(category, subFolder) {
-        // Accessing .path since we now use objects
-        return this.protocols[category]?.[subFolder]?.path || 'GEN/VOL./';
-    },
+    getProtocolPath(cat, sub) {
+    const entry = this.protocols[cat]?.[sub];
+    return typeof entry === 'object' ? entry.path : entry;
+},
 
     getProtocolRemark(category, subFolder) {
         // New helper to pull the manual remarks
