@@ -1,29 +1,72 @@
 import { MFS } from '../apps/mfs.js';
 
 export class FilesApp {
+    static COMM_TEMPLATES = {
+        OFFICIAL_LETTER: {
+            name: "NATIVE_ALLOTMENT_DECREE.txt",
+            icon: "⚖️",
+            label: "OFFICIAL_LETTER",
+            content: (id) => `SOVEREIGN_ADMINISTRATION // NATIVE_PROVISIONING\nCLASSIFICATION: RESTRICTED // THEALCOHESION_CORE\n------------------------------------------\nDATE: ${new Date().toLocaleDateString()}\nREF_ID: NAT_ALLOT_100MB_${Math.floor(Math.random()*1000)}\n\nSUBJECT: INITIAL_STORAGE_ALLOTMENT_DECREE\n\n1. PROVISION: Total 100.00 MB Mesh Storage.\n2. ELIGIBILITY: Verified Natives of Thealcohesion.\n3. PROTOCOL: Managed via EPOS v2.0.\n\nSTAMP_AUTHORITY: TLC_KERNEL_V1.2.8\nDIGITAL_SIG: [NATIVE_ENCLAVE_VERIFIED]`
+        },
+        OTHER_LETTER: {
+            name: "NATIVE_CORRESPONDENCE.txt",
+            icon: "✉️",
+            label: "OTHER_LETTER",
+            content: (id) => `MEMORANDUM // NATIVE_CORRESPONDENCE\nDATE: ${new Date().toLocaleDateString()}\nFROM: ${id}\n\n[Salutation],\n\n[Body text for general Native communication.]`
+        },
+        SIGNAL: {
+            name: "SIGNAL_BURST.txt",
+            icon: "📡",
+            label: "SIGNAL_BURST",
+            content: () => `[SIGNAL_PRIORITY: HIGH]\n[ORIGIN]: ADMIN_CORE\n[DATA]: PING_NATIVE_MESH\n[PULSE_ID]: ${Math.random().toString(36).substring(7).toUpperCase()}\n[EOF]`
+        }
+    };
     constructor(container, kernel) {
         this.container = container;
         this.kernel = kernel;
         this.activeCategory = 'Personal';
+        this.activeSub = null;
+        this.undoStack = [];; // for UNDO
         window.app = this; // CRITICAL: Makes app.download() etc work from HTML strings
+
+        document.addEventListener('keydown', (e) => {
+            if ((e.ctrlKey || e.metaKey) && e.key === 'z') {
+                app.undoDelete();
+            }
+        });
+
     }
+
+    async getDeviceKey() {
+    if (!localStorage.mfs_device_key) {
+        const key = crypto.getRandomValues(new Uint8Array(32));
+        localStorage.mfs_device_key = Array.from(key).join(',');
+    }
+    return new Uint8Array(localStorage.mfs_device_key.split(',').map(Number));
+
+}
+
 
     async init() {
         this.renderBase();
         this.navigateTo('Personal');
         this.updateTelemetry();
+        MFS.recalculatePersonalUsage();
+        this.runRecycleMaintenance();
     }
 
-    calculateSize(data) {
-    // Check if data is a File object (from input) or raw string
-    const bytes = data instanceof File ? data.size : new Blob([data]).size;
-    
-    if (bytes === 0) return '0.00 KB';
-    const k = 1024;
-    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
-    const i = Math.floor(Math.log(bytes) / Math.log(k));
-    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
-}
+    calculateBytes(data) {
+    if (data instanceof File) return data.size;
+    return new Blob([data]).size;
+    }
+
+    formatBytes(bytes) {
+        if (bytes === 0) return '0.00 KB';
+        const k = 1024;
+        const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+        const i = Math.floor(Math.log(bytes) / Math.log(k));
+        return `${(bytes / Math.pow(k, i)).toFixed(2)} ${sizes[i]}`;
+    }
 
     async saveNewFile(name, content, category) {
     try {
@@ -31,7 +74,7 @@ export class FilesApp {
         if (!name) throw new Error("VOID_IDENTIFIER");
 
         // 2. VFS Write: Use MFS directly
-        // await MFS.saveFile({ name, content, category }); 
+        await MFS.saveFile({ name, content, category }); 
 
         // 3. Dispatch via Kernel: Decoupled communication
         this.kernel.emit('FILE_CREATED', {
@@ -51,13 +94,18 @@ export class FilesApp {
 
    async navigateTo(cat, sub = null) {
     this.activeCategory = cat;
+    this.activeSub = sub;
     const list = document.getElementById('file-mesh-list');
     const breadcrumb = document.getElementById('breadcrumb');
+
+    // Safety Check: Prevent crash if DOM isn't ready
+        if (!list || !breadcrumb) return;
     
     //QUOTA TA
     // 1. Calculate Usage for Personal Sector
     const usageMB = (MFS.manifest.personalUsage / (1024 * 1024)).toFixed(2);
-    const quotaPct = Math.min((usageMB / 100) * 100, 100);
+    const quotaLimit = 100.00; // Native Birthright
+    const quotaPct = Math.min((usageMB / quotaLimit) * 100, 100);
     
     // 2. Build Tactical Breadcrumb
     const pathHtml = `<span class="path-root">DEVICE_STORAGE</span> / ${cat.toUpperCase()} ${sub ? ` / ${sub}` : ''}`;
@@ -67,10 +115,10 @@ export class FilesApp {
         <div class="quota-monitor">
             <span class="quota-label">STORAGE_MESH:</span>
             <div class="silo-bar">
-                <div class="silo-fill" style="width: ${quotaPct}%"></div>
-            </div>
-            <span class="quota-val">${usageMB} / 100.00 MB</span>
+            <div class="silo-fill" style="width: ${quotaPct}%"></div>
         </div>
+        <span class="quota-val">${usageMB} / ${quotaLimit} MB</span>
+    </div>
     ` : '';
 
     // Set the full header
@@ -88,7 +136,10 @@ export class FilesApp {
             const path = MFS.getProtocolPath(cat, s);
             const remark = MFS.getProtocolRemark(cat, s);
             const folderFiles = MFS.manifest.files.filter(f => f.category === cat && f.path.startsWith(path));
-            const totalSize = folderFiles.reduce((acc, f) => acc + f.size, 0);
+            const totalSizeBytes = folderFiles.reduce((acc, f) => {
+                if (typeof f.sizeBytes !== 'number') return acc;
+                return acc + f.sizeBytes;
+            }, 0);
             
             return `
                 <div class="protocol-card" data-cat="${cat}" data-sub="${s}" 
@@ -104,7 +155,7 @@ export class FilesApp {
                         <div class="remark-text">${remark}</div>
                     </div>
                         <div class="stat-row"><span>TOTAL_FILES:</span><span class="val">${folderFiles.length}</span></div>
-                        <div class="stat-row"><span>TOTAL_SIZE:</span><span class="val">${(totalSize / 1024).toFixed(1)} KB</span></div>
+                        <div class="stat-row"><span>TOTAL_SIZE:</span><span class="val">${this.formatBytes(totalSizeBytes)}</span></div>
                     </div>
                     <div class="card-footer">MOUNT_VOLUME</div>
                 </div>
@@ -187,10 +238,164 @@ export class FilesApp {
     
     list.innerHTML = html || '<div class="mesh-row">NO_DATA_PULSE</div>';
     
+    
+    if (cat === 'Recycle') {
+    const list = document.getElementById('file-mesh-list');
+    const files = MFS.manifest.recycleBin || [];
+
+    list.className = 'explorer-grid recycle-view';
+
+    const recycleHeader = `
+        <div class="recycle-command-header" style="grid-column: 1 / -1;">
+            <div class="recycle-title">♻ DATA_RECOVERY_ZONE</div>
+            <div class="recycle-subtitle">ORPHANED_OBJECTS // TIME-SENSITIVE</div>
+
+            <div class="undo-timeline">
+                <label class="timeline-label">UNDO_TIMELINE</label>
+                <input type="range"
+                    min="0"
+                    max="${Math.max(this.undoStack.length - 1, 0)}"
+                    value="${Math.max(this.undoStack.length - 1, 0)}"
+                    oninput="app.previewUndo(this.value)" />
+                <button class="restore-btn" onclick="app.restoreByTimeline()">
+                    RESTORE_POINT
+                </button>
+            </div>
+        </div>
+    `;
+
+    const fileCards = files.length ? files.map((f, i) => {
+        const maxDays = 30; // retention policy
+        const remainingDays = Math.max(
+            0,
+            Math.ceil((new Date(f.expiryAt).getTime() - Date.now()) / 86400000)
+        );
+        const ttlPercent = Math.min(100, (remainingDays / maxDays) * 100);
+
+        const decay = Math.floor(Math.random() * 5);
+
+        return `
+        <div class="file-card recycle-status decay-${decay}"
+             style="animation: slideIn 0.3s forwards ${i * 0.05}s; opacity: 0;">
+             
+            <div class="file-card-header">
+                <span class="status-tag">ORPHANED_DATA</span>
+                <span class="decay-tag">DECAY_${decay}%</span>
+            </div>
+            
+            <div class="file-card-body">
+                <div class="file-title">
+                    <span class="scramble-text">${f.name}</span>
+                </div>
+            <div class="ttl-ring-wrapper"
+                style="--ttl:${ttlPercent}"
+                data-days="${remainingDays}">
+                <div class="ttl-ring"></div>
+            </div>
+
+                <div class="file-telemetry">
+                    <div class="t-row">
+                        <span>PREV_SECTOR:</span>
+                        <span class="val">${f.category.toUpperCase()}</span>
+                    </div>
+                    <div class="t-row">
+                        <span>SIZE:</span>
+                        <span class="val">${f.size}</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="file-card-footer recycle-actions">
+                <div class="action-trigger restore"
+                     onclick="app.restoreFromRecycle(${i})">
+                    ↩ RESTORE
+                </div>
+
+                <div class="action-trigger purge wipe-btn"
+                     onclick="app.permanentDelete(${i})">
+                    ⊗ PURGE
+                </div>
+
+                <div class="version-trigger"
+                     title="VERSION_HISTORY"
+                     onclick="app.viewVersions('${f.name}')">
+                    🕘
+                </div>
+            </div>
+
+            <div class="scanline"></div>
+        </div>`;
+    }).join('') : `
+        <div class="empty-state recycle-empty" style="grid-column: 1 / -1;">
+            <div class="pulse-icon">♻</div>
+            <div class="empty-title">RECYCLE_BIN_CLEAR</div>
+            <div class="empty-sub">NO_ORPHANED_DATA_PRESENT</div>
+        </div>
+    `;
+
+    list.innerHTML = recycleHeader + fileCards;
+    this.applyScrambleEffect();
+    //RING COUNTDOWN HERE
+    document.querySelectorAll('.ttl-ring-wrapper').forEach(wrapper => {
+        let ttl = parseFloat(wrapper.style.getPropertyValue('--ttl')) || 100; // start from current TTL
+        const ring = wrapper.querySelector('.ttl-ring');
+
+        const interval = setInterval(() => {
+            ttl -= 0.5; // decrease by 0.5% per tick
+            if (ttl < 0) ttl = 0;
+
+            ring.style.setProperty('--ttl', ttl);
+
+            // Trigger fracture mode if TTL < 20%
+            if(ttl <= 20) {
+                wrapper.setAttribute('data-fracture', 'true');
+            }
+
+            // Stop interval if TTL is 0
+            if(ttl <= 0) clearInterval(interval);
+        }, 100); // 100ms per tick
+    });
+
+    return;
+}
+
+
     // Trigger effects after innerHTML is set
     this.applyScrambleEffect();
     this.setupTableEvents();
 }
+
+previewUndo(index) {
+    const entry = this.undoStack[index];
+    this.notify(`PREVIEW: ${entry.name}`);
+}
+
+restoreByTimeline() {
+    if (!this.undoStack.length) return;
+    const entry = this.undoStack.pop();
+    MFS.manifest.recycleBin = MFS.manifest.recycleBin.filter(f => f !== entry);
+    MFS.manifest.files.push(entry);
+    this.notify(`RESTORED: ${entry.name}`);
+    this.navigateTo(entry.category, entry.path.split('/')[1]);
+}
+
+renderLedger() {
+    const list = document.getElementById('file-mesh-list');
+    list.className = 'explorer-grid';
+    list.innerHTML = MFS.manifest.deleteLedger.map((l, i) => `
+        <div class="analytics-card">
+            <div class="card-header">🧾 DELETE_EVENT_${i}</div>
+            <div class="card-body">
+                <div>FILE: ${l.name}</div>
+                <div>PATH: ${l.path}</div>
+                <div>ACTOR: ${l.actor}</div>
+                <div>TIME: ${l.deletedAt}</div>
+                <div>HASH: ${l.hash}</div>
+            </div>
+        </div>
+    `).join('');
+}
+
 
     async tacticalRoute(fileName, size, index) {
         const routeBox = document.getElementById(`route-box-${index}`);
@@ -264,7 +469,7 @@ export class FilesApp {
                 <div class="explorer-brand">ENCLAVE_PRO // V1.0</div>
                 <div class="telemetry-box" id="sys-telemetry">MESH_LOAD: ACTIVE</div>
                 <nav class="explorer-nav">
-                    ${['Personal', 'Comms', 'Records', 'Finance', 'Personnel', 'Projects', 'Logistics'].map(cat => `
+                    ${['Personal', 'Comms', 'Records', 'Finance', 'Personnel', 'Projects', 'Logistics', 'Recycle'].map(cat => `
                         <div class="nav-node ${cat === this.activeCategory ? 'active' : ''}" data-cat="${cat}">${cat.toUpperCase()}</div>
                     `).join('')}
                     <div class="nav-separator"></div>
@@ -283,7 +488,7 @@ export class FilesApp {
                     </div>
 
                     <div class="tier-actions">
-                        <button class="create-btn" onclick="app.openUniversalCreator()">
+                        <button class="create-btn" onclick="app.openFolioDirector()">
                             <span class="plus-icon">+</span> INITIALIZE_FOLIO
                         </button>
                         <div class="search-scanner">
@@ -301,7 +506,6 @@ export class FilesApp {
     this.setupSearch();
 }  
 
-
 routeToComms(fileName, size = '0.00 KB') {
     this.notify(`PREPARING_DISPATCH: ${fileName.toUpperCase()}`, "normal");
     
@@ -314,6 +518,65 @@ routeToComms(fileName, size = '0.00 KB') {
         isManualRoute: true
     });
 }
+
+// Triggered by the INITIALIZE_FOLIO button
+    openFolioDirector() {
+        const modal = document.createElement('div');
+        modal.className = 'sov-modal-overlay';
+        modal.innerHTML = `
+            <div class="sov-modal folio-director">
+                <div class="modal-header">INITIALIZE_FOLIO_SYSTEM</div>
+                <div class="modal-body">
+                    <div class="folio-choice-grid">
+                        <div class="choice-card" onclick="app.generateNativeTemplate('OFFICIAL_LETTER')">
+                            <div class="choice-icon">⚖️</div>
+                            <div class="choice-label">OFFICIAL_LETTER</div>
+                        </div>
+                        <div class="choice-card" onclick="app.generateNativeTemplate('OTHER_LETTER')">
+                            <div class="choice-icon">✉️</div>
+                            <div class="choice-label">OTHER_LETTER</div>
+                        </div>
+                        <div class="choice-card" onclick="app.generateNativeTemplate('SIGNAL')">
+                            <div class="choice-icon">📡</div>
+                            <div class="choice-label">SIGNAL_BURST</div>
+                        </div>
+                        <div class="choice-card upload-path" onclick="app.bridgeToUpload()">
+                            <div class="choice-icon">📤</div>
+                            <div class="choice-label">UPLOAD_FILE</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-actions">
+                    <button class="wipe-btn" onclick="this.closest('.sov-modal-overlay').remove()">ABORT</button>
+                </div>
+            </div>
+        `;
+        document.body.appendChild(modal);
+    }
+
+    // Path A: The Templates
+    generateNativeTemplate(type) {
+        const template = FilesApp.COMM_TEMPLATES[type];
+        const identity = this.kernel.user?.identity || "NATIVE_ADMIN";
+        const content = template.content(identity);
+        
+        // Native routing logic
+        const category = (type === 'OTHER_LETTER') ? 'Personal' : 'Comms';
+        const sub = (type === 'SIGNAL') ? 'Signals' : 'Inbound';
+        
+        document.querySelector('.sov-modal-overlay').remove();
+
+        this.triggerSuccessAnimation(
+            { name: template.name, content: content, isTemplate: true }, 
+            category, sub, 'RESTRICTED'
+        );
+    }
+
+    // Path B: The Legacy Upload
+    bridgeToUpload() {
+        document.querySelector('.sov-modal-overlay').remove();
+        this.openUniversalCreator(); // Calls your existing file upload modal
+    }
 
 async openUniversalCreator() {
     // 1. Ensure we pull the sector keys correctly
@@ -428,40 +691,70 @@ async executeUpload() {
 }
 
 
-triggerSuccessAnimation(file, cat, sub, clearance) {
-    const auth = document.getElementById('new-file-auth')?.value || "USER_ADMIN";
+triggerSuccessAnimation(fileOrData, cat, sub, clearance) {
+    const isTemplate = fileOrData.isTemplate || false;
+    const fileName = isTemplate ? fileOrData.name : fileOrData.name;
+    const fileContent = isTemplate ? fileOrData.content : fileOrData;
+    const auth = document.getElementById('new-file-auth')?.value || "NATIVE_ADMIN";
     const modal = document.querySelector('.sov-modal');
+    const integrityHash = crypto.randomUUID();
+    
     
     // 1. Update UI to Success State
     modal.innerHTML = `
         <div class="success-anim-wrapper">
             <div class="success-hex">⬢</div>
             <div class="success-msg">OBJECT_SECURED</div>
-            <div class="success-details">${file.name.toUpperCase()}</div>
+            <div class="success-details">${fileName.toUpperCase()}</div>
         </div>
     `;
 
     try {
         // 2. Data Calculation
         // Pass the actual File object from the input to calculateSize
-        const sizeStr = this.calculateSize(file); 
-        
+        const fileBytes = this.calculateBytes(fileContent);
+        const sizeStr = this.formatBytes(fileBytes);
         const newFile = {
-            name: file.name,
+            name: fileName,
             path: MFS.getProtocolPath(cat, sub),
             category: cat,
-            type: file.name.split('.').pop() || 'bin',
-            size: sizeStr, 
+            type: fileName.split('.').pop() || 'txt',
+            sizeBytes: fileBytes,        // REAL NUMBER
+            size: sizeStr,               // UI STRING
             author: auth,
             urgency: (clearance === 'CONFIDENTIAL' || clearance === 'TOP_SECRET') ? 'high' : 'normal',
             clearance: clearance,
             created: new Date().toISOString().split('T')[0],
             modified: new Date().toISOString().split('T')[0],
-            views: 0
+            hash: integrityHash,
+            views: 0,
+            content: isTemplate ? fileContent : null,
+            versions: [{
+            hash: integrityHash,
+            timestamp: Date.now(),
+            sizeBytes: fileBytes
+        }],
         };
+
+        // ENFORCE PERSONAL QUOTA
+        if (cat === 'Personal') {
+            const used = MFS.manifest.personalUsage || 0;
+            const limit = MFS.manifest.personalQuota;
+
+            if ((used + fileBytes) > limit) {
+                this.notify("QUOTA_EXCEEDED: PERSONAL_MESH_LIMIT", "high");
+                document.querySelector('.sov-modal-overlay')?.remove();
+                return;
+            }
+        }
 
         // 3. Update Global Manifest
         MFS.manifest.files.push(newFile);
+
+        // 🔻 Deduct quota
+        if (cat === 'Personal') {
+            MFS.manifest.personalUsage += fileBytes;
+        }
         
         // 4. Signal the Comms Hub (The Nervous System)
         this.kernel.emit('FILE_CREATED', newFile);
@@ -479,6 +772,15 @@ triggerSuccessAnimation(file, cat, sub, clearance) {
         this.navigateTo(cat, sub);
     }, 2000);
 }
+
+viewVersions(fileName) {
+    const file = MFS.manifest.files.find(f => f.name === fileName);
+    if (!file || !file.versions) return;
+    alert(file.versions.map(v =>
+        `HASH: ${v.hash}\nTIME: ${new Date(v.timestamp)}`
+    ).join("\n\n"));
+}
+
 
 setupSearch() {
     const searchInput = this.container.querySelector('#mesh-search');
@@ -622,18 +924,196 @@ renderAnalytics() {
     }
 
     wipe(fileName) {
-        if (confirm(`CRITICAL: INITIATE TERMINATION OF ${fileName.toUpperCase()}?`)) {
-            // Find the element and add a "glitch out" animation
-            const cards = this.container.querySelectorAll('.file-card');
-            cards.forEach(card => {
-                if (card.innerText.includes(fileName)) {
-                    card.style.animation = "glitchOut 0.4s forwards";
-                    setTimeout(() => card.remove(), 400);
-                }
-            });
-            this.notify(`OBJECT_TERMINATED: ${fileName}`, "high");
+    if (!confirm(`CRITICAL: MOVE ${fileName.toUpperCase()} TO RECYCLE_BIN?`)) return;
+
+    const idx = MFS.manifest.files.findIndex(f => f.name === fileName);
+    if (idx === -1) return;
+
+    const file = MFS.manifest.files[idx];
+
+    // Preserve original location
+    file._recycleMeta = {
+        originalCategory: file.category,
+        originalPath: file.path,
+        deletedAt: Date.now(),
+        hash: file.hash            // 🧬 snapshot
+    };
+
+    // Remove from active files
+    MFS.manifest.files.splice(idx, 1);
+
+    // Restore quota immediately
+    if (file.category === 'Personal') {
+        MFS.manifest.personalUsage -= file.sizeBytes;
+        if (MFS.manifest.personalUsage < 0) {
+            MFS.manifest.personalUsage = 0;
         }
     }
+
+    //Encrypt on wipe
+    (async () => {
+    const key = await this.getDeviceKey();
+    const iv = crypto.getRandomValues(new Uint8Array(12));
+
+    const encoded = new TextEncoder().encode(JSON.stringify(file.content || ""));
+    const cryptoKey = await crypto.subtle.importKey(
+        "raw", key, "AES-GCM", false, ["encrypt"]
+    );
+
+    const encrypted = await crypto.subtle.encrypt(
+        { name: "AES-GCM", iv },
+        cryptoKey,
+        encoded
+    );
+
+    file._encryptedPayload = {
+        data: Array.from(new Uint8Array(encrypted)),
+        iv: Array.from(iv)
+    };
+
+    file.content = null; // remove plaintext
+    })();
+
+    // Push to recycle bin
+   // Set expiry for 30 days from now
+    file.expiryAt = new Date(Date.now() + 30 * 86400000).toISOString();
+
+    // Push to recycle bin
+    MFS.manifest.recycleBin.push(file);
+    this.undoStack.push(file);
+
+
+    // Track for undo
+    this.lastDeleted = file;
+
+    this.notify(`MOVED_TO_RECYCLE_BIN: ${fileName}`, "high");
+
+    //Tracking hash
+    MFS.manifest.deleteLedger.push({
+    name: file.name,
+    category: file.category,
+    path: file.path,
+    hash: file.hash,
+    deletedAt: new Date().toISOString(),
+    actor: this.kernel.user?.identity || "SYSTEM"
+});
+
+    // Stay in same folder
+    this.navigateTo(this.activeCategory, this.activeSub);
+
+    // Auto-expire undo after 10s
+    setTimeout(() => {
+        if (this.lastDeleted === file) this.lastDeleted = null;
+    }, 10000);
+}
+
+
+undoDelete() {
+    if (!this.undoStack.length) {
+        this.notify("UNDO_BUFFER_EMPTY");
+        return;
+    }
+    const file = this.undoStack.pop();
+
+    file.category = file._recycleMeta.originalCategory;
+    file.path = file._recycleMeta.originalPath;
+    delete file._recycleMeta;
+
+    if (file.category === 'Personal') {
+        MFS.manifest.personalUsage += file.sizeBytes;
+    }
+
+    MFS.manifest.recycleBin = MFS.manifest.recycleBin.filter(f => f !== file);
+    MFS.manifest.files.push(file);
+
+    this.notify(`UNDO_SUCCESS: ${file.name}`);
+    this.navigateTo(file.category, file.path.split('/')[1]);
+}
+
+restoreFromRecycle(index) {
+    const files = MFS.manifest.recycleBin;
+    const file = files[index];
+    if (!file) return;
+
+    // Integrity check
+    if (file._recycleMeta && file.hash !== file._recycleMeta.hash) {
+        this.notify("INTEGRITY_FAIL: HASH_MISMATCH", "high");
+        return;
+    }
+
+    // Restore original category/path
+    if (file._recycleMeta) {
+        file.category = file._recycleMeta.originalCategory;
+        file.path = file._recycleMeta.originalPath;
+    }
+    delete file._recycleMeta;
+
+    // Restore quota
+    if (file.category === 'Personal') MFS.manifest.personalUsage += file.sizeBytes;
+
+    // Move to active files
+    files.splice(index, 1);
+    MFS.manifest.files.push(file);
+
+    // Decrypt payload if needed
+    (async () => {
+        if (file._encryptedPayload) {
+            const key = await this.getDeviceKey();
+            const cryptoKey = await crypto.subtle.importKey(
+                "raw", key, "AES-GCM", false, ["decrypt"]
+            );
+            const decrypted = await crypto.subtle.decrypt(
+                { name: "AES-GCM", iv: new Uint8Array(file._encryptedPayload.iv) },
+                cryptoKey,
+                new Uint8Array(file._encryptedPayload.data)
+            );
+            file.content = JSON.parse(new TextDecoder().decode(decrypted));
+            delete file._encryptedPayload;
+        }
+    })();
+
+    this.notify(`RESTORED: ${file.name}`);
+    this.navigateTo(file.category);
+}
+
+
+runRecycleMaintenance() {
+    const now = Date.now();
+    const ttl = (MFS.manifest.recyclePolicy.autoPurgeDays || 30) * 86400000;
+
+    MFS.manifest.recycleBin = MFS.manifest.recycleBin.filter(file => {
+        if (!file._recycleMeta?.deletedAt) return true;
+        return (now - file._recycleMeta.deletedAt) < ttl;
+    });
+}
+
+
+permanentDelete(index) {
+    const card = document.querySelectorAll('.file-card.recycle-status')[index];
+    card.style.transition = 'all 0.4s';
+    card.style.filter = 'contrast(2) brightness(2) hue-rotate(90deg)';
+    card.style.transform = 'scale(0.8)';
+    card.style.opacity = '0';
+
+    const files = MFS.manifest.recycleBin;
+    const file = files[index];
+    if (!file) return;
+
+    if (!confirm(`FINAL_DELETE: ${file.name}? NO_RECOVERY`)) return;
+
+    files.splice(index, 1);
+    this.undoStack = this.undoStack.filter(f => f !== file);
+    
+    setTimeout(() => {
+        // Actual deletion logic here
+        MFS.manifest.recycleBin.splice(index, 1);
+        this.navigateTo('Recycle');
+        this.notify("DATA_PURGED_PERMANENTLY", "high");
+    }, 400);
+}
+
+
+
 
     notify(msg, priority = "normal") {
         const color = priority === "high" ? "#ff4545" : "#00ff41";
@@ -656,6 +1136,9 @@ renderAnalytics() {
                 node.classList.add('active');
                 this.navigateTo(node.dataset.cat);
                 this.container.querySelector('#view-stats').onclick = () => this.renderAnalytics();
+                if (node.id === 'view-stats') {
+    this.renderLedger();
+}
             };
         });
     }

@@ -3,8 +3,16 @@
  * Comprehensive Protocol Mapping per Communication Manual
  */
 export const MFS = {
+    
     manifest: {
-        personalUsage: 1258291, // Tracked for Article 13.2 (approx 1.2MB)
+        personalQuota: 100 * 1024 * 1024, // 100 MB
+        personalUsage: 0,                 // recalculated on boot
+        recycleBin: [],          // 🗑️ deleted files live here
+        deleteLedger: [],        // 🧾 audit trail
+        recyclePolicy: {
+        autoPurgeDays: 30    // ♻️ auto purge window
+        },
+        
         files: [
             // --- PERSONAL Category ---
             { 
@@ -12,7 +20,8 @@ export const MFS = {
                 path: "USR/LOCAL/VOL./notes.txt", 
                 category: "Personal", 
                 type: "txt", 
-                size: 1024,
+                sizeBytes: 1024,
+                size: "1.00 KB",
                 author: "USR_ROOT",
                 urgency: "normal",
                 created: "2025-12-26",
@@ -26,7 +35,8 @@ export const MFS = {
                 path: "SEC.TAC/COM 1/3/6/VOL./allotment.json", 
                 category: "Finance", 
                 type: "json", 
-                size: 4520,
+                sizeBytes: 4520,
+                size:"1.00KB",
                 author: "FIN_OFFICER",
                 urgency: "high", // High priority for investor tracking
                 created: "2025-12-26",
@@ -38,7 +48,8 @@ export const MFS = {
                 path: "SEC.TAC/COM 1/3/6/VOL./epos_v1.pdf", 
                 category: "Finance", 
                 type: "pdf", 
-                size: 85200,
+                sizeBytes: 85200,
+                size:"85.20KB",
                 author: "SYSTEM_ARCHITECT",
                 urgency: "normal",
                 created: "2025-12-30",
@@ -109,19 +120,28 @@ export const MFS = {
 },
 
     async getFiles(category) {
-    return this.manifest.files.filter(f => f.category === category);
+        return this.manifest.files.filter(f => f.category === category);
     },
+
     getSubFolders(category) {
         return Object.keys(this.protocols[category] || {});
     },
 
     getProtocolPath(cat, sub) {
-    const entry = this.protocols[cat]?.[sub];
-    return typeof entry === 'object' ? entry.path : entry;
-},
+        const entry = this.protocols[cat]?.[sub];
+        // Safely extract the string path from the object
+        return entry?.path || 'GEN/VOL./';
+    },
 
-    getProtocolRemark(category, subFolder) {
-        // New helper to pull the manual remarks
-        return this.protocols[category]?.[subFolder]?.remark || 'NO_REMARKS_FOUND';
+    getProtocolRemark(cat, sub) {
+        return this.protocols[cat]?.[sub]?.remark || 'NO_REMARKS_FOUND';
+    },
+
+    recalculatePersonalUsage() {
+        // This ensures the 100MB Bar (100 - X) is accurate
+        this.manifest.personalUsage = this.manifest.files
+            .filter(f => f.category === 'Personal')
+            .reduce((sum, f) => sum + (f.sizeBytes || 0), 0);
+        return this.manifest.personalUsage;
     }
 };

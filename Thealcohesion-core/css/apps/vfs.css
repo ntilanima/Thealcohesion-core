@@ -1036,3 +1036,339 @@
     }
     .search-scanner { max-width: none; }
 }
+
+.folio-choice-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+    margin-top: 10px;
+}
+
+.choice-card {
+    background: rgba(164, 69, 255, 0.05);
+    border: 1px solid var(--sov-edge);
+    padding: 20px 10px;
+    text-align: center;
+    cursor: pointer;
+    transition: 0.2s;
+    clip-path: polygon(0 0, 100% 0, 100% 85%, 85% 100%, 0 100%);
+}
+
+.choice-card:hover {
+    background: rgba(164, 69, 255, 0.15);
+    border-color: var(--sov-purple);
+}
+
+.choice-icon { font-size: 24px; margin-bottom: 8px; }
+.choice-label { font-size: 9px; letter-spacing: 1px; color: #fff; }
+
+.upload-path {
+    background: rgba(0, 255, 65, 0.03);
+    border: 1px dashed rgba(0, 255, 65, 0.4);
+}
+
+
+.explorer-grid.recycle-view {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+    gap: 15px;
+    padding: 10px;
+}
+
+.file-card.recycle {
+    background: #1b1b1b;
+    border: 1px solid #444;
+    border-radius: 8px;
+    padding: 10px;
+    transition: transform 0.2s;
+}
+
+.file-card.recycle:hover {
+    transform: translateY(-3px);
+}
+
+.undo-timeline {
+    margin-bottom: 15px;
+    display: flex;
+    gap: 10px;
+    align-items: center;
+}
+
+.wipe-btn {
+    color: #ff5555;
+    cursor: pointer;
+}
+
+
+/* Recycle Specific Styling */
+.file-card.recycle-status {
+    background: rgba(40, 10, 10, 0.2);
+    border: 1px dashed rgba(255, 69, 69, 0.3);
+    position: relative;
+    overflow: hidden;
+}
+
+.file-card.recycle-status:hover {
+    background: rgba(60, 20, 20, 0.4);
+    border-style: solid;
+    border-color: #ff4545;
+}
+
+.status-tag {
+    font-size: 8px;
+    background: #ff4545;
+    color: white;
+    padding: 1px 4px;
+    font-weight: bold;
+}
+
+.decay-tag {
+    font-size: 8px;
+    color: #ff4545;
+    opacity: 0.7;
+}
+
+/* Action Triggers */
+.recycle-actions {
+    display: grid;
+    grid-template-columns: 1fr 1fr 40px;
+    gap: 5px;
+    margin-top: 10px;
+}
+
+.action-trigger {
+    font-size: 9px;
+    padding: 6px;
+    text-align: center;
+    background: rgba(255, 255, 255, 0.05);
+    cursor: pointer;
+    border: 1px solid transparent;
+    transition: all 0.2s;
+}
+
+.action-trigger.restore:hover {
+    color: var(--sov-green);
+    border-color: var(--sov-green);
+    background: rgba(0, 255, 65, 0.1);
+}
+
+.action-trigger.purge:hover {
+    color: #ff4545;
+    border-color: #ff4545;
+    background: rgba(255, 69, 69, 0.1);
+}
+
+.version-trigger {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(255, 255, 255, 0.05);
+    cursor: pointer;
+}
+
+/* Visual Flavor: Moving Scanline */
+.scanline {
+    position: absolute;
+    top: 0; left: 0; width: 100%; height: 2px;
+    background: rgba(255, 69, 69, 0.1);
+    opacity: 0.5;
+    animation: scan 3s linear infinite;
+    pointer-events: none;
+}
+
+@keyframes scan {
+    0% { top: 0%; }
+    100% { top: 100%; }
+}
+
+
+/* Recycle Dashboard */
+.recycle-dashboard-header {
+    background: rgba(255, 69, 69, 0.05);
+    border: 1px solid rgba(255, 69, 69, 0.2);
+    padding: 20px;
+    margin-bottom: 20px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.salvage-meta {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+}
+
+.salvage-meta .val {
+    color: #ff4545;
+    text-shadow: 0 0 10px #ff4545;
+}
+
+/* Custom Range Slider */
+.sov-range {
+    -webkit-appearance: none;
+    width: 200px;
+    background: #1a1a1a;
+    height: 4px;
+    border: 1px solid #333;
+}
+
+.sov-range::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 12px;
+    height: 12px;
+    background: #ff4545;
+    cursor: pointer;
+    box-shadow: 0 0 10px #ff4545;
+}
+
+/* Recycle Action Buttons */
+.restore-btn {
+    background: transparent;
+    border: 1px solid var(--sov-green);
+    color: var(--sov-green);
+    padding: 8px 15px;
+    font-size: 10px;
+    cursor: pointer;
+    transition: 0.2s;
+}
+
+.restore-btn:hover {
+    background: rgba(0, 255, 65, 0.1);
+    box-shadow: 0 0 15px rgba(0, 255, 65, 0.2);
+}
+
+.recycle-actions {
+    display: flex;
+    gap: 2px;
+    background: rgba(0,0,0,0.3);
+}
+
+.action-trigger {
+    flex: 1;
+    font-size: 9px;
+    padding: 10px 5px;
+    text-align: center;
+    border: 1px solid rgba(255,255,255,0.05);
+    cursor: pointer;
+}
+
+
+.recycle-command-header {
+    padding: 20px;
+    border: 1px solid rgba(255,255,255,0.08);
+    background: linear-gradient(180deg, rgba(124,58,237,0.08), transparent);
+}
+
+.recycle-title {
+    font-size: 14px;
+    letter-spacing: 2px;
+    color: var(--sov-purple);
+}
+
+.recycle-subtitle {
+    font-size: 10px;
+    opacity: 0.6;
+    margin-bottom: 12px;
+}
+
+.undo-timeline {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+}
+
+.undo-timeline input[type="range"] {
+    flex: 1;
+}
+
+.recycle-status {
+    filter: grayscale(0.6) contrast(1.1);
+}
+
+.decay-4 { opacity: 0.85 }
+.decay-3 { opacity: 0.9 }
+.decay-2 { opacity: 0.95 }
+.decay-1 { opacity: 1 }
+
+.recycle-empty {
+    text-align: center;
+    opacity: 0.7;
+}
+
+
+/* === TTL RING (static, visual only) === */
+
+/* ─────────────────────────────
+   TTL RING — BASE VISIBILITY
+   ───────────────────────────── */
+
+.ttl-ring-wrapper {
+    width: 54px;
+    height: 54px;
+    pointer-events: none;
+    z-index: 20;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+
+    width: 100%;
+    margin: 8px 0 6px 0;
+
+    pointer-events: auto;
+    position: relative;
+}
+
+.ttl-ring {
+    width: 38px;
+    height: 38px;
+    border-radius: 50%;
+
+    background:
+        conic-gradient(
+            var(--accent) calc(var(--ttl) * 1%),
+            rgba(255,255,255,0.08) 0%
+        );
+
+    box-shadow:
+        0 0 6px rgba(124,58,237,0.35);
+
+    transition: background 0.4s linear;
+}
+
+
+.ttl-ring-wrapper::after {
+    content: attr(data-days) " DAYS LEFT";
+    position: absolute;
+    bottom: -14px;
+    font-size: 9px;
+    letter-spacing: 0.08em;
+    opacity: 0;
+    color: rgba(255,255,255,0.65);
+    transition: opacity 0.2s;
+}
+
+.ttl-ring-wrapper:hover::after {
+    opacity: 1;
+}
+
+
+.ttl-ring-wrapper[data-fracture="true"] .ttl-ring {
+    background:
+        repeating-conic-gradient(
+            from 0deg,
+            var(--accent) 0deg 6deg,
+            transparent 6deg 12deg
+        );
+
+    filter: drop-shadow(0 0 6px rgba(255,80,80,0.6));
+}
+
+.ttl-ring-wrapper[data-fracture="true"] .ttl-ring {
+    animation: flicker 0.3s infinite;
+}
+
+@keyframes flicker {
+    0%, 100% { filter: drop-shadow(0 0 6px rgba(255,80,80,0.6)); }
+    50% { filter: drop-shadow(0 0 14px rgba(255,50,50,0.8)); }
+}
+
