@@ -1,0 +1,115 @@
+/* identityRegistry.css */
+:root {
+    --id-gold: #d4af37;
+    --id-green: #00ff41;
+    --id-red: #ff4545;
+}
+
+.registry-view {
+    padding: 30px;
+    background: radial-gradient(circle at top left, rgba(212, 175, 55, 0.05), transparent);
+}
+
+.registry-wrapper {
+    max-width: 900px;
+    margin: 0 auto;
+    border: 1px solid rgba(212, 175, 55, 0.2);
+    background: rgba(10, 10, 12, 0.95);
+    padding: 30px;
+}
+
+.registry-header {
+    display: flex;
+    justify-content: space-between;
+    border-bottom: 2px solid var(--id-gold);
+    padding-bottom: 20px;
+    margin-bottom: 30px;
+}
+
+.rank-tag {
+    background: var(--id-gold);
+    color: #000;
+    font-size: 10px;
+    padding: 2px 8px;
+    font-weight: bold;
+    text-transform: uppercase;
+}
+
+.clearance-stamp {
+    border: 2px solid var(--id-red);
+    color: var(--id-red);
+    padding: 5px 15px;
+    font-weight: bold;
+    transform: rotate(-5deg);
+    margin-bottom: 10px;
+    display: inline-block;
+}
+
+.registry-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 30px;
+}
+
+.reg-label {
+    color: var(--id-gold);
+    font-size: 11px;
+    letter-spacing: 2px;
+    margin-bottom: 20px;
+    border-bottom: 1px solid #333;
+}
+
+.reg-row {
+    display: flex;
+    justify-content: space-between;
+    padding: 12px 0;
+    border-bottom: 1px solid #222;
+    font-size: 13px;
+}
+
+.award-pill {
+    background: rgba(0, 255, 65, 0.05);
+    border: 1px solid var(--id-green);
+    color: var(--id-green);
+    font-size: 9px;
+    padding: 3px 8px;
+    margin: 2px;
+    display: inline-block;
+}
+
+/* Device List Styling */
+.device-entry {
+    background: #000;
+    border: 1px solid #222;
+    padding: 15px;
+    margin-bottom: 10px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.device-entry.active {
+    border-color: var(--id-green);
+    box-shadow: 0 0 10px rgba(0, 255, 65, 0.1);
+}
+
+.d-status-dot {
+    width: 8px; height: 8px; border-radius: 50%;
+    background: #333; margin-right: 15px;
+}
+
+.active .d-status-dot {
+    background: var(--id-green);
+    box-shadow: 0 0 8px var(--id-green);
+}
+
+/* Access Denied Glitch */
+.access-denied-glitch {
+    height: 60vh;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    text-align: center;
+    color: var(--id-red);
+}

@@ -735,7 +735,52 @@ async shutdown() {
                 return instance;
             },
 
+            'monitor': async (container) => {
+            const { MonitorApp } = await import('./monitor.js');
+            
+            const apiBridge = {
+                signature: 'SOVEREIGN_CORE_V1',
+                // Provides the monitor access to all registered app metadata
+                getRegistry: () => masterRegistry,
+                // Calculates live load for the 100MB Allotment
+                getSystemMetrics: () => ({
+                    ramUsed: this.currentMemory,
+                    ramTotal: this.maxMemory,
+                    activeTasks: Object.keys(this.activeProcesses || {}).length
+                }),
+                notify: (msg, type) => this.showNotification(msg, type)
+            };
+
+            const instance = new MonitorApp(container, apiBridge);
+            instance.init();
+            
+            this.activeProcesses = this.activeProcesses || {};
+            this.activeProcesses['monitor'] = instance;
+            return instance;
+        },
+
+        'identity': async (container) => {
+            const { IdentityManager } = await import('./identityRegistry.js');
+            
+            const apiBridge = {
+                signature: 'SOVEREIGN_CORE_V1',
+                // Essential for device-binding verification
+                network: { ip: this.network?.ip || '127.0.0.1' },
+                // Passes the current session key for identity signing
+                session: this.sessionKey,
+                close: () => this.closeApp('identity')
+            };
+
+            const instance = new IdentityManager(container, apiBridge);
+            instance.render(); // Renders the Citizen Folio
+
+            this.activeProcesses = this.activeProcesses || {};
+            this.activeProcesses['identity'] = instance;
+            return instance;
+        },
+
         };
+        
     }
 
     async boot() {   

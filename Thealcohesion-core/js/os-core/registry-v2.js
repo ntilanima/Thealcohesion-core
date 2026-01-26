@@ -65,7 +65,33 @@ export const registry = [
         lifecycle: 'VETTED'
     },
 
-    // --- 2. CORE SYSTEM UTILITIES ---
+    // --- 2. IDENTITY & ALLOTMENT ---
+    { 
+        id: 'identity', 
+        name: 'Citizen Registry', 
+        icon: '🪪', 
+        file: 'identityRegistry.js',
+        protocol: 'CORE://identity',
+        category: 'Governance',
+        roles: ['ANY'],
+        manifest: { purpose: 'Sovereign identity management and device-binding logs.', resources: { cpu: 'Low', ram: 2 } },
+        ethics: { tracking: false, manipulation: false, consent: true },
+        lifecycle: 'VETTED'
+    },
+    { 
+        id: 'resource-pool', 
+        name: 'Investors/EPOS', 
+        icon: '🤝', 
+        file: 'resource-pool.js', 
+        protocol: 'ECON://epos',
+        category: 'Finance',
+        roles: ['INVESTOR', 'OFFICER', 'NATIVE'],
+        manifest: { purpose: 'Governance of initial allotments (2025-12-26) and resource distribution.', resources: { cpu: 'Low', ram: 8 } },
+        ethics: { tracking: false, manipulation: false, consent: true },
+        lifecycle: 'VETTED'
+    },
+
+    // --- 3. CORE SYSTEM UTILITIES ---
     { 
         id: 'files', 
         name: 'File Explorer', 
@@ -178,7 +204,7 @@ export const registry = [
         lifecycle: 'VETTED'
     },
 
-    // --- 3. SOVEREIGN ECOSYSTEM ---
+    // --- 4. SOVEREIGN ECOSYSTEM ---
     { 
         id: 'time', 
         name: 'Temporal Engine', 
@@ -200,18 +226,6 @@ export const registry = [
         category: 'Finance',
         roles: ['MEMBER', 'TREASURY', 'OFFICER', 'MEGA'],
         manifest: { purpose: 'Real-time sovereign economic monitoring and currency stability analysis.', resources: { cpu: 'Low', ram: 12 } },
-        ethics: { tracking: false, manipulation: false, consent: true },
-        lifecycle: 'VETTED'
-    },
-    { 
-        id: 'resource-pool', 
-        name: 'Investors/EPOS', 
-        icon: '🤝', 
-        file: 'resource-pool.js', 
-        protocol: 'ECON://epos',
-        category: 'Finance',
-        roles: ['INVESTOR', 'OFFICER'],
-        manifest: { purpose: 'Governance of initial allotments (2025-12-26), shares, and resource distribution.', resources: { cpu: 'Low', ram: 8 } },
         ethics: { tracking: false, manipulation: false, consent: true },
         lifecycle: 'VETTED'
     },

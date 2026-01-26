@@ -334,7 +334,6 @@ export class FilesApp {
     `;
 
     list.innerHTML = recycleHeader + fileCards;
-    this.applyScrambleEffect();
     //RING COUNTDOWN HERE
     document.querySelectorAll('.ttl-ring-wrapper').forEach(wrapper => {
         let ttl = parseFloat(wrapper.style.getPropertyValue('--ttl')) || 100; // start from current TTL
