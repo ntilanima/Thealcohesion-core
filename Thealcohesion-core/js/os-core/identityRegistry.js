@@ -9,8 +9,18 @@ const MEMBER_LIST = [
         userName: "ARCHAN_SUPREME",
         officialName: "Michael Audi", 
         sovereignName: "Archantilani Ntilanima Archantima", 
+        actionCenter: "AC_NAIROBI_01", 
+        tlca: "AC_NAIROBI_01_TLCA_01",
+        rank: "ARCHON",
+        position: "SUPREME_SAGE",
+        specialRecognition: ["BLD", "TRT", "PTP", "ORIGIN_FOUNDER"],
+        awards: ["EARLY_INVESTOR", "100MB_PIONEER"],
+        joinedThealcohesion: "2023-01-01",
+        joinedAC: "2023-06-15",
+        joinedTLC: "2024-01-10",
+        rankDate: "2025-12-26",
+        remarks: "On Duty", 
         titles: ["Sage AMA Humble"],
-        specialRecognition: ["BLD", "TRT", "PTP"], 
         demographics: { dob: "1990-01-01", gender: "MALE" },
         documentId: "ID-774900X",
         contact: { email: "archon@sovereign.os", phone: "+254700000000" },
@@ -31,8 +41,7 @@ const MEMBER_LIST = [
             abbr: "CG.SNR.",
             clearance: 10,
             isFrozen: false
-        },
-        awards: ["EARLY_INVESTOR", "100MB_PIONEER"]
+        }
     },
     {
         userName: "GENESIS_NODE",
@@ -280,42 +289,24 @@ export class IdentityManager {
                     </div>
 
                     <div class="data-col">
-                        ${this.isEditing ? `
-                        <div style="background:rgba(212,175,55,0.05); border:1px solid var(--id-gold); padding:20px; margin-bottom:20px; animation: fadeIn 0.3s ease-out;">
-                            <div class="reg-label" style="color:var(--id-gold); border-color:var(--id-gold);">Identity_Modification_Console</div>
-                            
-                            <label style="font-size:9px; color:#888; display:block; margin: 10px 0 5px;">PROTOCOL_RANK_ASSIGNMENT</label>
-                            <select id="rank-changer" class="sovereign-input" style="height:35px; border-color:#444; width:100%;">
-                                ${ranks.map(r => `<option value="${r.a}|${r.n}" ${m.security.abbr === r.a ? 'selected' : ''}>${r.a} // ${r.n}</option>`).join('')}
-                            </select>
-
-                            <label style="font-size:9px; color:#888; display:block; margin: 20px 0 5px;">SPECIAL_RECOGNITION_MANAGEMENT</label>
-                            <div style="display:flex; gap:8px;">
-                                ${['BLD', 'TRT', 'PTP'].map(type => {
-                                    const active = recognitions.includes(type);
-                                    return `
-                                        <button class="award-pill recognition-toggle" data-type="${type}" 
-                                                style="cursor:pointer; flex:1; border:1px solid ${active ? 'var(--id-gold)' : '#333'}; 
-                                                background:${active ? 'rgba(212,175,55,0.1)' : 'transparent'}; 
-                                                color:${active ? 'var(--id-gold)' : '#555'}; padding:10px 0;">
-                                            ${active ? 'REMOVE' : 'ADD'} ${type}
-                                        </button>
-                                    `;
-                                }).join('')}
-                            </div>
-                        </div>
-                        ` : ''}
-
+                        <div class="reg-label">Tactical_Deployment</div>
+                        <div class="reg-row"><span>ACTION_CENTER</span><span style="color:#fff">${m.actionCenter || 'UNASSIGNED'}</span></div>
+                        <div class="reg-row"><span>TLC_NODE</span><span style="color:#fff">${m.tlca || 'UNASSIGNED'}</span></div>
+                        <div class="reg-row"><span>RANK_DATE</span><span style="color:var(--id-gold)">${m.rankDate || 'N/A'}</span></div>
+                        <div class="reg-row"><span>REMARKS</span><span style="color:var(--id-green)">${m.remarks || 'ACTIVE'}</span></div>
+                        
                         <div class="reg-label">Citizen_Core_Identity</div>
                         <div class="reg-row"><span>FULL_LEGAL_NAME</span><span style="color:#fff">${m.officialName}</span></div>
+                        <div class="reg-row">
+                        <span>GOVERNMENT_ID_REF</span><span style="color:#fff">${m.documentId}</span></div>
                         <div class="reg-row"><span>DEMOGRAPHICS</span><span style="color:#fff">${m.demographics.dob} / ${m.demographics.gender}</span></div>
                         <div class="reg-row"><span>PRIMARY_UPLINK</span><span style="color:#fff">${m.contact.email}</span></div>
-                        <div class="reg-row">
-                            <span>SECTOR_ORIGIN</span>
-                            <span style="color: ${isStaged ? 'var(--id-red)' : 'var(--id-green)'}; font-weight: bold;">
-                                ${isStaged ? '[!] AWAITING_FIRST_LOGIN' : `${m.location.country} // ${m.location.sector}`}
-                            </span>
-                        </div>
+                        <div class="reg-row"><span>CONTACT_PH</span><span style="color:#fff">${m.phone || 'N/A'}</span></div>
+
+                        <div class="reg-label">Service_History</div>
+                        <div class="reg-row"><span>JOINED_THEALCOHESION</span><span style="color:#fff">${m.joinedThealcohesion || 'N/A'}</span></div>
+                        <div class="reg-row"><span>JOINED_AC</span><span style="color:#fff">${m.joinedAC || 'N/A'}</span></div>
+                        <div class="reg-row"><span>JOINED_TLC</span><span style="color:#fff">${m.joinedTLC || 'N/A'}</span></div>
 
                         <div class="reg-label">Sovereign_Lineage</div>
                         <div class="reg-row">
@@ -332,60 +323,47 @@ export class IdentityManager {
                         <div class="reg-label">Hardware_Binding</div>
                         <div class="device-entry active">
                             <div>
-                                <div style="color:#fff; font-size:11px;">${m.security.deviceFingerprint}</div>
-                                <div style="color:var(--id-gold); font-size:9px;">IP: ${m.security.ipBinding}</div>
+                                <div style="color:#fff; font-size:11px;">${m.security.deviceFingerprint || 'CORE_WORKSTATION'}</div>
+                                <div style="color:var(--id-gold); font-size:9px;">IP: ${m.security.ipBinding || '0.0.0.0'}</div>
                             </div>
                             <div class="d-status-dot"></div>
                         </div>
-
                         <div class="reg-label">Active_System_Awards</div>
-                        <div style="margin-top:10px;">
-                            ${m.awards.map(a => `<span class="award-pill">${a}</span>`).join('')}
+                        <div style="margin-top:10px; display:flex; gap:5px; flex-wrap:wrap;">
+                            ${m.awards ? m.awards.map(a => `<span class="award-pill">${a}</span>`).join('') : '<span style="color:#444; font-size:9px;">NO_AWARDS_RECORDED</span>'}
                         </div>
 
-                        <div style="
-                            padding: 10px; 
-                            margin-bottom: 15px; 
-                            margin-top: 20px;
-                            background: ${isFrozen ? 'rgba(255, 69, 69, 0.1)' : 'rgba(0, 255, 65, 0.05)'}; 
-                            border: 1px solid ${isFrozen ? 'var(--id-red)' : 'var(--id-green)'};
-                            color: ${isFrozen ? 'var(--id-red)' : 'var(--id-green)'};
-                            font-size: 10px;
-                            text-align: center;
-                        ">
+                        <div style="padding: 10px; margin-top: 25px; background: ${isFrozen ? 'rgba(255, 69, 69, 0.1)' : 'rgba(0, 255, 65, 0.05)'}; border: 1px solid ${isFrozen ? 'var(--id-red)' : 'var(--id-green)'}; color: ${isFrozen ? 'var(--id-red)' : 'var(--id-green)'}; font-size: 10px; text-align: center;">
                             ${isFrozen ? 'SIGNAL_STATUS: ACCESS_RESTRICTED // LOGIN_DISABLED' : 'SIGNAL_STATUS: UPLINK_ACTIVE // LOGIN_ENABLED'}
                         </div>
-                        <div>
-                            <div>
-                           <button id="toggle-freeze" style="
-                                padding: 10px 15px; 
-                                margin-bottom: 20px; 
-                                background: transparent; 
-                                border: 1px solid ${isFrozen ? 'var(--id-green)' : 'var(--id-red)'}; 
-                                color: ${isFrozen ? 'var(--id-green)' : 'var(--id-red)'}; 
-                                cursor: pointer; 
-                                font-size: 10px; 
-                                letter-spacing: 2px; 
-                                text-align: center;">
-                                ${isFrozen ? '[ UNFREEZE_IDENTITY ]' : '[ FREEZE_IDENTITY ]'}
-                            </button>
-                        </div>
-                        </div>
+                        <div style="margin-top: 20px;">
+                        <button id="toggle-freeze" style="
+                            padding: 10px 15px; 
+                            background: transparent; 
+                            border: 1px solid ${isFrozen ? 'var(--id-green)' : 'var(--id-red)'}; 
+                            color: ${isFrozen ? 'var(--id-green)' : 'var(--id-red)'}; 
+                            cursor: pointer; 
+                            font-size: 10px; 
+                            letter-spacing: 2px; 
+                            width: 100%;">
+                            ${isFrozen ? '[ UNFREEZE_IDENTITY ]' : '[ FREEZE_IDENTITY ]'}
+                        </button>
                     </div>
-                </div>
-                <div class="reg-label">Access_&_Uplink_History</div>
-                    <div style="background:rgba(0,0,0,0.3); border:1px solid #222; padding:10px; max-height:150px; overflow-y:auto; font-family:monospace;">
-                        ${history.length > 0 ? history.map(log => `
-                            <div style="display:flex; justify-content:space-between; border-bottom:1px solid #111; padding:5px 0; font-size:9px;">
-                                <span style="color:var(--id-green); text-transform:uppercase;">[${log.event}]</span>
-                                <span style="color:#666;">${log.location} // ${log.ip}</span>
-                                <span style="color:#444;">${log.timestamp}</span>
-                            </div>
-                        `).join('') : `
-                            <div style="color:#444; font-size:10px; text-align:center; padding:10px;">NO_ACCESS_HISTORY_RECORDED</div>
-                        `}
+                     <div class="reg-label">Access_&_Uplink_History</div>
+                        <div style="background:rgba(0,0,0,0.3); border:1px solid #222; padding:10px; max-height:150px; overflow-y:auto; font-family:monospace;">
+                            ${(this.loginHistory[m.security.uid] || []).length > 0 ? this.loginHistory[m.security.uid].map(log => `
+                                <div style="display:flex; justify-content:space-between; border-bottom:1px solid #111; padding:5px 0; font-size:9px;">
+                                    <span style="color:var(--id-green); text-transform:uppercase;">[${log.event}]</span>
+                                    <span style="color:#666;">${log.location} // ${log.ip}</span>
+                                    <span style="color:#444;">${log.timestamp}</span>
+                                </div>
+                            `).join('') : `
+                                <div style="color:#444; font-size:10px; text-align:center; padding:10px;">NO_ACCESS_HISTORY_RECORDED</div>
+                            `}
+                        </div>
+                        <button id="close-dossier" style="margin-top:50px; width:100%; background:transparent; border:1px solid #222; color:#555; padding:12px; cursor:pointer; font-family:inherit; text-transform:uppercase; font-size:10px; letter-spacing:2px;">[ Return_To_Index ]</button>
                     </div>
-                <button id="close-dossier" style="margin-top:50px; width:100%; background:transparent; border:1px solid #222; color:#555; padding:12px; cursor:pointer; font-family:inherit; text-transform:uppercase; font-size:10px; letter-spacing:2px;">[ Return_To_Index ]</button>
+                
             </div>
         </div>
     `;
@@ -1069,6 +1047,7 @@ finalizeCitizenUplink(memberUid, country, ip) {
     }
     return false;
 }
+
 
     attachEvents() {
     // 1. Define the Navigation Helper (Unified for Sidebar and Buttons)

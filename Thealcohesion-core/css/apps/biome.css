@@ -333,3 +333,367 @@
     background: #fff;
     border-color: #fff;
 }
+
+
+/* biome.css - TACTICAL_POPUP_&_TLC_NODES */
+
+/* Mini TLC Markers */
+.tlc-node-icon {
+    background: transparent;
+    border: none;
+}
+
+.tlc-dot {
+    width: 6px;
+    height: 6px;
+    background: #fff; /* White for individual nodes */
+    border-radius: 50%;
+    box-shadow: 0 0 8px #fff;
+    opacity: 0.8;
+}
+
+/* Sovereign Popup Styling */
+.sovereign-popup .leaflet-popup-content-wrapper {
+    background: rgba(5, 5, 5, 0.95) !important;
+    border: 1px solid var(--id-green) !important;
+    color: #fff !important;
+    padding: 10px;
+}
+
+.popup-stat-row {
+    display: flex;
+    justify-content: space-between;
+    margin: 5px 0;
+    font-size: 10px;
+    border-bottom: 1px solid #222;
+    padding-bottom: 2px;
+}
+
+.popup-stat-label { color: #555; text-transform: uppercase; }
+.popup-stat-value { color: var(--id-green); font-weight: bold; }
+
+/* biome.css - SOVEREIGN_TACTICAL_UI */
+
+.sovereign-popup .leaflet-popup-content-wrapper {
+    background: rgba(2, 2, 2, 0.95) !important;
+    border: 1px solid var(--id-green) !important;
+    color: #fff !important;
+    border-radius: 0px !important;
+    font-family: 'JetBrains Mono', monospace;
+    padding: 10px;
+    box-shadow: 0 0 20px rgba(0, 255, 65, 0.3);
+}
+
+.popup-header {
+    border-bottom: 1px solid var(--id-green);
+    margin-bottom: 8px;
+    padding-bottom: 4px;
+    font-weight: bold;
+    color: var(--id-green);
+}
+
+.popup-stat {
+    display: flex;
+    justify-content: space-between;
+    font-size: 10px;
+    margin: 4px 0;
+}
+
+.stat-key { color: #555; text-transform: uppercase; }
+.stat-val { color: #fff; }
+
+/* TLC MINI-NODES */
+.tlc-node-icon {
+    background: transparent;
+    border: none;
+}
+
+.tlc-dot {
+    width: 6px;
+    height: 6px;
+    background: #fff;
+    border-radius: 50%;
+    box-shadow: 0 0 10px #fff;
+    opacity: 0.8;
+    animation: nodePulse 2s infinite ease-in-out;
+}
+
+@keyframes nodePulse {
+    0%, 100% { transform: scale(1); opacity: 0.5; }
+    50% { transform: scale(1.3); opacity: 1; }
+}
+
+/* biome.css - POPUP_REFINEMENT */
+
+.sovereign-popup {
+    min-width: 180px;
+    font-family: 'JetBrains Mono', monospace;
+}
+
+.popup-header {
+    border-bottom: 1px solid var(--id-green);
+    margin-bottom: 10px;
+    padding-bottom: 5px;
+    font-weight: bold;
+    color: var(--id-green);
+    letter-spacing: 1px;
+}
+
+.popup-stat {
+    display: flex;
+    justify-content: space-between;
+    font-size: 11px;
+    margin-bottom: 6px;
+}
+
+.stat-key {
+    color: #666;
+    text-transform: uppercase;
+}
+
+.stat-val {
+    color: #fff;
+}
+
+.tactical-btn {
+    background: var(--id-green);
+    color: #000;
+    border: none;
+    padding: 8px;
+    width: 100%;
+    margin-top: 10px;
+    cursor: pointer;
+    font-weight: bold;
+    font-size: 10px;
+    text-transform: uppercase;
+}
+
+.tactical-btn:hover {
+    background: #fff;
+}
+
+/* biome.css - BROADCAST_INTERFACE */
+
+.action-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+    margin-top: 10px;
+}
+
+.broadcast-btn {
+    background: transparent;
+    border: 1px solid var(--id-green);
+    color: var(--id-green);
+    padding: 8px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 9px;
+    font-weight: bold;
+    cursor: pointer;
+    transition: all 0.3s;
+    text-transform: uppercase;
+}
+
+.broadcast-btn:hover {
+    background: var(--id-green);
+    color: #000;
+    box-shadow: 0 0 10px var(--id-green);
+}
+
+.tlc-dot {
+    width: 8px;
+    height: 8px;
+    background: #00ff41; /* Sovereign Green */
+    border-radius: 50%;
+    box-shadow: 0 0 15px #00ff41;
+}
+
+/* biome.css - BROADCAST_ANIMATIONS */
+
+.broadcast-line {
+    stroke: var(--id-green);
+    stroke-width: 1;
+    stroke-dasharray: 5, 5;
+    animation: flowData 2s linear infinite;
+    opacity: 0.6;
+}
+
+@keyframes flowData {
+    from { stroke-dashoffset: 20; }
+    to { stroke-dashoffset: 0; }
+}
+
+.broadcast-pulse-ring {
+    border: 2px solid var(--id-green);
+    border-radius: 50%;
+    position: absolute;
+    animation: signalExpand 1.5s ease-out infinite;
+}
+
+@keyframes signalExpand {
+    0% { transform: scale(0.1); opacity: 1; }
+    100% { transform: scale(3); opacity: 0; }
+}
+
+
+/* biome.css - OS_MODAL_&_RESPONSIVE_POPUP */
+
+/* Responsive Popup Adjustment */
+.sovereign-popup {
+    width: 90vw; /* Fluid width on mobile */
+    max-width: 240px; /* Cap on desktop */
+    font-family: 'JetBrains Mono', monospace;
+}
+
+/* OS Modal Overlay */
+.os-modal-overlay {
+    position: fixed;
+    top: 0; left: 0; width: 100%; height: 100%;
+    background: rgba(0, 0, 0, 0.85);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 20000;
+    backdrop-filter: blur(4px);
+}
+
+.os-broadcast-window {
+    width: 400px;
+    max-width: 90%;
+    background: #050505;
+    border: 1px solid var(--id-green);
+    box-shadow: 0 0 30px rgba(0, 255, 65, 0.2);
+}
+
+.os-window-header {
+    background: var(--id-green);
+    color: #000;
+    padding: 8px 12px;
+    font-size: 11px;
+    font-weight: bold;
+}
+
+.os-window-body { padding: 20px; }
+
+.os-label { color: #555; font-size: 10px; margin-bottom: 10px; }
+
+.os-input-area {
+    width: 100%;
+    height: 100px;
+    background: #000;
+    border: 1px solid #222;
+    color: var(--id-green);
+    font-family: 'JetBrains Mono', monospace;
+    padding: 10px;
+    outline: none;
+    resize: none;
+    margin-bottom: 20px;
+}
+
+.os-input-area:focus { border-color: var(--id-green); }
+
+.os-button-group { display: flex; gap: 10px; justify-content: flex-end; }
+
+.os-btn-primary {
+    background: var(--id-green);
+    border: none;
+    color: #000;
+    padding: 8px 16px;
+    font-weight: bold;
+    cursor: pointer;
+}
+
+.os-btn-secondary {
+    background: transparent;
+    border: 1px solid #333;
+    color: #666;
+    padding: 8px 16px;
+    cursor: pointer;
+}
+
+.os-btn-primary:hover { background: #fff; }
+.os-btn-secondary:hover { color: #fff; border-color: #fff; }
+
+/* Ensure Leaflet popups don't overflow small screens */
+@media (max-width: 600px) {
+    .leaflet-popup-content {
+        margin: 8px !important;
+    }
+}
+
+/* biome.css - NOMINAL_ROLL_STYLES */
+
+.roster-container {
+    height: 100%;
+    background: #000;
+    display: flex;
+    flex-direction: column;
+    padding: 20px;
+    font-family: 'JetBrains Mono', monospace;
+}
+
+.roster-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px solid var(--id-green);
+    padding-bottom: 15px;
+    margin-bottom: 20px;
+}
+
+.roster-title {
+    color: var(--id-green);
+    font-size: 14px;
+    font-weight: bold;
+}
+
+.roster-table-wrapper {
+    flex-grow: 1;
+    overflow-x: auto;
+    overflow-y: auto;
+}
+
+.roster-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 11px;
+    color: #ccc;
+    text-align: left;
+    white-space: nowrap;
+}
+
+.roster-table th {
+    background: #0a0a0a;
+    color: var(--id-green);
+    padding: 12px;
+    border: 1px solid #1a1a1a;
+    font-size: 10px;
+}
+
+.roster-table td {
+    padding: 10px;
+    border: 1px solid #1a1a1a;
+}
+
+.roster-table tr:hover {
+    background: rgba(0, 255, 65, 0.05);
+}
+
+.rank-tag {
+    background: #222;
+    padding: 2px 5px;
+    border-radius: 2px;
+    color: #fff;
+}
+
+/* Status Highlighting */
+.status-cell { font-weight: bold; }
+.status-duty { color: var(--id-green); }
+.status-leave { color: #ffae00; }
+.status-sick { color: var(--id-red); }
+.status-off { color: #555; }
+
+.recognition-cell {
+    color: #00e5ff; /* Cyan highlight for special recognition */
+    font-style: italic;
+}

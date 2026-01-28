@@ -1,5 +1,6 @@
 /**
  * sovereignBiome.js
+ * IDENTITY_LINKED_GEOGRAPHY // REGISTER_SYNC_ACTIVE
  * FIXED_SEARCH_LOGIC // ALLOTMENT_PRIORITY_SYNC
  */
 
@@ -10,45 +11,177 @@ export class SovereignBiome {
         this.viewMode = 'MAP';
         this.showHeatmap = true;
         this.map = null;
+        this.tlcLayer = L.layerGroup(); 
+        this.flowLayer = L.layerGroup(); 
         
         this.acPoints = [
-            { id: "AC_NAIROBI_01", name: "Nairobi Central", lat: -1.286389, lng: 36.817223, res: 98, tlc: 450 },
-            { id: "AC_MOMBASA_02", name: "Mombasa Coastal", lat: -4.043477, lng: 39.668206, res: 72, tlc: 210 },
-            { id: "AC_KISUMU_03", name: "Kisumu Lake", lat: -0.091702, lng: 34.767956, res: 91, tlc: 180 }
+            { id: "AC_NAIROBI_01", name: "NAIROBI_CENTRAL", lat: -1.286389, lng: 36.817223, tlcCapacity: 450 },
+            { id: "AC_MOMBASA_02", name: "MOMBASA_COASTAL", lat: -4.043477, lng: 39.668206, tlcCapacity: 210 },
+            { id: "AC_KISUMU_03", name: "KISUMU_LAKE", lat: -0.091702, lng: 34.767956, tlcCapacity: 180 }
         ];
 
-        // Ensure global hooks are active
-        window.drillAction = (id) => this.drillToTLC(id);
+        this.currentRoster = [];
+        
+        // Global hooks
+        window.openNominalRoll = (level, id) => this.showNominalRoll(level, id);
+        window.exitRoster = () => { this.viewMode = 'MAP'; this.render(); };
+        window.drillAction = (id) => this.showTLCNodes(id);
+        window.broadcastSignal = (level, id) => this.executeBroadcast(level, id);
         window.selectSuggestion = (type, id) => this.handleSelection(type, id);
     }
 
+    // Pulls live data from the Identity Register state
+    getRegisterData() {
+        return window.os?.memberList || [];
+    }
+
     render() {
+        // Consolidated Render Logic
         if (this.viewMode === 'MAP') {
+            this.container.style.padding = "0";
             this.container.innerHTML = `
                 <div class="biome-grid-container">
                     <div class="map-search-container">
                         <div class="search-input-wrapper">
                             <input type="text" id="map-search" class="map-search-input" placeholder="SCANNING_FOR_SIGNATURES..." autocomplete="off">
-                            <button id="btn-teleport" class="map-search-btn">GO</button>
                         </div>
                         <div id="search-results" class="search-suggestions"></div>
                     </div>
-
                     <div id="biome-map"></div>
-                    
                     <div class="map-controls">
                         <button id="toggle-heat" class="map-toggle-btn">HEAT: ${this.showHeatmap ? 'ON' : 'OFF'}</button>
                     </div>
                 </div>
             `;
-            // Re-init map and search
-            setTimeout(() => {
-                this.initMap();
-                this.initSearchLogic();
-            }, 100);
-        } else {
-            this.container.innerHTML = this.renderTLCList(this.selectedAC);
+            this.initMap();
+            this.initSearchLogic();
+        } else if (this.viewMode === 'NOMINAL_ROLL') {
+            this.container.innerHTML = this.renderNominalRollUI();
         }
+    }
+
+    initMap() {
+        if (this.map) this.map.remove();
+        this.map = L.map('biome-map', { zoomControl: false, attributionControl: false }).setView([-1.28, 36.81], 7);
+        L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png').addTo(this.map);
+        
+        this.tlcLayer.addTo(this.map);
+        this.flowLayer.addTo(this.map);
+
+        this.acPoints.forEach(ac => {
+            const acNatives = window.os?.memberList?.filter(m => m.actionCenter === ac.id) || [];
+            const icon = L.divIcon({ className: 'ac-marker-icon', html: `<div class="marker-node"></div>` });
+            
+            L.marker([ac.lat, ac.lng], { icon }).addTo(this.map).bindPopup(`
+                <div class="sovereign-popup">
+                    <div class="popup-header">${ac.name}</div>
+                    <div class="popup-stat"><span class="stat-key">TLC_NODES:</span> <span class="stat-val">${ac.tlcCapacity}</span></div>
+                    <div class="popup-stat"><span class="stat-key">NATIVES_TOTAL:</span> <span class="stat-val">${acNatives.length}</span></div>
+                    <div class="action-grid">
+                        <button onclick="drillAction('${ac.id}')" class="tactical-btn">[ SCAN_LOCAL ]</button>
+                        <button onclick="broadcastSignal('AC', '${ac.id}')" class="broadcast-btn">[ BROADCAST ]</button>
+                    </div>
+                    <button onclick="openNominalRoll('AC', '${ac.id}')" class="os-btn-secondary" style="width:100%; margin-top:8px; font-size:9px;">[ NOMINAL_ROLL ]</button>
+                </div>
+            `);
+        });
+        setTimeout(() => this.map.invalidateSize(), 100);
+    }
+
+    showTLCNodes(acId) {
+        const ac = this.acPoints.find(a => a.id === acId);
+        if (!ac) return;
+
+        this.tlcLayer.clearLayers();
+        this.flowLayer.clearLayers();
+        this.map.flyTo([ac.lat, ac.lng], 14, { duration: 1.5 });
+
+        for (let i = 1; i <= 5; i++) {
+            const tlcName = `TLC_${acId.split('_')[1]}_NODE_0${i}`;
+            const coords = [ac.lat + (Math.random() - 0.5) * 0.015, ac.lng + (Math.random() - 0.5) * 0.015];
+            const tlcNatives = window.os?.memberList?.filter(m => m.tlcId === tlcName) || [];
+
+            L.marker(coords, { 
+                icon: L.divIcon({ className: 'tlc-node-icon', html: `<div class="tlc-dot"></div>` }) 
+            }).addTo(this.tlcLayer).bindPopup(`
+                <div class="sovereign-popup">
+                    <div class="popup-header" style="font-size:10px;">${tlcName}</div>
+                    <div class="popup-stat"><span class="stat-key">NATIVE_COUNT:</span> <span class="stat-val">${tlcNatives.length}</span></div>
+                    <button onclick="broadcastSignal('TLC', '${tlcName}')" class="broadcast-btn" style="width:100%;">[ BROADCAST ]</button>
+                    <button onclick="openNominalRoll('TLC', '${tlcName}')" class="os-btn-secondary" style="width:100%; margin-top:5px; font-size:9px;">[ NOMINAL_ROLL ]</button>
+                </div>
+            `);
+        }
+    }
+
+    showNominalRoll(level, id) {
+        const allMembers = window.os?.memberList || [];
+        this.currentRoster = allMembers.filter(m => level === 'AC' ? m.actionCenter === id : m.tlcId === id);
+        this.viewMode = 'NOMINAL_ROLL';
+        this.render();
+    }
+
+    renderNominalRollUI() {
+        return `
+            <div class="roster-container">
+                <header class="roster-header">
+                    <div class="roster-title">[ NOMINAL_ROLL // ${this.currentRoster.length} ACTIVE_PERSONNEL ]</div>
+                    <button onclick="exitRoster()" class="os-btn-primary">BACK_TO_MAP</button>
+                </header>
+                <div class="roster-table-wrapper">
+                    <table class="roster-table">
+                        <thead>
+                            <tr>
+                                <th>NAME</th><th>RANK</th><th>POSITION</th><th>PHONE</th>
+                                <th>SPECIAL_RECOGNITION</th><th>JOINED_OS</th><th>JOINED_AC</th>
+                                <th>JOINED_TLC</th><th>RANK_DATE</th><th>REMARKS</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${this.currentRoster.map(m => `
+                                <tr class="status-${(m.remarks || 'Duty').toLowerCase()}">
+                                    <td>${m.userName || 'N/A'}</td>
+                                    <td><span class="rank-tag">${m.rank || 'NATIVE'}</span></td>
+                                    <td>${m.position || 'MEMBER'}</td>
+                                    <td>${m.phone || '---'}</td>
+                                    <td class="recognition-cell">${m.specialRecognition || 'NONE'}</td>
+                                    <td>${m.joinedThealcohesion || '---'}</td>
+                                    <td>${m.joinedAC || '---'}</td>
+                                    <td>${m.joinedTLC || '---'}</td>
+                                    <td>${m.rankDate || '---'}</td>
+                                    <td class="status-cell">${m.remarks || 'ON DUTY'}</td>
+                                </tr>
+                            `).join('')}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        `;
+    }
+
+    executeBroadcast(level, id) {
+        const modal = document.createElement('div');
+        modal.className = 'os-modal-overlay';
+        modal.innerHTML = `
+            <div class="os-broadcast-window">
+                <div class="os-window-header">[ UPLINK: ${id} ]</div>
+                <div class="os-window-body">
+                    <textarea id="broadcast-msg" class="os-input-area" placeholder="TYPE_MESSAGE..."></textarea>
+                    <div class="os-button-group">
+                        <button onclick="this.closest('.os-modal-overlay').remove()" class="os-btn-secondary">ABORT</button>
+                        <button id="send-signal" class="os-btn-primary">TRANSMIT</button>
+                    </div>
+                </div>
+            </div>`;
+        document.body.appendChild(modal);
+
+        document.getElementById('send-signal').onclick = () => {
+            const msg = document.getElementById('broadcast-msg').value;
+            if(msg) {
+                this.api.notify(`SIGNAL_TRANSMITTED_TO_${id}`, "success");
+                modal.remove();
+            }
+        };
     }
 
     initSearchLogic() {
@@ -131,31 +264,7 @@ export class SovereignBiome {
         }
     }
 
-    initMap() {
-        if (this.map) this.map.remove();
-        this.map = L.map('biome-map', { zoomControl: false, attributionControl: false }).setView([-1.28, 36.81], 7);
-        L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png').addTo(this.map);
-
-        if (this.showHeatmap) {
-            const heatData = this.acPoints.map(ac => [ac.lat, ac.lng, ac.tlc / 100]);
-            L.heatLayer(heatData, { radius: 35, blur: 20, gradient: { 0.4: 'green', 1: 'white' } }).addTo(this.map);
-        }
-
-        this.acPoints.forEach(ac => {
-            const icon = L.divIcon({ className: 'ac-marker-icon', html: `<div class="marker-node" id="node-${ac.id}"></div>` });
-            L.marker([ac.lat, ac.lng], { icon }).addTo(this.map).bindPopup(`
-                <div style="color:var(--id-green); font-family:monospace;">
-                    <b>${ac.name}</b><br>
-                    <button onclick="drillAction('${ac.id}')" style="background:var(--id-green); color:#000; border:none; padding:5px; width:100%; margin-top:8px; cursor:pointer; font-weight:bold;">
-                        [ DRILL_INTO_TLC ]
-                    </button>
-                </div>
-            `);
-        });
-
-        const heatBtn = document.getElementById('toggle-heat');
-        if(heatBtn) heatBtn.onclick = () => { this.showHeatmap = !this.showHeatmap; this.render(); };
-    }
+ 
 
     drillToTLC(acId) {
         this.viewMode = 'CELL_LIST';
