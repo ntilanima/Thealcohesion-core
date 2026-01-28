@@ -1,0 +1,335 @@
+/* biome.css - THEALCOHESION_GEOGRAPHY */
+
+:root {
+    --id-green: #00ff41;
+    --id-red: #ff0000;
+    --id-dark: #020202;
+    --ac-bg: rgba(0, 255, 65, 0.02);
+}
+
+.biome-grid-container {
+    position: relative;
+    width: 100%;
+    height: 100%; /* Ensures it stays in the VPU */
+    display: flex;
+    flex-direction: column;
+    overflow: hidden; /* Prevents map from leaking out */
+}
+
+.ac-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 25px;
+    margin-top: 30px;
+}
+
+.ac-card {
+    border: 1px solid #1a1a1a;
+    background: var(--ac-bg);
+    padding: 25px;
+    border-radius: 4px;
+    position: relative;
+    overflow: hidden;
+    transition: transform 0.3s ease, border-color 0.3s ease;
+}
+
+.ac-card:hover {
+    border-color: #333;
+    transform: translateY(-2px);
+}
+
+.resonance-glow {
+    position: absolute;
+    top: 0;
+    right: 0;
+    width: 4px;
+    height: 100%;
+    transition: background 0.5s ease, box-shadow 0.5s ease;
+}
+
+/* THE_RESONANCE_PULSE_ANIMATION */
+@keyframes acPulse {
+    0% { background: rgba(0, 255, 65, 0.02); box-shadow: 0 0 0px var(--id-green); }
+    50% { background: rgba(0, 255, 65, 0.15); box-shadow: 0 0 30px var(--id-green); border-color: #fff; }
+    100% { background: rgba(0, 255, 65, 0.02); box-shadow: 0 0 0px var(--id-green); }
+}
+
+.resonance-active {
+    animation: acPulse 2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.stat-label {
+    font-size: 9px;
+    color: #444;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+.stat-value {
+    font-size: 24px;
+    font-family: 'Courier New', Courier, monospace;
+}
+
+/* tlc-directory.css - CELLULAR_MANIFEST_VIEW */
+
+.tlc-list-container {
+    animation: slideIn 0.3s ease-out;
+    padding: 20px;
+    background: #000;
+    border: 1px solid #111;
+}
+
+.tlc-row {
+    display: grid;
+    grid-template-columns: 80px 1fr 120px 100px;
+    padding: 12px;
+    border-bottom: 1px solid #0a0a0a;
+    align-items: center;
+    transition: background 0.2s;
+}
+
+.tlc-row:hover {
+    background: rgba(0, 255, 65, 0.05);
+}
+
+.cell-id { color: #444; font-size: 10px; font-family: monospace; }
+.cell-name { color: #eee; font-weight: bold; letter-spacing: 1px; }
+.cell-birthright { color: var(--id-green); font-size: 11px; font-family: monospace; }
+.cell-status { text-align: right; font-size: 9px; }
+
+@keyframes slideIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+
+/* biome.css - GEOSPATIAL_EXTENSION */
+
+#biome-map {
+    flex-grow: 1; /* Fills remaining space below header */
+    width: 100%;
+    height: 100%;
+    background: #000;
+}
+
+/* Customizing Leaflet to fit Sovereign aesthetics */
+.leaflet-container {
+    background: #000 !important;
+    font-family: 'JetBrains Mono', monospace !important;
+}
+
+.leaflet-popup-content-wrapper, .leaflet-popup-tip {
+    background: #0a0a0a !important;
+    color: var(--id-green) !important;
+    border: 1px solid #222;
+    border-radius: 0px !important;
+}
+
+/* Pulse animation for Map Markers */
+.ac-marker-pulse {
+    width: 12px;
+    height: 12px;
+    background: var(--id-green);
+    border-radius: 50%;
+    box-shadow: 0 0 10px var(--id-green);
+    animation: markerPulse 2s infinite;
+}
+
+@keyframes markerPulse {
+    0% { transform: scale(1); opacity: 1; }
+    100% { transform: scale(3); opacity: 0; }
+}
+
+/* biome.css - GEOSPATIAL_EXTENSION */
+
+#biome-map {
+    width: 100%;
+    height: 100%;
+    background: #000;
+}
+
+/* Custom Tactical Popup */
+.leaflet-popup-content-wrapper {
+    background: #0a0a0a !important;
+    color: var(--id-green) !important;
+    border: 1px solid #222;
+    border-radius: 0px !important;
+    font-family: 'JetBrains Mono', monospace;
+}
+
+.leaflet-popup-tip { background: #0a0a0a !important; }
+
+/* The Pulse Marker */
+.ac-marker-icon {
+    background: transparent;
+    border: none;
+}
+
+.marker-node {
+    width: 12px;
+    height: 12px;
+    background: var(--id-green);
+    border-radius: 50%;
+    box-shadow: 0 0 15px var(--id-green);
+    position: relative;
+}
+
+.marker-node::after {
+    content: '';
+    position: absolute;
+    top: -4px; left: -4px; right: -4px; bottom: -4px;
+    border: 1px solid var(--id-green);
+    border-radius: 50%;
+    animation: pulseCircle 2s infinite;
+}
+
+@keyframes pulseCircle {
+    0% { transform: scale(1); opacity: 1; }
+    100% { transform: scale(3); opacity: 0; }
+}
+
+
+/* biome.css - HEATMAP_CONTROLS */
+
+.map-controls {
+    position: absolute;
+    top: 15px;
+    right: 15px;
+    z-index: 9999; /* Ensure it stays above map layers */
+}
+
+.map-toggle-btn {
+    background: rgba(0,0,0,0.8);
+    border: 1px solid var(--id-green);
+    color: var(--id-green);
+    padding: 6px 12px;
+    font-size: 10px;
+    cursor: pointer;
+    backdrop-filter: blur(5px);
+}
+
+/* Fix popup button visibility */
+.leaflet-popup-content button {
+    margin-top: 10px;
+    display: block;
+    width: 100%;
+}
+
+/* biome.css - REFINED SOVEREIGN SEARCH */
+
+.map-search-container {
+    position: absolute;
+    top: 20px;
+    left: 20px;
+    z-index: 10001 !important; /* Forces it above all Leaflet layers */
+    display: flex;
+    flex-direction: column;
+    width: 320px;
+}
+
+.search-input-wrapper {
+    display: flex;
+    border: 1px solid var(--id-green);
+    background: rgba(0, 0, 0, 0.9);
+    box-shadow: 0 0 15px rgba(0, 255, 65, 0.2);
+}
+
+.map-search-input {
+    background: transparent;
+    border: none;
+    color: var(--id-green);
+    padding: 12px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    width: 100%;
+    outline: none;
+    text-transform: uppercase;
+}
+
+.map-search-btn {
+    background: var(--id-green);
+    border: none;
+    color: #000;
+    padding: 0 15px;
+    cursor: pointer;
+    font-weight: bold;
+    font-size: 10px;
+    transition: background 0.2s;
+}
+
+.map-search-btn:hover {
+    background: #fff;
+}
+
+/* IMPORTANT: Fixed Suggestion Box */
+.search-suggestions {
+    background: rgba(5, 5, 5, 0.98);
+    border: 1px solid var(--id-green);
+    border-top: none;
+    max-height: 250px;
+    overflow-y: auto;
+    display: none; /* JS will toggle this to 'block' */
+    backdrop-filter: blur(10px);
+}
+
+.suggestion-item {
+    padding: 12px 15px;
+    border-bottom: 1px solid #111;
+    cursor: pointer;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.suggestion-item:hover {
+    background: rgba(0, 255, 65, 0.15);
+}
+
+.suggestion-label {
+    font-size: 11px;
+    color: #eee;
+    font-weight: bold;
+    letter-spacing: 1px;
+}
+
+.suggestion-type {
+    font-size: 8px;
+    color: var(--id-green);
+    border: 1px solid var(--id-green);
+    padding: 2px 5px;
+    text-transform: uppercase;
+}
+
+.priority-tag {
+    color: #000;
+    background: var(--id-green); /* High contrast for EPOS/Investors */
+    font-size: 8px;
+    padding: 2px 4px;
+    margin-left: 8px;
+    font-weight: bold;
+}
+
+
+
+
+
+
+.map-search-input:focus {
+    border-color: var(--id-green);
+}
+
+.map-search-btn {
+    background: var(--id-green);
+    border: 1px solid var(--id-green);
+    color: #000;
+    padding: 0 15px;
+    cursor: pointer;
+    font-weight: bold;
+    font-size: 10px;
+    text-transform: uppercase;
+}
+
+.map-search-btn:hover {
+    background: #fff;
+    border-color: #fff;
+}

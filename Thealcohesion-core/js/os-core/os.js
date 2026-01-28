@@ -779,6 +779,53 @@ async shutdown() {
             return instance;
         },
 
+        'biome': async (container) => {
+            const { SovereignBiome } = await import('./sovereignBiome.js');
+            
+            const apiBridge = {
+                signature: 'SOVEREIGN_CORE_V1',
+                // Biome needs the Honey-pot logs from the Identity Manager to calculate Resonance
+                getSecurityLogs: () => {
+                    const idApp = this.activeProcesses['identity'];
+                    return idApp ? idApp.honeyPotLogs : [];
+                },
+                // Bridge to notify Kernel of Geofence triggers
+                notify: (msg, type) => this.showNotification ? this.showNotification(msg, type) : console.log(msg),
+                close: () => this.closeApp('biome')
+            };
+
+            const instance = new SovereignBiome(container, apiBridge);
+            instance.render(); // Renders the Cellular Grid
+
+            this.activeProcesses = this.activeProcesses || {};
+            this.activeProcesses['biome'] = instance;
+            return instance;
+        },
+
+        'oracle': async (container) => {
+            const { SovereignOracle } = await import('./oracleEngine.js');
+            
+            const apiBridge = {
+                signature: 'SOVEREIGN_CORE_V1',
+                // Provides clearance level for Archon Truth-Verification
+                getClearance: () => {
+                    // Logic to check if user is Archan/Level 10
+                    return this.userRole === 'ADMIN' || this.userRole === 'MEGA' ? 10 : 1;
+                },
+                // Persistence for the signed truth-feed
+                fs: this.vfs,
+                notify: (msg, type) => this.showNotification ? this.showNotification(msg, type) : console.log(msg),
+                close: () => this.closeApp('oracle')
+            };
+
+            const instance = new SovereignOracle(container, apiBridge);
+            instance.render(); // Renders the Truth Stream
+
+            this.activeProcesses = this.activeProcesses || {};
+            this.activeProcesses['oracle'] = instance;
+            return instance;
+        },
+
         };
         
     }

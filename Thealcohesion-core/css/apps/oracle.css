@@ -1,0 +1,85 @@
+/* oracle.css - SOVEREIGN_OS_V2 */
+
+:root {
+    --id-green: #00ff41;
+    --id-red: #ff0000;
+    --id-warn: #ffaa00;
+    --bg-dark: #050505;
+    --border-dim: #1a1a1a;
+}
+
+.oracle-container {
+    padding: 40px;
+    display: grid;
+    grid-template-columns: 1fr 350px;
+    gap: 30px;
+    background: var(--bg-dark);
+    height: 100%;
+    overflow-y: auto;
+    font-family: 'JetBrains Mono', monospace;
+}
+
+.oracle-header h1 {
+    color: var(--id-green);
+    letter-spacing: 8px;
+    text-transform: uppercase;
+    margin: 0;
+}
+
+.signal-card {
+    border: 1px solid var(--border-dim);
+    background: rgba(255, 255, 255, 0.01);
+    padding: 20px;
+    position: relative;
+    border-radius: 4px;
+    transition: all 0.3s ease;
+}
+
+.signal-card:hover {
+    background: rgba(0, 255, 65, 0.03);
+    border-color: #333;
+}
+
+.resonance-bar {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 2px;
+}
+
+.status-pending { background: var(--id-warn); }
+.status-verified { background: var(--id-green); box-shadow: 0 0 10px var(--id-green); }
+.status-purged { background: var(--id-red); }
+
+.broadcaster-aside {
+    border-left: 1px solid var(--border-dim);
+    padding-left: 30px;
+}
+
+.broadcast-input {
+    width: 100%;
+    background: #000;
+    color: #ddd;
+    border: 1px solid #333;
+    padding: 10px;
+    font-family: inherit;
+    margin-bottom: 15px;
+    resize: none;
+}
+
+.execute-btn {
+    width: 100%;
+    background: var(--id-green);
+    color: #000;
+    border: none;
+    padding: 12px;
+    font-weight: bold;
+    cursor: pointer;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+}
+
+.execute-btn:hover {
+    background: #fff;
+}

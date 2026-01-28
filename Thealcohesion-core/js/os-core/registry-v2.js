@@ -79,6 +79,21 @@ export const registry = [
         lifecycle: 'VETTED'
     },
     { 
+        id: 'oracle', 
+        name: 'The Oracle', 
+        icon: '👁️', 
+        file: 'oracleEngine.js', 
+        protocol: 'GOV://truth-feed',
+        category: 'Governance',
+        roles: ['ANY'],
+        manifest: { 
+            purpose: 'Curated intelligence feed for Action Centers with Archon truth-verification.', 
+            resources: { cpu: 'Low', ram: 4 } 
+        },
+        ethics: { tracking: false, manipulation: false, consent: true },
+        lifecycle: 'VETTED'
+    },
+    { 
         id: 'resource-pool', 
         name: 'Investors/EPOS', 
         icon: '🤝', 
@@ -204,7 +219,22 @@ export const registry = [
         lifecycle: 'VETTED'
     },
 
-    // --- 4. SOVEREIGN ECOSYSTEM ---
+    // --- 3. SOVEREIGN ECOSYSTEM ---
+    { 
+        id: 'biome', 
+        name: 'Sovereign Biome', 
+        icon: '🕸️', 
+        file: 'sovereignBiome.js', 
+        protocol: 'INF://cellular-map',
+        category: 'Infrastructure',
+        roles: ['ANY'],
+        manifest: { 
+            purpose: 'Neural heatmap of Thealcohesion Action Centers and TLC resonance.', 
+            resources: { cpu: 'Medium', ram: 12 } 
+        },
+        ethics: { tracking: false, manipulation: false, consent: true },
+        lifecycle: 'VETTED'
+    },
     { 
         id: 'time', 
         name: 'Temporal Engine', 
