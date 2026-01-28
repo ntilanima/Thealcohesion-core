@@ -29,7 +29,8 @@ const MEMBER_LIST = [
             since: "2025-12-26",
             rank: "Chief In General Senior",
             abbr: "CG.SNR.",
-            clearance: 10
+            clearance: 10,
+            isFrozen: false
         },
         awards: ["EARLY_INVESTOR", "100MB_PIONEER"]
     },
@@ -54,7 +55,8 @@ const MEMBER_LIST = [
             status: "ENCRYPTED",
             since: "2025-12-26",
             clearance: 4,
-            rank: "INITIAL_INVESTOR"
+            rank: "INITIAL_INVESTOR",
+            isFrozen: false
         },
         awards: ["CORE_INVESTOR", "CORE_CONTRIBUTOR"]
     }
@@ -70,7 +72,7 @@ const MEMBER_LIST = [
         "JM": "Junior Mentor",
         "M": "Mentee",
         "S": "Seed"
-    };
+    }; 
 
 
     const RANK_SCHEMA = [
@@ -114,12 +116,26 @@ export class IdentityManager {
             };
         this.isExporting = false; // Tracks the visual export state
         this.loginHistory = {}; // Stores logs keyed by member UID
+        this.ipBlacklist = ["192.168.1.666", "10.0.0.13"]; // Add known hostile IPs here
+        this.honeyPotLogs = []; // Initialize the Honey-pot tracker
 
 
     }
 
     async init() {
         this.render();
+    }
+
+    isIpBlacklisted(ip) {
+    return this.ipBlacklist.includes(ip);
+    }
+
+    blacklistIp(ip) {
+        if (!this.ipBlacklist.includes(ip)) {
+            this.ipBlacklist.push(ip);
+            this.addLog(`IP_BURNED: ${ip} added to blacklist.`, 'security');
+            this.render();
+        }
     }
 
     formatSovereignName(member) {
@@ -147,16 +163,24 @@ export class IdentityManager {
         // 1. Update the Master List
         MEMBER_LIST[idx] = { ...MEMBER_LIST[idx], ...updates };
         
-        // 2. IMMEDIATE SYNC: Update the currently viewed member reference
-        // This ensures the next button click sees the NEW data immediately
+        // 2. FORCE DISCONNECT LOGIC
         if (this.selectedMember && this.selectedMember.security.uid === uid) {
-            this.selectedMember = MEMBER_LIST[idx];
+            if (updates.isFrozen === true) {
+                this.addLog(`SECURITY: Force-disconnecting UID ${uid}. Signal severed.`, 'security');
+                
+                this.selectedMember = null; // This triggers the logout
+                this.isEditing = false;
+                this.vaultUnlocked = false; 
+                
+                alert(`SIGNAL_SEVERED: Identity ${uid} has been frozen and logged out.`);
+            } else {
+                this.selectedMember = MEMBER_LIST[idx];
+            }
         }
 
         const statusMsg = updates.isFrozen ? 'SIGNAL_FROZEN' : 'SIGNAL_RESTORED';
         this.addLog(`${statusMsg}: ${uid}`, 'admin');
         
-        // 3. RE-RENDER: Do NOT set isEditing to false here
         this.render(); 
     }
 }
@@ -333,16 +357,18 @@ export class IdentityManager {
                         </div>
                         <div>
                             <div>
-                            <button id="toggle-freeze" style="
-                            padding: 10px; 
-                            margin-bottom: 20px; 
-                            background: transparent; border: 1px solid ${isFrozen ? 'var(--id-green)' : 'var(--id-red)'}; 
-                            border: 1px solid ${isFrozen ? 'var(--id-red)' : 'var(--id-green)'};
-                            color: color: ${isFrozen ? 'var(--id-green)' : 'var(--id-red)'}; padding: 5px 15px; cursor: pointer; font-size: 10px; letter-spacing: 2px;
-                            font-size: 10px;
-                            text-align: center;">
-                            ${isFrozen ? '[ UNFREEZE_IDENTITY ]' : '[ FREEZE_IDENTITY ]'}
-                        </button>
+                           <button id="toggle-freeze" style="
+                                padding: 10px 15px; 
+                                margin-bottom: 20px; 
+                                background: transparent; 
+                                border: 1px solid ${isFrozen ? 'var(--id-green)' : 'var(--id-red)'}; 
+                                color: ${isFrozen ? 'var(--id-green)' : 'var(--id-red)'}; 
+                                cursor: pointer; 
+                                font-size: 10px; 
+                                letter-spacing: 2px; 
+                                text-align: center;">
+                                ${isFrozen ? '[ UNFREEZE_IDENTITY ]' : '[ FREEZE_IDENTITY ]'}
+                            </button>
                         </div>
                         </div>
                     </div>
@@ -475,6 +501,8 @@ export class IdentityManager {
                     <button id="sb-index" class="sidebar-btn ${(!this.isRegistering && this.viewMode === 'DIRECTORY') ? 'active' : ''}">[ DIRECTORY_INDEX ]</button>
                     <button id="sb-reg" class="sidebar-btn ${this.isRegistering ? 'active' : ''}">[ + ] REGISTER_NEW</button>
                     <button id="sb-vault" class="sidebar-btn ${this.viewMode === 'VAULT' ? 'active' : ''}">[ TOKEN_VAULT ]</button>
+                    <button id="sb-honeypot" class="sidebar-btn ${this.viewMode === 'HONEYPOT' ? 'active' : ''}" style="border-color:var(--id-red); color:var(--id-red);">[ HONEY_POT_LOGS ]</button>
+                    <button id="sb-lockdown" class="sidebar-btn" style="border-color:var(--id-red); background:rgba(255,0,0,0.1); color:var(--id-red); font-weight:bold;">[!] MASS_LOCKDOWN</button>
                     <button id="sb-export" class="sidebar-btn green">[ EXPORT_MANIFEST ]</button>
                     
                     <button id="clear-filters" style="background:transparent; border:1px solid #333; color:#444; font-size:9px; padding:8px; cursor:pointer; margin-top:10px;">
@@ -507,6 +535,7 @@ export class IdentityManager {
 getCurrentView() {
     if (this.isRegistering) return this.renderGateway();
     if (this.viewMode === 'VAULT') return this.renderTokenVault();
+    if (this.viewMode === 'HONEYPOT') return this.renderHoneyPot();
     if (this.selectedMember) return this.renderDossier();
     return this.renderDirectory();
 }
@@ -644,6 +673,16 @@ renderDirectory() {
 
     handleRegistration(e) {
         e.preventDefault();
+        
+        // NEW: Network-level IP check
+        const userIp = "192.168.1.666"; // Simulated captured IP
+        if (this.ipBlacklist && this.ipBlacklist.includes(userIp)) {
+            this.blacklistIp(userIp, "HOSTILE_REGISTRATION_ATTEMPT"); // Logs to Honey-pot
+            this.addLog(`BLOCK_EVENT: Blacklisted IP attempt [${userIp}]`, 'security');
+            alert("NETWORK_ERROR: Your IP has been blacklisted by Sovereign DevOps.");
+            return; // Signal Severed
+        }
+        
         const formData = new FormData(e.target);
         const entryKey = formData.get('referralCode');
         const uid = formData.get('uid');
@@ -871,12 +910,72 @@ renderDirectory() {
     `;
 }
 
+renderHoneyPot() {
+    return `
+        <div class="registry-view">
+            <div class="registry-wrapper" style="animation: slideUp 0.4s ease-out;">
+                <h1 style="color:var(--id-red); letter-spacing:4px;">HONEY_POT_MONITOR</h1>
+                <div class="reg-label" style="color:var(--id-red); border-color:var(--id-red);">Blocked_Network_Attempts</div>
+                <div style="max-height:400px; overflow-y:auto; background:rgba(255,0,0,0.05); border:1px solid #300; padding:15px;">
+                    ${this.honeyPotLogs.length > 0 ? this.honeyPotLogs.map(log => `
+                        <div style="display:flex; justify-content:space-between; border-bottom:1px solid #200; padding:10px; font-family:monospace; font-size:11px;">
+                            <span style="color:var(--id-red); font-weight:bold;">[${log.event}]</span>
+                            <span style="color:#666;">IP: ${log.ip}</span>
+                            <span style="color:#444;">${log.timestamp}</span>
+                        </div>
+                    `).join('') : '<div style="color:#444; text-align:center; padding:20px;">NO_HOSTILE_ATTEMPTS_RECORDED</div>'}
+                </div>
+                <button id="close-honey" class="sidebar-btn" style="margin-top:30px;">[ RETURN_TO_DIRECTORY ]</button>
+            </div>
+        </div>
+    `;
+}
+
+
+    /**
+     * PROTOCOL: GLOBAL_SIGNAL_SEVER
+     * Emergency lockdown of all non-Archon identities.
+     */
+    triggerMassLockdown() {
+        this.addLog("CRITICAL: INITIATING_GLOBAL_LOCKDOWN", "security");
+        
+        MEMBER_LIST.forEach(m => {
+            // Protect clearance level 10 (Archan Supreme)
+            if (m.security.clearance < 10) {
+                m.isFrozen = true;
+            }
+        });
+
+        this.selectedMember = null; // Sever active admin view
+        this.viewMode = 'DIRECTORY';
+        this.render();
+        
+        alert("SYSTEM_WIDE_LOCKDOWN: All non-Archon signals have been severed.");
+    }
+
+    /**
+     * HONEY-POT PROTOCOL
+     * Records and blocks hostile IP signals.
+     */
+    blacklistIp(ip, reason = "MANUAL_BAN") {
+        if (ip && !this.ipBlacklist.includes(ip)) {
+            this.ipBlacklist.push(ip);
+            this.honeyPotLogs.unshift({
+                timestamp: new Date().toLocaleString(),
+                ip: ip,
+                event: reason
+            });
+            this.addLog(`IP_BURNED: ${ip} added to blacklist.`, 'security');
+            this.render();
+        }
+    }
+
     /**
      * VOUCH_CITIZEN_PROTOCOL
      * Authorizes a pending registration via cryptographic signature.
      */
     vouchForCitizen(tempUid, voucherUid) {
-    const member = MEMBER_LIST.find(m => m.security.uid === uid);
+    const member = MEMBER_LIST.find(m => m.security.uid === tempUid);
     
     if (member && member.isFrozen) {
         this.addLog(`VOUCH_FAILED: Cannot approve FROZEN_SIGNAL ${uid}`, 'error');
@@ -1004,6 +1103,19 @@ finalizeCitizenUplink(memberUid, country, ip) {
         this.render();
     });
 
+    bind('#sb-honeypot', () => {
+    this.viewMode = 'HONEYPOT';
+    this.isRegistering = false;
+    this.selectedMember = null;
+    this.render();
+    });
+
+    bind('#sb-lockdown', () => {
+        if(confirm("CRITICAL: Sever ALL non-Archon signals immediately?")) {
+            this.triggerMassLockdown();
+        }
+    });
+
     const rankChanger = this.container.querySelector('#rank-changer');
     if (rankChanger) {
         rankChanger.onchange = (e) => {
@@ -1085,14 +1197,42 @@ finalizeCitizenUplink(memberUid, country, ip) {
     });
 
     // --- FREEZE/UNFREEZE LOGIC ---
+    // Bind Global Lockdown button
+    const lockdownBtn = this.container.querySelector('#sb-lockdown');
+    if (lockdownBtn) {
+        lockdownBtn.onclick = () => {
+            if(confirm("CRITICAL: Are you sure you want to sever ALL non-Archon signals?")) {
+                this.triggerMassLockdown();
+            }
+        };
+    }
+
+    // Closses honeypot
+    const closeHoney = this.container.querySelector('#close-honey');
+    if (closeHoney) {
+        closeHoney.onclick = () => {
+            this.viewMode = 'DIRECTORY';
+            this.render();
+        };
+    }
+
+    // Updated Freeze button to also Blacklist the member's IP
     const freezeBtn = this.container.querySelector('#toggle-freeze');
     if (freezeBtn) {
         freezeBtn.onclick = () => {
-            const currentStatus = this.selectedMember.isFrozen || false;
-            this.updateMember(this.selectedMember.security.uid, {
-                isFrozen: !currentStatus
-            });
+            const m = this.selectedMember;
+            const currentStatus = m.isFrozen || false;
+            
+            // 1. Perform the data update
+            this.updateMember(m.security.uid, { isFrozen: !currentStatus });
+
+            // 2. SOVEREIGN_AUTO_BURN: If freezing, blacklist their IP
+            if (!currentStatus && m.security.ipBinding) {
+                this.blacklistIp(m.security.ipBinding, `FROZEN_ID_SEVERED_${m.security.uid}`);
+            }
         };
     }
+    
+    }
 }
-}
+
