@@ -127,6 +127,9 @@ export class IdentityManager {
         this.loginHistory = {}; // Stores logs keyed by member UID
         this.ipBlacklist = ["192.168.1.666", "10.0.0.13"]; // Add known hostile IPs here
         this.honeyPotLogs = []; // Initialize the Honey-pot tracker
+        this.tacticalDirectory = []; // Array of AC objects, each containing a .tlcs array
+        this.expandedAC = null;      // Tracks which AC card is currently open
+        this.tacticalSearchQuery = "";
 
 
     }
@@ -464,7 +467,16 @@ export class IdentityManager {
     // Determine which view to generate
     const mainContent = this.getCurrentView();
     const overlay = this.isExporting ? this.renderProcessingOverlay() : '';
-
+    let content = "";
+    if (this.viewMode === 'DOSSIER') {
+        content = this.renderDossier();
+    } else if (this.viewMode === 'GATEWAY') {
+        content = this.renderGateway();
+    } else if (this.viewMode === 'TACTICAL') { // INJECT THIS BLOCK
+        content = this.renderTacticalCommand(); 
+    } else {
+        content = this.renderDirectory(); // This is why it was defaulting to Index
+    }
     this.container.innerHTML = `
         <div class="os-layout" style="display: flex; height: 100vh; overflow: hidden; background: #000;">
             ${overlay}
@@ -478,6 +490,7 @@ export class IdentityManager {
                 <div style="padding: 20px; flex: 0 0 auto; display: flex; flex-direction: column; gap: 10px;">
                     <button id="sb-index" class="sidebar-btn ${(!this.isRegistering && this.viewMode === 'DIRECTORY') ? 'active' : ''}">[ DIRECTORY_INDEX ]</button>
                     <button id="sb-reg" class="sidebar-btn ${this.isRegistering ? 'active' : ''}">[ + ] REGISTER_NEW</button>
+                    <button id="nav-tactical" class="nav-btn ${this.viewMode === 'TACTICAL' ? 'active' : ''}">[ TACTICAL ]</button>
                     <button id="sb-vault" class="sidebar-btn ${this.viewMode === 'VAULT' ? 'active' : ''}">[ TOKEN_VAULT ]</button>
                     <button id="sb-honeypot" class="sidebar-btn ${this.viewMode === 'HONEYPOT' ? 'active' : ''}" style="border-color:var(--id-red); color:var(--id-red);">[ HONEY_POT_LOGS ]</button>
                     <button id="sb-lockdown" class="sidebar-btn" style="border-color:var(--id-red); background:rgba(255,0,0,0.1); color:var(--id-red); font-weight:bold;">[!] MASS_LOCKDOWN</button>
@@ -512,6 +525,7 @@ export class IdentityManager {
 
 getCurrentView() {
     if (this.isRegistering) return this.renderGateway();
+    if (this.viewMode === 'TACTICAL') return this.renderTacticalCommand();
     if (this.viewMode === 'VAULT') return this.renderTokenVault();
     if (this.viewMode === 'HONEYPOT') return this.renderHoneyPot();
     if (this.selectedMember) return this.renderDossier();
@@ -1048,6 +1062,185 @@ finalizeCitizenUplink(memberUid, country, ip) {
     return false;
 }
 
+renderTacticalCommand() {
+    const query = (this.tacticalSearchQuery || "").toLowerCase();
+    
+    // Perform Deep-Search across ACs and their nested TLCs
+    const filteredTactical = this.tacticalDirectory.filter(ac => {
+        // Match AC Level
+        const acMatch = ac.name.toLowerCase().includes(query) || 
+                        ac.id.toLowerCase().includes(query) ||
+                        ac.areaCode.toLowerCase().includes(query);
+        
+        // Match TLC Level
+        const tlcMatch = ac.tlcs.some(tlc => 
+            tlc.name.toLowerCase().includes(query) || 
+            tlc.id.toLowerCase().includes(query) ||
+            tlc.areaCode.toLowerCase().includes(query)
+        );
+
+        return acMatch || tlcMatch;
+    });
+
+    // AUTO-EXPAND LOGIC: If a search is active and matches a TLC, open that AC
+    if (query.length > 2 && filteredTactical.length === 1) {
+        this.expandedAC = filteredTactical[0].id;
+    }
+
+    return `
+    <div class="registry-wrapper" style="background:#000; padding:25px; font-family:monospace;">
+            <div style="display:flex; justify-content:space-between; margin-bottom:20px;">
+            <h2 style="color:var(--id-gold);">[ TACTICAL_ASSET_DIRECTORY ]</h2>
+            <div style="display:flex; gap:10px;">
+                <button id="btn-show-ac" class="award-pill" style="background:var(--id-gold); color:#000;">+ HUB_AC</button>
+                <button id="btn-show-tlc" class="award-pill" style="border:1px solid var(--id-green); color:var(--id-green); background:transparent;">+ NODE_TLC</button>
+            </div>
+        </div>
+        <div id="tactical-form-target" style="display:none; margin-bottom:20px; border:1px solid #222; padding:15px;"></div>
+        <div style="margin-bottom: 20px; position: relative;">
+            <input type="text" id="tactical-search" value="${this.tacticalSearchQuery || ''}" 
+                   placeholder="SEARCH_BY_AC_OR_TLC_NAME..." 
+                   style="width: 100%; background: #080808; border: 1px solid #222; color: var(--id-gold); padding: 12px; font-family: monospace; outline: none; border-left: 4px solid var(--id-gold);">
+        </div>
+        <div style="display:flex; flex-direction:column; gap:15px;">
+            ${filteredTactical.map(ac => {
+                const stats = this.getNodeTelemetry(ac.id);
+                const isExpanded = this.expandedAC === ac.id;
+                return `
+                <div style="border:1px solid ${isExpanded ? 'var(--id-gold)' : '#111'}; background:#050505;">
+                    <div class="ac-card" data-id="${ac.id}" style="display:grid; grid-template-columns: 1.5fr 1fr 1.5fr 1fr; padding:15px; cursor:pointer;">
+                        <div>
+                            <div style="color:var(--id-gold); font-weight:bold;">${ac.name}</div>
+                            <div style="font-size:9px; color:#444;">${ac.id} // AREA: ${ac.areaCode}</div>
+                        </div>
+                        <div>
+                            <div style="color:#555; font-size:9px;">NATIVES/TLCs</div>
+                            <div style="color:var(--id-green);">${stats.count} / ${ac.tlcs.length}</div>
+                        </div>
+                        <div style="font-size:9px;">
+                            <div style="color:#555;">RANK_BREAKDOWN / GENDER</div>
+                            <div style="color:#888;">${stats.rankBreakdown}</div>
+                            <div style="color:#666;">${stats.gender}</div>
+                        </div>
+                        <div style="text-align:right;">
+                            <div style="color:var(--id-gold); font-size:10px;">${this.getPhysicalLocation(ac.lat, ac.lng)}</div>
+                            <div style="color:#333; font-size:9px;">${ac.lat}, ${ac.lng}</div>
+                        </div>
+                    </div>
+
+                    ${isExpanded ? `
+                        <div style="padding:15px; background:rgba(0,255,65,0.02); border-top:1px dashed #222; display:grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap:10px;">
+                            ${ac.tlcs.map(tlc => {
+                                const tStats = this.getNodeTelemetry(tlc.id);
+                                return `
+                                <div style="border:1px solid #222; padding:10px; border-left:3px solid var(--id-green);">
+                                    <div style="color:#fff; font-size:11px;">${tlc.name}</div>
+                                    <div style="color:#333; font-size:8px; margin-bottom:5px;">${tlc.id} // ${tlc.areaCode}</div>
+                                    <div style="font-size:9px; color:var(--id-green);">${tStats.count} NATIVES</div>
+                                    <div style="font-size:8px; color:#444; margin-top:5px;">${tStats.rankBreakdown}</div>
+                                    <div style="text-align:right; font-size:8px; color:#222; margin-top:5px;">${this.getPhysicalLocation(tlc.lat, tlc.lng)}</div>
+                                </div>`;
+                            }).join('')}
+                        </div>
+                    ` : ''}
+                </div>`;
+            }).join('')}
+        </div>
+    </div>`;
+}
+handleTacticalSubmit(type) {
+    const name = document.getElementById('node-name').value;
+    const lat = parseFloat(document.getElementById('node-lat').value);
+    const lng = parseFloat(document.getElementById('node-lng').value);
+
+    if (type === 'AC') {
+        const areaCode = this.generateAreaCode('AC'); // Auto-generates AC-XXXX
+        this.tacticalDirectory.push({
+            id: `T-${areaCode}`,
+            name, areaCode, lat, lng, tlcs: []
+        });
+    } else {
+        const parentId = document.getElementById('parent-ac-id').value;
+        const parent = this.tacticalDirectory.find(a => a.id === parentId);
+        
+        if (!parent) return alert("ERROR: PARENT_AC_NOT_FOUND");
+        
+        const areaCode = this.generateAreaCode('TLC', parent.areaCode); // Auto-generates AC-XXXX-XXXX
+        parent.tlcs.push({
+            id: `T-${areaCode}`,
+            name, areaCode, lat, lng
+        });
+    }
+    this.render();
+}
+
+// --- GEOGRAPHIC & ID GENERATION HELPERS ---
+// --- ADVANCED TACTICAL ENGINE ---
+
+// Calculates distance in KM (Haversine Formula)
+calculateDistance(lat1, lon1, lat2, lon2) {
+    const R = 6371;
+    const dLat = (lat2 - lat1) * Math.PI / 180;
+    const dLon = (lon2 - lon1) * Math.PI / 180;
+    const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
+              Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * Math.sin(dLon/2) * Math.sin(dLon/2);
+    return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+}
+
+// Generates Sovereign IDs: T-AC-#### or T-AC-####-TLC-####
+generateId(type, areaCode, parentId = null) {
+    const suffix = Math.floor(1000 + Math.random() * 9000);
+    return type === 'AC' ? `T-AC-${suffix}` : `${parentId}-TLC-${suffix}`;
+}
+
+// --- SOVEREIGN TACTICAL ENGINE ---
+
+// Generates Area Codes based on provided patterns
+generateAreaCode(type, parentCode = null) {
+    const random = Math.floor(1000 + Math.random() * 8999);
+    return type === 'AC' ? `AC-${random}` : `${parentCode}-${random}`;
+}
+
+// Maps coordinates to real physical names
+getPhysicalLocation(lat, lng) {
+    // In a production environment, you would call a Reverse Geocoding API.
+    // Here we provide a localized sector mapping.
+    const sectors = {
+        "-1": "NAIROBI_METRO",
+        "1": "ESTONIA_CORE",
+        "34": "JOHANNESBURG_SOUTH"
+    };
+    const base = sectors[Math.floor(lat).toString()] || "UNKNOWN_SECTOR";
+    return `${base}_GRID_${Math.abs(Math.floor(lng))}E`;
+}
+
+// Comprehensive Rank & Demographic Telemetry
+getNodeTelemetry(nodeId) {
+    const natives = MEMBER_LIST.filter(m => m.actionCenter === nodeId || m.tlca === nodeId);
+    
+    // Explicit Rank Audit (Required Ranks)
+    const schema = ["CG.SNR.", "CAO", "AO", "SAAO", "JAAO", "SM", "JM", "M", "S"];
+    const rankCounts = {};
+    schema.forEach(r => rankCounts[r] = 0);
+    
+    natives.forEach(m => {
+        const r = m.security.abbr || "S";
+        if (rankCounts[r] !== undefined) rankCounts[r]++;
+    });
+
+    // Formatting for display
+    const rankStr = Object.entries(rankCounts)
+        .filter(([_, count]) => count > 0)
+        .map(([r, c]) => `${r}:${c}`).join(' | ');
+
+    return {
+        count: natives.length,
+        rankBreakdown: rankStr || "NO_RANKED_ASSETS",
+        gender: `M:${natives.filter(m => m.demographics.gender === 'MALE').length} F:${natives.filter(m => m.demographics.gender === 'FEMALE').length}`
+    };
+}
+
+
 
     attachEvents() {
     // 1. Define the Navigation Helper (Unified for Sidebar and Buttons)
@@ -1211,6 +1404,104 @@ finalizeCitizenUplink(memberUid, country, ip) {
             }
         };
     }
+
+    // Navigation
+    const tacticalBtn = this.container.querySelector('#nav-tactical');
+if (tacticalBtn) {
+    tacticalBtn.onclick = () => {
+        this.viewMode = 'TACTICAL';
+        this.selectedMember = null;
+        this.isRegistering = false;
+        this.addLog("TACTICAL_COMMAND_INTERFACE_ENTERED", "admin");
+        this.render();
+    };
+}
+
+    // 2. Tactical Submission Events
+    if (this.viewMode === 'TACTICAL') {
+        const subAC = this.container.querySelector('#submit-ac');
+        if (subAC) subAC.onclick = () => this.handleTacticalSubmit('AC');
+        
+        const subTLC = this.container.querySelector('#submit-tlc');
+        if (subTLC) subTLC.onclick = () => this.handleTacticalSubmit('TLC');
+    }
+
+    this.container.querySelectorAll('.ac-card').forEach(card => {
+    card.onclick = (e) => {
+        // Don't expand if clicking an input inside
+        if(e.target.tagName === 'INPUT' || e.target.tagName === 'BUTTON') return;
+        
+        const acId = card.dataset.id;
+        this.expandedAC = this.expandedAC === acId ? null : acId; // Toggle
+        this.render();
+    };
+});
+
+if (this.viewMode === 'TACTICAL') {
+    const tacSearch = this.container.querySelector('#tactical-search');
+    if (tacSearch) {
+        tacSearch.oninput = (e) => {
+            this.tacticalSearchQuery = e.target.value;
+            this.render(); // Update the UI in real-time
+            
+            // Re-focus the search bar after render to maintain typing flow
+            const refocused = document.getElementById('tactical-search');
+            if (refocused) {
+                refocused.focus();
+                refocused.setSelectionRange(e.target.value.length, e.target.value.length);
+            }
+        };
+    }}
+
+if (this.viewMode === 'TACTICAL') {
+    // Correct target for form injection
+    const formContainer = this.container.querySelector('#tactical-form-target');
+    
+    // Toggle AC Form - Corrected ID
+    const btnShowAC = this.container.querySelector('#btn-show-ac');
+    if (btnShowAC) {
+        btnShowAC.onclick = () => {
+            formContainer.style.display = 'block';
+            formContainer.innerHTML = `
+                <div style="color:var(--id-gold); font-size:11px; margin-bottom:15px;">> INITIALIZE_AC_PROMPT</div>
+                <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:10px;">
+                    <input id="node-name" placeholder="NODE_NAME" class="sovereign-input">
+                </div>
+                <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
+                    <input id="node-lat" placeholder="LATITUDE" class="sovereign-input">
+                    <input id="node-lng" placeholder="LONGITUDE" class="sovereign-input">
+                </div>
+                <button id="submit-ac" class="award-pill" style="width:100%; margin-top:15px; background:var(--id-gold); color:#000;">ACTIVATE_NODE</button>
+            `;
+            // Re-attach submit listener after injection
+            this.container.querySelector('#submit-ac').onclick = () => this.handleTacticalSubmit('AC');
+        };
+    }
+
+    
+
+    // Toggle TLC Form - Corrected ID
+    const btnShowTLC = this.container.querySelector('#btn-show-tlc');
+    if (btnShowTLC) {
+        btnShowTLC.onclick = () => {
+            formContainer.style.display = 'block';
+            formContainer.innerHTML = `
+                <div style="color:var(--id-green); font-size:11px; margin-bottom:15px;">> DECOUPLE_TLC_PROMPT</div>
+                <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:10px;">
+                    <input id="node-name" placeholder="TLC_NAME" class="sovereign-input">
+                    <input id="parent-ac-id" placeholder="PARENT_AC_ID (e.g. T-AC-8787)" class="sovereign-input">
+                </div>
+                <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
+                    <input id="node-lat" placeholder="LAT" class="sovereign-input">
+                    <input id="node-lng" placeholder="LNG" class="sovereign-input">
+                </div>
+                <button id="submit-tlc" class="award-pill" style="width:100%; margin-top:15px; border:1px solid var(--id-green); color:var(--id-green); background:transparent;">ESTABLISH_SIGNAL</button>
+            `;
+            // Re-attach submit listener after injection
+            this.container.querySelector('#submit-tlc').onclick = () => this.handleTacticalSubmit('TLC');
+        };
+    }
+}
     
     }
 }
