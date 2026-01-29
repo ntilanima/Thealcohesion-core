@@ -122,43 +122,49 @@ export class SovereignBiome {
     }
 
     renderNominalRollUI() {
-        return `
-            <div class="roster-container">
-                <header class="roster-header">
-                    <div class="roster-title">[ NOMINAL_ROLL // ${this.currentRoster.length} ACTIVE_PERSONNEL ]</div>
-                    <button onclick="exitRoster()" class="os-btn-primary">BACK_TO_MAP</button>
-                </header>
-                <div class="roster-table-wrapper">
-                    <table class="roster-table">
-                        <thead>
-                            <tr>
-                                <th>NAME</th><th>RANK</th><th>POSITION</th><th>PHONE</th>
-                                <th>SPECIAL_RECOGNITION</th><th>JOINED_OS</th><th>JOINED_AC</th>
-                                <th>JOINED_TLC</th><th>RANK_DATE</th><th>REMARKS</th>
+    return `
+        <div class="roster-container">
+            <header class="roster-header">
+                <div class="roster-title">[ NOMINAL_ROLL // ${this.currentRoster.length} ACTIVE_PERSONNEL ]</div>
+                <button onclick="exitRoster()" class="os-btn-primary">BACK_TO_MAP</button>
+            </header>
+            <div class="roster-table-wrapper">
+                <table class="roster-table">
+                    <thead>
+                        <tr>
+                            <th>DOSSIER</th>
+                            <th>NAME</th><th>RANK</th><th>POSITION</th><th>PHONE</th>
+                            <th>SPECIAL_RECOGNITION</th><th>JOINED_OS</th><th>JOINED_AC</th>
+                            <th>JOINED_TLC</th><th>RANK_DATE</th><th>REMARKS</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${this.currentRoster.map(m => `
+                            <tr class="status-${(m.remarks || 'Duty').toLowerCase()}">
+                                <td>
+                                    <button onclick="os.activeProcesses['biome'].openMemberInRegistry('${m.security.uid}')" 
+                                            style="background:var(--id-gold); color:#000; border:none; padding:4px 8px; font-size:9px; cursor:pointer; font-weight:bold; letter-spacing:1px;">
+                                        OPEN_DOSSIER
+                                    </button>
+                                </td>
+                                <td>${m.userName || 'N/A'}</td>
+                                <td><span class="rank-tag">${m.rank || 'NATIVE'}</span></td>
+                                <td>${m.position || 'MEMBER'}</td>
+                                <td>${m.contact?.phone || m.phone || '---'}</td>
+                                <td class="recognition-cell">${m.specialRecognition || 'NONE'}</td>
+                                <td>${m.joinedThealcohesion || '---'}</td>
+                                <td>${m.joinedAC || '---'}</td>
+                                <td>${m.joinedTLC || '---'}</td>
+                                <td>${m.rankDate || '---'}</td>
+                                <td class="status-cell">${m.remarks || 'ON DUTY'}</td>
                             </tr>
-                        </thead>
-                        <tbody>
-                            ${this.currentRoster.map(m => `
-                                <tr class="status-${(m.remarks || 'Duty').toLowerCase()}">
-                                    <td>${m.userName || 'N/A'}</td>
-                                    <td><span class="rank-tag">${m.rank || 'NATIVE'}</span></td>
-                                    <td>${m.position || 'MEMBER'}</td>
-                                    <td>${m.phone || '---'}</td>
-                                    <td class="recognition-cell">${m.specialRecognition || 'NONE'}</td>
-                                    <td>${m.joinedThealcohesion || '---'}</td>
-                                    <td>${m.joinedAC || '---'}</td>
-                                    <td>${m.joinedTLC || '---'}</td>
-                                    <td>${m.rankDate || '---'}</td>
-                                    <td class="status-cell">${m.remarks || 'ON DUTY'}</td>
-                                </tr>
-                            `).join('')}
-                        </tbody>
-                    </table>
-                </div>
+                        `).join('')}
+                    </tbody>
+                </table>
             </div>
-        `;
-    }
-
+        </div>
+    `;
+}
     executeBroadcast(level, id) {
         const modal = document.createElement('div');
         modal.className = 'os-modal-overlay';
@@ -249,6 +255,43 @@ export class SovereignBiome {
             results.style.display = 'none';
         }
     });
+}
+
+//click a member on the Map or in a Nominal Roll and open their Dossier in the Registry.
+openMemberInRegistry(uid) {
+    // 1. Switch the OS active process to the Registry
+    if (window.os && window.os.launchProcess) {
+        window.os.launchProcess('registry');
+        
+        // 2. Tell the Registry to select this specific member
+        const registry = window.os.activeProcesses['registry'];
+        if (registry) {
+            const member = MEMBER_LIST.find(m => m.security.uid === uid);
+            if (member) {
+                registry.selectedMember = member;
+                registry.isEditing = false;
+                registry.render();
+            }
+        }
+    }
+}
+
+// method to receive these updates and refresh the map markers/nominal rolls without reloading the whole page
+syncRegistryData(newList) {
+    console.log("BIOME_SYNC: Receiving updated Sovereign Roster...");
+    this.currentRoster = newList;
+
+    // If we are currently looking at a TLC list or Nominal Roll, re-render it
+    if (this.viewMode === 'CELL_LIST' || this.viewMode === 'NOMINAL_ROLL') {
+        this.render(); 
+    }
+
+    // Refresh Map markers to reflect updated populations
+    if (this.map && this.viewMode === 'MAP') {
+        this.renderMarkers(); 
+    }
+    
+    this.api.notify("BIOME_MAP: Population data synchronized.", "system");
 }
 
     handleSelection(type, id) {

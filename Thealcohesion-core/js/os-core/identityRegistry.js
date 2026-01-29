@@ -172,29 +172,41 @@ export class IdentityManager {
     updateMember(uid, updates) {
     const idx = MEMBER_LIST.findIndex(m => m.security.uid === uid);
     if (idx !== -1) {
-        // 1. Update the Master List
+        // 1. UPDATE MASTER LIST
         MEMBER_LIST[idx] = { ...MEMBER_LIST[idx], ...updates };
         
-        // 2. FORCE DISCONNECT LOGIC
+        // 2. BIOME SYNCHRONIZATION (The Connection)
+        // Propagate changes to the map immediately (AC/TLC moves or Frozen status)
+        if (window.os && window.os.activeProcesses['biome']) {
+            window.os.activeProcesses['biome'].syncRegistryData(MEMBER_LIST);
+            this.addLog(`UPLINK_SYNC: Data for ${uid} propagated to Biome.`, 'system');
+        }
+
+        // 3. FORCE DISCONNECT / SECURITY LOGIC
         if (this.selectedMember && this.selectedMember.security.uid === uid) {
             if (updates.isFrozen === true) {
                 this.addLog(`SECURITY: Force-disconnecting UID ${uid}. Signal severed.`, 'security');
                 
-                this.selectedMember = null; // This triggers the logout
+                // Reset local state to trigger "Logout" from the dossier view
+                this.selectedMember = null; 
                 this.isEditing = false;
                 this.vaultUnlocked = false; 
                 
                 alert(`SIGNAL_SEVERED: Identity ${uid} has been frozen and logged out.`);
             } else {
+                // Update the current view's reference if they weren't frozen
                 this.selectedMember = MEMBER_LIST[idx];
             }
         }
 
+        // 4. FINAL LOGGING & UI REFRESH
         const statusMsg = updates.isFrozen ? 'SIGNAL_FROZEN' : 'SIGNAL_RESTORED';
         this.addLog(`${statusMsg}: ${uid}`, 'admin');
         
         this.render(); 
+        return true;
     }
+    return false;
 }
 
     addLog(msg, type = 'info') {
@@ -224,17 +236,40 @@ export class IdentityManager {
 
     renderDossier() {
     const m = this.selectedMember;
-    const recognitions = m.specialRecognition || [];
-    const recognitionSuffix = recognitions.length > 0 
-        ? ' ' + recognitions.map(r => `(${r})`).join('') 
-        : '';
-        
-    const fullSovereignName = `${m.sovereignName}${recognitionSuffix}`;
+    const isFrozen = m.isFrozen || false;
     const isStaged = m.location.country === "PENDING_UPLINK";
     const history = this.loginHistory[m.security.uid] || [];
-    const isFrozen = this.selectedMember.isFrozen || false;
 
-    const ranks = [
+    // Helper for Advanced Editable Rows
+    const editableRow = (label, value, id, type = "text", isSelect = false, options = []) => {
+        if (this.isEditing) {
+            if (isSelect) {
+                return `
+                <div class="reg-row">
+                    <span>${label}</span>
+                    <select id="edit-${id}" class="sovereign-input" style="width:60%; height:22px; font-size:10px;">
+                        ${options.map(opt => `<option value="${opt.a}" ${m.security.abbr === opt.a ? 'selected' : ''}>${opt.a} // ${opt.n}</option>`).join('')}
+                    </select>
+                </div>`;
+            }
+            return `
+            <div class="reg-row">
+                <span>${label}</span>
+                <input id="edit-${id}" type="${type}" value="${value || ''}" class="sovereign-input" style="width:60%; height:20px; font-size:10px; padding:2px 5px;">
+            </div>`;
+        }
+        return `<div class="reg-row"><span>${label}</span><span style="color:#fff">${value || 'N/A'}</span></div>`;
+    };
+
+    const recognitions = m.specialRecognition || [];
+    const recognitionSuffix = recognitions.length > 0 ? ' ' + recognitions.map(r => `(${r})`).join('') : '';
+    const fullSovereignName = `${m.sovereignName}${recognitionSuffix}`;
+    // Prepare Tactical Options (Parent/Child r/tn)
+    const acOptions = this.tacticalDirectory.map(ac => ({ val: ac.id, label: ac.name }));
+    const currentAC = this.tacticalDirectory.find(ac => ac.id === m.actionCenter);
+    const tlcOptions = currentAC ? currentAC.tlcs.map(t => ({ val: t.id, label: t.name })) : [];
+
+    const rankOptions = [
         { a: "CG.SNR.", n: "Chief In General Senior" },
         { a: "CAO", n: "Chief Authenticating Officer" },
         { a: "AO", n: "Authenticating Officer" },
@@ -247,129 +282,121 @@ export class IdentityManager {
     ];
 
     return `
-        <div class="registry-view">
-            <div class="registry-wrapper" style="animation: slideUp 0.4s ease-out;">
-                <div class="registry-header">
-                    <div style="flex: 1;">
-                        <div class="rank-tag" style="background: var(--id-gold); color: #000; margin-bottom: 10px;">
-                            ${m.security.abbr} // ${m.security.rank}
+    <div class="registry-view">
+        <div class="registry-wrapper" style="animation: slideUp 0.4s ease-out;">
+            <div class="registry-header">
+                <div style="flex: 1;">
+                    <div class="rank-tag" style="background: var(--id-gold); color: #000; margin-bottom: 10px;">
+                        ${m.security.abbr} // ${m.security.rank}
+                    </div>
+                    <h2 style="font-size: 2.2rem; margin: 0; letter-spacing: 1px; color: var(--id-gold);">
+                        ${fullSovereignName}
+                    </h2>
+                    <div style="color: var(--id-green); font-size: 11px; letter-spacing: 1px;">SYSTEM_UID: ${m.security.uid}</div>
+                    ${isStaged ? `<div style="color:var(--id-red); font-size:9px; margin-top:5px;">[ STATUS: PENDING_UPLINK_STAGING ]</div>` : ''}
+                </div>
+                <div style="text-align: right;">
+                    <button id="toggle-edit-mode" style="background:${this.isEditing ? 'var(--id-green)' : 'transparent'}; border:1px solid ${this.isEditing ? 'var(--id-green)' : 'var(--id-gold)'}; color:${this.isEditing ? '#000' : 'var(--id-gold)'}; padding:8px 15px; font-size:9px; cursor:pointer; letter-spacing:1px; margin-bottom:15px; font-family:inherit; font-weight:bold;">
+                        ${this.isEditing ? '[ COMMIT_SYSTEM_CHANGES ]' : '[ UPDATE_MEMBER ]'}
+                    </button>
+                    <div class="clearance-stamp">LEVEL 0${m.security.clearance}</div>
+                    <div style="color: #444; font-size: 10px; margin-top:10px;">AUTHORIZED_SINCE: ${m.security.since}</div>
+                </div>
+            </div>
+
+            <div class="registry-grid">
+                <div class="biometric-col">
+                    <div class="reg-label">Biometric_Profile</div>
+                    <div style="width:100%; height:280px; border:1px solid var(--id-gold); background:url(${m.media.profile}) center/cover; position:relative;">
+                        <div style="position:absolute; inset:0; background:linear-gradient(transparent, #000); opacity:0.7;"></div>
+                    </div>
+                    
+                    <div class="reg-label">Sovereign_Attributes</div>
+                    ${editableRow("POSITION", m.position, "position")}
+                    ${editableRow("TITLES", m.titles ? m.titles.join(', ') : '', "titles")}
+                    ${editableRow("RANK_CLASS", m.security.abbr, "rank", "text", true, rankOptions)}
+                    ${editableRow("RECOGNITION", m.specialRecognition ? m.specialRecognition.join(', ') : '', "specialRec")}
+
+                    <div class="reg-label">Verification_Vault</div>
+                    <div class="device-entry ${this.vaultUnlocked ? 'active' : ''}" id="toggle-vault" style="cursor:pointer;">
+                        <div style="display:flex; align-items:center;">
+                            <div class="d-status-dot"></div>
+                            <span style="font-size:10px; letter-spacing:1px;">${this.vaultUnlocked ? 'CONCEAL_SCAN_DATA' : 'REQUEST_ID_ACCESS'}</span>
                         </div>
-                        <h2 style="font-size: 2.2rem; margin: 0; letter-spacing: 1px; color: var(--id-gold);">
-                            ${fullSovereignName}
-                        </h2>
-                        <div style="color: var(--id-green); font-size: 11px; letter-spacing: 1px;">SYSTEM_UID: ${m.security.uid}</div>
                     </div>
-                    <div style="text-align: right;">
-                        <button id="toggle-edit-mode" style="background:${this.isEditing ? 'var(--id-red)' : 'transparent'}; border:1px solid ${this.isEditing ? 'var(--id-red)' : 'var(--id-gold)'}; color:${this.isEditing ? '#fff' : 'var(--id-gold)'}; padding:8px 15px; font-size:9px; cursor:pointer; letter-spacing:1px; margin-bottom:15px; font-family:inherit;">
-                            ${this.isEditing ? '[ CANCEL_CHANGES ]' : '[ UPDATE_MEMBER ]'}
-                        </button>
-                        <div class="clearance-stamp">LEVEL 0${m.security.clearance}</div>
-                        <div style="color: #444; font-size: 10px; margin-top:10px;">AUTHORIZED_SINCE: ${m.security.since}</div>
-                    </div>
+                    ${this.vaultUnlocked ? `
+                        <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-top:10px; animation: fadeIn 0.3s ease;">
+                            <img src="${m.media.idFront}" style="width:100%; border:1px solid var(--id-gold); opacity:0.8;">
+                            <img src="${m.media.idBack}" style="width:100%; border:1px solid var(--id-gold); opacity:0.8;">
+                        </div>
+                    ` : ''}
                 </div>
 
-                <div class="registry-grid">
-                    <div class="biometric-col">
-                        <div class="reg-label">Biometric_Profile</div>
-                        <div style="width:100%; height:280px; border:1px solid var(--id-gold); background:url(${m.media.profile}) center/cover; position:relative;">
-                            <div style="position:absolute; inset:0; background:linear-gradient(transparent, #000); opacity:0.7;"></div>
-                        </div>
-                        
-                        <div class="reg-label">Verification_Vault</div>
-                        <div class="device-entry ${this.vaultUnlocked ? 'active' : ''}" id="toggle-vault" style="cursor:pointer;">
-                            <div style="display:flex; align-items:center;">
-                                <div class="d-status-dot"></div>
-                                <span style="font-size:10px; letter-spacing:1px;">${this.vaultUnlocked ? 'CONCEAL_SCAN_DATA' : 'REQUEST_ID_ACCESS'}</span>
-                            </div>
-                        </div>
+                <div class="data-col">
+                    <div class="reg-label">Tactical_Deployment</div>
+                    ${editableRow("ACTION_CENTER", m.actionCenter, "ac_id", "text", true, acOptions)}
+                    ${editableRow("TLC_NODE", m.tlca, "tlc_id", "text", true, tlcOptions)}
+                    ${editableRow("RANK_DATE", m.rankDate, "rankDate", "date")}
+                    ${editableRow("REMARKS", m.remarks, "remarks")}
+                    
+                    <div class="reg-label">Citizen_Core_Identity</div>
+                    <div class="reg-row"><span>FULL_LEGAL_NAME</span><span style="color:#fff">${m.officialName}</span></div>
+                    <div class="reg-row"><span>GOVERNMENT_ID_REF</span><span style="color:#fff">${m.documentId}</span></div>
+                    <div class="reg-row"><span>DEMOGRAPHICS</span><span style="color:#fff">${m.demographics.dob} / ${m.demographics.gender}</span></div>
+                    <div class="reg-row"><span>CONTACT_PH</span><span style="color:#fff">${m.contact.phone || 'N/A'}</span></div>
+                    <div class="reg-row"><span>PRIMARY_UPLINK</span><span style="color:#fff">${m.contact.email}</span></div>
 
-                        ${this.vaultUnlocked ? `
-                            <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-top:10px; animation: fadeIn 0.3s ease;">
-                                <img src="${m.media.idFront}" style="width:100%; border:1px solid var(--id-gold); opacity:0.8;">
-                                <img src="${m.media.idBack}" style="width:100%; border:1px solid var(--id-gold); opacity:0.8;">
-                            </div>
-                        ` : ''}
+                    <div class="reg-label">Service_History</div>
+                    <div class="reg-row"><span>ORIGIN_DATE</span><span style="color:#fff">${m.joinedThealcohesion || 'N/A'}</span></div>
+                    ${editableRow("JOINED_AC", m.joinedAC, "joinedAC", "date")}
+                    ${editableRow("JOINED_TLC", m.joinedTLC, "joinedTLC", "date")}
+
+                    <div class="reg-label">Sovereign_Lineage</div>
+                    <div class="reg-row">
+                        <span>AUTHORIZATION_KEY</span>
+                        <span style="color:var(--id-gold); font-weight:bold;">${m.security.authorizationKey || 'LEGACY_ALLOTMENT'}</span>
                     </div>
 
-                    <div class="data-col">
-                        <div class="reg-label">Tactical_Deployment</div>
-                        <div class="reg-row"><span>ACTION_CENTER</span><span style="color:#fff">${m.actionCenter || 'UNASSIGNED'}</span></div>
-                        <div class="reg-row"><span>TLC_NODE</span><span style="color:#fff">${m.tlca || 'UNASSIGNED'}</span></div>
-                        <div class="reg-row"><span>RANK_DATE</span><span style="color:var(--id-gold)">${m.rankDate || 'N/A'}</span></div>
-                        <div class="reg-row"><span>REMARKS</span><span style="color:var(--id-green)">${m.remarks || 'ACTIVE'}</span></div>
-                        
-                        <div class="reg-label">Citizen_Core_Identity</div>
-                        <div class="reg-row"><span>FULL_LEGAL_NAME</span><span style="color:#fff">${m.officialName}</span></div>
-                        <div class="reg-row">
-                        <span>GOVERNMENT_ID_REF</span><span style="color:#fff">${m.documentId}</span></div>
-                        <div class="reg-row"><span>DEMOGRAPHICS</span><span style="color:#fff">${m.demographics.dob} / ${m.demographics.gender}</span></div>
-                        <div class="reg-row"><span>PRIMARY_UPLINK</span><span style="color:#fff">${m.contact.email}</span></div>
-                        <div class="reg-row"><span>CONTACT_PH</span><span style="color:#fff">${m.phone || 'N/A'}</span></div>
-
-                        <div class="reg-label">Service_History</div>
-                        <div class="reg-row"><span>JOINED_THEALCOHESION</span><span style="color:#fff">${m.joinedThealcohesion || 'N/A'}</span></div>
-                        <div class="reg-row"><span>JOINED_AC</span><span style="color:#fff">${m.joinedAC || 'N/A'}</span></div>
-                        <div class="reg-row"><span>JOINED_TLC</span><span style="color:#fff">${m.joinedTLC || 'N/A'}</span></div>
-
-                        <div class="reg-label">Sovereign_Lineage</div>
-                        <div class="reg-row">
-                            <span>AUTHORIZATION_KEY</span>
-                            <span style="color:var(--id-gold); font-weight:bold;">${m.security.authorizationKey || 'LEGACY_ALLOTMENT'}</span>
+                    <div class="reg-label">Hardware_Binding</div>
+                    <div class="device-entry active">
+                        <div>
+                            <div style="color:#fff; font-size:11px;">${m.security.deviceFingerprint || 'CORE_WORKSTATION'}</div>
+                            <div style="color:var(--id-gold); font-size:9px;">IP: ${m.security.ipBinding || '0.0.0.0'}</div>
                         </div>
-                        ${m.security.vouchedBy ? `
-                            <div class="reg-row">
-                                <span>VOUCHED_BY</span>
-                                <span style="color:var(--id-green); font-size:10px;">${m.security.vouchedBy}</span>
+                        <div class="d-status-dot"></div>
+                    </div>
+
+                    <div class="reg-label">Active_System_Awards</div>
+                    <div style="margin-top:10px; display:flex; gap:5px; flex-wrap:wrap;">
+                        ${m.awards && m.awards.length > 0 
+                            ? m.awards.map(a => `<span class="award-pill">${a}</span>`).join('') 
+                            : '<span style="color:#444; font-size:9px;">NO_AWARDS_RECORDED</span>'}
+                    </div>
+
+                    <div style="padding: 10px; margin-top: 25px; background: ${isFrozen ? 'rgba(255, 69, 69, 0.1)' : 'rgba(0, 255, 65, 0.05)'}; border: 1px solid ${isFrozen ? 'var(--id-red)' : 'var(--id-green)'}; color: ${isFrozen ? 'var(--id-red)' : 'var(--id-green)'}; font-size: 10px; text-align: center; font-family: monospace;">
+                        ${isFrozen ? 'SIGNAL_STATUS: ACCESS_RESTRICTED // LOGIN_DISABLED' : 'SIGNAL_STATUS: UPLINK_ACTIVE // LOGIN_ENABLED'}
+                    </div>
+
+                    <div class="reg-label">Access_&_Uplink_History</div>
+                    <div style="background:rgba(0,0,0,0.3); border:1px solid #222; padding:10px; max-height:120px; overflow-y:auto;">
+                        ${history.length > 0 ? history.map(log => `
+                            <div style="display:flex; justify-content:space-between; border-bottom:1px solid #111; padding:3px 0; font-size:9px;">
+                                <span style="color:var(--id-green);">[${log.event}]</span>
+                                <span style="color:#444;">${log.timestamp}</span>
                             </div>
-                        ` : ''}
+                        `).join('') : '<div style="color:#444; font-size:9px; text-align:center;">NO_LOGS_FOUND</div>'}
+                    </div>
 
-                        <div class="reg-label">Hardware_Binding</div>
-                        <div class="device-entry active">
-                            <div>
-                                <div style="color:#fff; font-size:11px;">${m.security.deviceFingerprint || 'CORE_WORKSTATION'}</div>
-                                <div style="color:var(--id-gold); font-size:9px;">IP: ${m.security.ipBinding || '0.0.0.0'}</div>
-                            </div>
-                            <div class="d-status-dot"></div>
-                        </div>
-                        <div class="reg-label">Active_System_Awards</div>
-                        <div style="margin-top:10px; display:flex; gap:5px; flex-wrap:wrap;">
-                            ${m.awards ? m.awards.map(a => `<span class="award-pill">${a}</span>`).join('') : '<span style="color:#444; font-size:9px;">NO_AWARDS_RECORDED</span>'}
-                        </div>
-
-                        <div style="padding: 10px; margin-top: 25px; background: ${isFrozen ? 'rgba(255, 69, 69, 0.1)' : 'rgba(0, 255, 65, 0.05)'}; border: 1px solid ${isFrozen ? 'var(--id-red)' : 'var(--id-green)'}; color: ${isFrozen ? 'var(--id-red)' : 'var(--id-green)'}; font-size: 10px; text-align: center;">
-                            ${isFrozen ? 'SIGNAL_STATUS: ACCESS_RESTRICTED // LOGIN_DISABLED' : 'SIGNAL_STATUS: UPLINK_ACTIVE // LOGIN_ENABLED'}
-                        </div>
-                        <div style="margin-top: 20px;">
-                        <button id="toggle-freeze" style="
-                            padding: 10px 15px; 
-                            background: transparent; 
-                            border: 1px solid ${isFrozen ? 'var(--id-green)' : 'var(--id-red)'}; 
-                            color: ${isFrozen ? 'var(--id-green)' : 'var(--id-red)'}; 
-                            cursor: pointer; 
-                            font-size: 10px; 
-                            letter-spacing: 2px; 
-                            width: 100%;">
-                            ${isFrozen ? '[ UNFREEZE_IDENTITY ]' : '[ FREEZE_IDENTITY ]'}
+                    <div style="margin-top: 20px; display:flex; gap:10px;">
+                        <button id="toggle-freeze" style="flex:1; padding:10px; background:transparent; border:1px solid ${isFrozen ? 'var(--id-green)' : 'var(--id-red)'}; color:${isFrozen ? 'var(--id-green)' : 'var(--id-red)'}; cursor:pointer; font-size:10px; letter-spacing:1px;">
+                            ${isFrozen ? '[ UNFREEZE_SIGNAL ]' : '[ FREEZE_SIGNAL ]'}
                         </button>
+                        <button id="close-dossier" style="flex:1; background:transparent; border:1px solid #222; color:#555; padding:10px; cursor:pointer; font-size:10px;">[ RETURN_TO_INDEX ]</button>
                     </div>
-                     <div class="reg-label">Access_&_Uplink_History</div>
-                        <div style="background:rgba(0,0,0,0.3); border:1px solid #222; padding:10px; max-height:150px; overflow-y:auto; font-family:monospace;">
-                            ${(this.loginHistory[m.security.uid] || []).length > 0 ? this.loginHistory[m.security.uid].map(log => `
-                                <div style="display:flex; justify-content:space-between; border-bottom:1px solid #111; padding:5px 0; font-size:9px;">
-                                    <span style="color:var(--id-green); text-transform:uppercase;">[${log.event}]</span>
-                                    <span style="color:#666;">${log.location} // ${log.ip}</span>
-                                    <span style="color:#444;">${log.timestamp}</span>
-                                </div>
-                            `).join('') : `
-                                <div style="color:#444; font-size:10px; text-align:center; padding:10px;">NO_ACCESS_HISTORY_RECORDED</div>
-                            `}
-                        </div>
-                        <button id="close-dossier" style="margin-top:50px; width:100%; background:transparent; border:1px solid #222; color:#555; padding:12px; cursor:pointer; font-family:inherit; text-transform:uppercase; font-size:10px; letter-spacing:2px;">[ Return_To_Index ]</button>
-                    </div>
-                
+                </div>
             </div>
         </div>
-    `;
+    </div>`;
 }
     renderGateway() {
         // Filter only UNUSED keys for the dropdown
@@ -490,7 +517,7 @@ export class IdentityManager {
                 <div style="padding: 20px; flex: 0 0 auto; display: flex; flex-direction: column; gap: 10px;">
                     <button id="sb-index" class="sidebar-btn ${(!this.isRegistering && this.viewMode === 'DIRECTORY') ? 'active' : ''}">[ DIRECTORY_INDEX ]</button>
                     <button id="sb-reg" class="sidebar-btn ${this.isRegistering ? 'active' : ''}">[ + ] REGISTER_NEW</button>
-                    <button id="nav-tactical" class="nav-btn ${this.viewMode === 'TACTICAL' ? 'active' : ''}">[ TACTICAL ]</button>
+                    <button id="nav-tactical" class="sidebar-btn ${this.viewMode === 'TACTICAL' ? 'active' : ''}">[ TACTICAL ]</button>
                     <button id="sb-vault" class="sidebar-btn ${this.viewMode === 'VAULT' ? 'active' : ''}">[ TOKEN_VAULT ]</button>
                     <button id="sb-honeypot" class="sidebar-btn ${this.viewMode === 'HONEYPOT' ? 'active' : ''}" style="border-color:var(--id-red); color:var(--id-red);">[ HONEY_POT_LOGS ]</button>
                     <button id="sb-lockdown" class="sidebar-btn" style="border-color:var(--id-red); background:rgba(255,0,0,0.1); color:var(--id-red); font-weight:bold;">[!] MASS_LOCKDOWN</button>
@@ -1089,6 +1116,12 @@ renderTacticalCommand() {
 
     return `
     <div class="registry-wrapper" style="background:#000; padding:25px; font-family:monospace;">
+            <div id="tactical-modal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.9); z-index:1000; align-items:center; justify-content:center;">
+            <div id="modal-content" style="background:#050505; border:1px solid var(--id-gold); width:450px; padding:30px; box-shadow: 0 0 50px rgba(212,175,55,0.1);">
+                <div id="modal-form-target"></div>
+                <button id="btn-modal-cancel" style="width:100%; margin-top:10px; background:transparent; border:1px solid #333; color:#555; padding:10px; cursor:pointer; font-family:inherit;">[ ABORT_OPERATION ]</button>
+            </div>
+        </div>
             <div style="display:flex; justify-content:space-between; margin-bottom:20px;">
             <h2 style="color:var(--id-gold);">[ TACTICAL_ASSET_DIRECTORY ]</h2>
             <div style="display:flex; gap:10px;">
@@ -1148,30 +1181,78 @@ renderTacticalCommand() {
         </div>
     </div>`;
 }
+
+
 handleTacticalSubmit(type) {
+    // 1. Common Data Extraction
     const name = document.getElementById('node-name').value;
     const lat = parseFloat(document.getElementById('node-lat').value);
     const lng = parseFloat(document.getElementById('node-lng').value);
 
-    if (type === 'AC') {
-        const areaCode = this.generateAreaCode('AC'); // Auto-generates AC-XXXX
-        this.tacticalDirectory.push({
-            id: `T-${areaCode}`,
-            name, areaCode, lat, lng, tlcs: []
-        });
-    } else {
-        const parentId = document.getElementById('parent-ac-id').value;
-        const parent = this.tacticalDirectory.find(a => a.id === parentId);
-        
-        if (!parent) return alert("ERROR: PARENT_AC_NOT_FOUND");
-        
-        const areaCode = this.generateAreaCode('TLC', parent.areaCode); // Auto-generates AC-XXXX-XXXX
-        parent.tlcs.push({
-            id: `T-${areaCode}`,
-            name, areaCode, lat, lng
-        });
+    // Basic Validation
+    if (!name || isNaN(lat) || isNaN(lng)) {
+        alert("ERROR: INCOMPLETE_COORDINATE_DATA");
+        return;
     }
-    this.render();
+
+    if (type === 'AC') {
+        // --- ACTION CENTER LOGIC ---
+        // Auto-generate Area Code: AC-7828 pattern
+        const areaCode = this.generateAreaCode('AC'); 
+        
+        const newAC = {
+            id: `T-${areaCode}`,
+            name: name,
+            areaCode: areaCode,
+            lat: lat,
+            lng: lng,
+            physicalLocation: this.getPhysicalLocation(lat, lng), // Real-world name
+            tlcs: []
+        };
+
+        this.tacticalDirectory.push(newAC);
+        this.addLog(`AC_ESTABLISHED: ${newAC.id} @ ${newAC.physicalLocation}`, 'admin');
+
+    } else if (type === 'TLC') {
+        // --- TLC NODE LOGIC ---
+        const parentId = document.getElementById('parent-ac-id').value;
+        const parentAC = this.tacticalDirectory.find(ac => ac.id === parentId);
+        
+        if (!parentAC) {
+            alert("ERROR: INVALID_PARENT_AC_ID");
+            return;
+        }
+
+        // REINFORCE 100KM RADIUS
+        const distance = this.calculateDistance(parentAC.lat, parentAC.lng, lat, lng);
+        if (distance > 100) {
+            this.addLog(`SECURITY_ALERT: TLC_PROXIMITY_VIOLATION (${distance.toFixed(2)}km)`, 'security');
+            alert(`DEPLOYMENT_FAILED: Node outside authorized 100km radius (Distance: ${distance.toFixed(2)}km).`);
+            return;
+        }
+
+        // Auto-generate TLC Area Code: AC_CODE-2929 pattern
+        const areaCode = this.generateAreaCode('TLC', parentAC.areaCode);
+
+        const newTLC = {
+            id: `T-${areaCode}`,
+            name: name,
+            areaCode: areaCode,
+            lat: lat,
+            lng: lng,
+            physicalLocation: this.getPhysicalLocation(lat, lng)
+        };
+
+        parentAC.tlcs.push(newTLC);
+        this.addLog(`TLC_DEPLOYED: ${newTLC.id} linked to ${parentId}`, 'admin');
+    }
+
+    // 3. Finalize UI State
+    const modal = document.getElementById('tactical-modal');
+    if (modal) modal.style.display = 'none';
+    
+    this.render(); // Refresh cards and search results
+    this.addLog(`${type}_NODE_ESTABLISHED_SUCCESSFULLY`, 'admin');
 }
 
 // --- GEOGRAPHIC & ID GENERATION HELPERS ---
@@ -1179,12 +1260,14 @@ handleTacticalSubmit(type) {
 
 // Calculates distance in KM (Haversine Formula)
 calculateDistance(lat1, lon1, lat2, lon2) {
-    const R = 6371;
+    const R = 6371; // Radius of the Earth in km
     const dLat = (lat2 - lat1) * Math.PI / 180;
     const dLon = (lon2 - lon1) * Math.PI / 180;
-    const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
-              Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * Math.sin(dLon/2) * Math.sin(dLon/2);
-    return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+    const a = 
+        Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+        Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * Math.sin(dLon / 2) * Math.sin(dLon / 2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    return R * c; 
 }
 
 // Generates Sovereign IDs: T-AC-#### or T-AC-####-TLC-####
@@ -1455,54 +1538,141 @@ if (this.viewMode === 'TACTICAL') {
 
 if (this.viewMode === 'TACTICAL') {
     // Correct target for form injection
-    const formContainer = this.container.querySelector('#tactical-form-target');
     
-    // Toggle AC Form - Corrected ID
-    const btnShowAC = this.container.querySelector('#btn-show-ac');
-    if (btnShowAC) {
-        btnShowAC.onclick = () => {
-            formContainer.style.display = 'block';
-            formContainer.innerHTML = `
-                <div style="color:var(--id-gold); font-size:11px; margin-bottom:15px;">> INITIALIZE_AC_PROMPT</div>
-                <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:10px;">
-                    <input id="node-name" placeholder="NODE_NAME" class="sovereign-input">
-                </div>
-                <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
-                    <input id="node-lat" placeholder="LATITUDE" class="sovereign-input">
-                    <input id="node-lng" placeholder="LONGITUDE" class="sovereign-input">
-                </div>
-                <button id="submit-ac" class="award-pill" style="width:100%; margin-top:15px; background:var(--id-gold); color:#000;">ACTIVATE_NODE</button>
-            `;
-            // Re-attach submit listener after injection
-            this.container.querySelector('#submit-ac').onclick = () => this.handleTacticalSubmit('AC');
-        };
-    }
+const modal = this.container.querySelector('#tactical-modal');
+const modalTarget = this.container.querySelector('#modal-form-target');
 
-    
+// Helper to open modal
+const openModal = (html) => {
+    modal.style.display = 'flex';
+    modalTarget.innerHTML = html;
+};
 
-    // Toggle TLC Form - Corrected ID
-    const btnShowTLC = this.container.querySelector('#btn-show-tlc');
-    if (btnShowTLC) {
-        btnShowTLC.onclick = () => {
-            formContainer.style.display = 'block';
-            formContainer.innerHTML = `
-                <div style="color:var(--id-green); font-size:11px; margin-bottom:15px;">> DECOUPLE_TLC_PROMPT</div>
-                <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:10px;">
-                    <input id="node-name" placeholder="TLC_NAME" class="sovereign-input">
-                    <input id="parent-ac-id" placeholder="PARENT_AC_ID (e.g. T-AC-8787)" class="sovereign-input">
-                </div>
-                <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
-                    <input id="node-lat" placeholder="LAT" class="sovereign-input">
-                    <input id="node-lng" placeholder="LNG" class="sovereign-input">
-                </div>
-                <button id="submit-tlc" class="award-pill" style="width:100%; margin-top:15px; border:1px solid var(--id-green); color:var(--id-green); background:transparent;">ESTABLISH_SIGNAL</button>
-            `;
-            // Re-attach submit listener after injection
-            this.container.querySelector('#submit-tlc').onclick = () => this.handleTacticalSubmit('TLC');
-        };
-    }
+// AC Modal Trigger
+const btnShowAC = this.container.querySelector('#btn-show-ac');
+if (btnShowAC) {
+    btnShowAC.onclick = () => {
+        openModal(`
+            <div style="color:var(--id-gold); margin-bottom:15px;">> INITIALIZING_AC_HUB_PROTOCOL</div>
+            <input id="node-name" placeholder="AC_NAME" class="sovereign-input" style="margin-bottom:10px; width:100%;">
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
+                <input id="node-lat" placeholder="LATITUDE" class="sovereign-input">
+                <input id="node-lng" placeholder="LONGITUDE" class="sovereign-input">
+            </div>
+            <button id="submit-ac" class="award-pill" style="width:100%; margin-top:15px; background:var(--id-gold); color:#000;">ESTABLISH_AC</button>
+        `);
+
+        // CRITICAL FIX: Bind the click event AFTER the HTML is injected
+        const submitBtn = document.getElementById('submit-ac');
+        if (submitBtn) {
+            submitBtn.onclick = () => this.handleTacticalSubmit('AC');
+        }
+    };
+}
+
+// TLC Modal Trigger
+this.container.querySelector('#btn-show-tlc').onclick = () => {
+    openModal(`
+        <div style="color:var(--id-green); margin-bottom:15px;">> DECOUPLING_TLC_SUB_NODE</div>
+        <input id="node-name" placeholder="TLC_NAME" class="sovereign-input" style="margin-bottom:10px; width:100%;">
+        <input id="parent-ac-id" placeholder="PARENT_AC_ID (e.g. T-AC-7828)" class="sovereign-input" style="margin-bottom:10px; width:100%;">
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
+            <input id="node-lat" placeholder="LATITUDE" class="sovereign-input">
+            <input id="node-lng" placeholder="LONGITUDE" class="sovereign-input">
+        </div>
+        <div style="color:#444; font-size:9px; margin-bottom:10px;">PROXIMITY_ENFORCEMENT: MAX_100KM_FROM_PARENT</div>
+        <button id="submit-tlc" class="award-pill" style="width:100%; margin-top:15px; border:1px solid var(--id-green); color:var(--id-green); background:transparent;">DEPLOY_TLC</button>
+    `);
+    this.container.querySelector('#submit-tlc').onclick = () => this.handleTacticalSubmit('TLC');
+};
+
+// Universal Cancel Action
+this.container.querySelector('#btn-modal-cancel').onclick = () => {
+    modal.style.display = 'none';
+};
+
+
+}
+
+// Admin making changed to a member
+// Inside attachEvents()
+const commitBtn = this.container.querySelector('#toggle-edit-mode');
+if (commitBtn) {
+    commitBtn.onclick = () => {
+        if (this.isEditing) {
+            // --- DATA COLLECTION & COMMIT ---
+            const m = this.selectedMember;
+            
+            // Collect standard text and date fields
+            const updates = {
+                position: document.getElementById('edit-position').value,
+                actionCenter: document.getElementById('edit-ac_id').value,
+                tlca: document.getElementById('edit-tlc_id').value,
+                rankDate: document.getElementById('edit-rankDate').value,
+                remarks: document.getElementById('edit-remarks').value,
+                joinedAC: document.getElementById('edit-joinedAC').value,
+                joinedTLC: document.getElementById('edit-joinedTLC').value
+            };
+
+            // Handle Array fields (Titles & Special Recognition) 
+            // Splits by comma and cleans up whitespace
+            updates.titles = document.getElementById('edit-titles').value
+                .split(',')
+                .map(t => t.trim())
+                .filter(t => t !== "");
+
+            updates.specialRecognition = document.getElementById('edit-specialRec').value
+                .split(',')
+                .map(r => r.trim())
+                .filter(r => r !== "");
+
+            // Handle Rank Change & Security Synchronization
+            const rankSelect = document.getElementById('edit-rank');
+            const selectedAbbr = rankSelect.value;
+            
+            // Assuming RANK_SCHEMA is defined globally or within your class scope
+            const rankInfo = RANK_SCHEMA.find(r => r.abbr === selectedAbbr);
+            
+            updates.security = {
+                ...m.security,
+                abbr: selectedAbbr,
+                rank: rankInfo ? rankInfo.name : m.security.rank,
+                clearance: rankInfo ? rankInfo.clearance : m.security.clearance
+            };
+
+            // Execute master list update
+            this.updateMember(m.security.uid, updates);
+            
+            // Exit edit mode and log action
+            this.isEditing = false;
+            this.addLog(`SYSTEM_UPDATE: CID_${m.security.uid} record modified by administrator.`, 'admin');
+        } else {
+            // Enter edit mode
+            this.isEditing = true;
+        }
+        this.render();
+    };
+}
+
+// --- TACTICAL HIERARCHY LISTENER ---
+// Ensures that if Action Center is changed during edit, the TLC dropdown updates its children
+const acDropdown = this.container.querySelector('#edit-ac_id');
+if (acDropdown) {
+    acDropdown.onchange = (e) => {
+        const selectedACId = e.target.value;
+        const tlcDropdown = document.getElementById('edit-tlc_id');
+        
+        // Find the AC in your tacticalDirectory to get its specific TLCs
+        const acData = this.tacticalDirectory.find(ac => ac.id === selectedACId);
+        
+        if (tlcDropdown && acData) {
+            tlcDropdown.innerHTML = acData.tlcs.map(t => 
+                `<option value="${t.id}">${t.name}</option>`
+            ).join('');
+        }
+    };
 }
     
-    }
+}
 }
 
