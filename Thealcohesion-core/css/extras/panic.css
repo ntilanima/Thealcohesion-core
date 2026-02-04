@@ -34,3 +34,8 @@
     0% { top: 0%; }
     100% { top: 100%; }
 }
+
+@keyframes vpu-load {
+    from { left: -100%; }
+    to { left: 0%; }
+}

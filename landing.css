@@ -34,7 +34,7 @@ body, html {
 .noise {
     position: fixed;
     top: 0; left: 0; width: 100%; height: 100%;
-    background: url('https://grainy-gradients.vercel.app/noise.svg');
+    background: url('./images/noise.svg');
     opacity: 0.04;
     pointer-events: none;
     z-index: 10;
@@ -208,3 +208,92 @@ body, html {
     100% { left: 100%; }
 }
 
+
+/* --- SOVEREIGN SNIFFER HUD: HIGH-END --- */
+#sniffer-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(5, 0, 0, 0.9); /* Deep dark red tint */
+    backdrop-filter: blur(10px);
+    z-index: 10000;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    font-family: 'Courier New', monospace;
+    overflow: hidden;
+}
+
+/* The vertical scanning laser */
+.scanner-bar {
+    position: absolute;
+    width: 100%;
+    height: 100px;
+    background: linear-gradient(to bottom, transparent, rgba(164, 69, 255, 0.2), transparent);
+    border-bottom: 2px solid rgba(164, 69, 255, 0.8);
+    box-shadow: 0 40px 100px rgba(164, 69, 255, 0.3);
+    top: -100px;
+    animation: scan-move 3s linear infinite;
+    pointer-events: none;
+}
+
+@keyframes scan-move {
+    0% { top: -100px; }
+    100% { top: 100%; }
+}
+
+/* The Terminal Container */
+.sniffer-hud {
+    width: 600px;
+    padding: 40px;
+    border: 1px solid rgba(164, 69, 255, 0.3);
+    background: rgba(0, 0, 0, 0.6);
+    position: relative;
+    box-shadow: 0 0 50px rgba(0, 0, 0, 1);
+}
+
+.sniffer-hud::before {
+    content: "HARDWARE_SCRUTINY_ACTIVE";
+    position: absolute;
+    top: -12px;
+    left: 20px;
+    background: #050505;
+    padding: 0 10px;
+    font-size: 10px;
+    color: #a445ff;
+    letter-spacing: 3px;
+}
+
+.status-title {
+    color: #fff;
+    font-size: 1.5rem;
+    margin-bottom: 20px;
+    letter-spacing: 5px;
+    text-shadow: 0 0 10px #a445ff;
+}
+
+.sniffer-log {
+    height: 250px;
+    overflow-y: auto;
+    font-size: 12px;
+    color: #00ff41; /* Forensic Green */
+    scrollbar-width: none;
+}
+
+.sniffer-log div {
+    margin-bottom: 4px;
+    border-left: 2px solid transparent;
+    padding-left: 10px;
+}
+
+.sniffer-log .critical { color: #ff4444; border-color: #ff4444; font-weight: bold; }
+.sniffer-log .success { color: #a445ff; border-color: #a445ff; }
+
+/* Glitch effect for the overlay background */
+.hud-noise {
+    position: absolute;
+    inset: 0;
+    background: url('./images/noise.svg');
+    opacity: 0.05;
+    pointer-events: none;
+}

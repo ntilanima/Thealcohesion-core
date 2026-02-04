@@ -1,0 +1,31 @@
+{
+  "name": "thealcohesion-core",
+  "version": "1.0.0",
+  "description": "Thealcohesion is a high-performance, from-scratch Cloud Operating System built to manage decentralized resources and secure **Investor Allotments**.",
+  "main": "landing.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ntilanima/Thealcohesion-core.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/ntilanima/Thealcohesion-core/issues"
+  },
+  "homepage": "https://github.com/ntilanima/Thealcohesion-core#readme",
+  "dependencies": {
+    "bcryptjs": "^3.0.3",
+    "cors": "^2.8.6",
+    "dotenv": "^17.2.3",
+    "express": "^5.2.1",
+    "express-rate-limit": "^8.2.1",
+    "helmet": "^8.1.0",
+    "jsonwebtoken": "^9.0.3",
+    "pg": "^8.18.0"
+  },
+  "devDependencies": {}
+}

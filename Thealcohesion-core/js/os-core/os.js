@@ -3,7 +3,7 @@
  * Core: TLC_Kernel
  * Logic: Window Management & Advanced App Routing
  */
-
+import { SovereignAuth } from './auth.js';
 import { SystemTray } from './tray.js';
 import { NeuralWallpaper } from './wallpaper.js';
 import { registry } from './registry-v2.js';
@@ -339,10 +339,197 @@ class TLC_Kernel {
             
             this.notify(`SYSTEM: NEW_FOLIO_DETECTED [${fileData.name}]`, "normal");
         });
-        
+
+        // NETWORK MONITORING
+        this.network = {
+            ip: '127.0.0.1',
+            status: 'DISCONNECTED', // Initial status
+            isConnected: false,     // Boolean flag for logic checks
+            backend: 'http://localhost:3000' // Base URL (don't include /api/vpu here to keep it flexible)
+        };
+
+        // Add a method to check the link
+        this.checkSovereignLink = async () => {
+            try {
+                // We append /api/vpu/status to the base backend URL
+                const response = await fetch(`${this.network.backend}/api/vpu/status`);
+                const data = await response.json();
+                
+                this.network.isConnected = true;
+                this.network.status = 'CONNECTED';
+                
+                // Logs to your OS notification system
+                this.logEvent(`Sovereign Link Active: ${data.total_members} Members Sync'd.`, 'success');
+            } catch (e) {
+                this.network.isConnected = false;
+                this.network.status = 'OFFLINE';
+                this.logEvent('Sovereign Link Offline: Database unreachable.', 'critical');
+            }
+        };
+
+        this.checkSovereignLink();
+        this.securityCheckInterval = setInterval(() => this.verifySecurityPerimeter(), 30000); // Check every 30s
+        this.vpuExpiry = 24 * 60 * 60 * 1000; // 24 Hours
+        this.checkDeadDrop();
+
+        //The Enclave will now self-destruct if not refreshed.
+        this.sessionStart = Date.now();
+        setInterval(() => {
+            const twentyFourHours = 24 * 60 * 60 * 1000;
+            if (this.isBooted && (Date.now() - this.sessionStart > twentyFourHours)) {
+                this.shredAndLock("TEMPORAL_DEAD_DROP");
+                this.verifyPerimeter()
+            }
+        }, 60000); // Check every minute
     }
 
+    //The Enclave will now self-destruct if not refreshed.
+    async verifyPerimeter() {
+    const currentHW = await this.getHardwareEntropy();
+    // In a real scenario, you'd fetch the current public IP here
+    if (this.isBooted && currentHW !== this.currentUserSignature) {
+        this.shredAndLock("HARDWARE_TAMPER_DETECTED");
+    }
+}
 
+shredAndLock(reason) {
+    this.sessionKey = null; // Wipe the Enclave Key from RAM
+    this.isBooted = false;
+    
+    // Switch UI to the Reset/Contact Form
+    const gate = document.getElementById('login-gate');
+    gate.style.display = 'flex';
+    document.getElementById('os-root').style.display = 'none';
+    
+    window.dispatchEvent(new CustomEvent('vpu:security_breach', { detail: { reason } }));
+    alert(`SECURITY_CRITICAL: ${reason}. Enclave Shredded.`);
+}
+
+checkDeadDrop() {
+    setInterval(() => {
+        const lastAuth = localStorage.getItem('vpu_last_auth');
+        if (Date.now() - lastAuth > this.vpuExpiry) {
+            this.shredAndLock("TEMPORAL_DEAD_DROP_TRIGGERED");
+        }
+    }, 60000); // Check every minute
+}
+async verifySecurityPerimeter() {
+    if (!this.isLoggedIn) return; // Only watch if a session is active
+
+    const binding = await this.getSecurityBinding(); // Fetches HW + IP
+    
+    // If current hardware/network doesn't match the session's bound identity
+    if (binding.fingerprint !== this.currentUser.bound_machine_id) {
+        this.triggerRealPanic("HW_MISMATCH", "Machine binding integrity lost.");
+        this.invokeGatekeeper("SECURITY_MISMATCH");
+    }
+}
+
+  forceLockdown(reason) {
+        this.lastAuthError = reason;
+        
+        // 1. Clear the session key (Wipe sensitive data from memory)
+        this.sessionKey = null;
+        
+        // 2. Clear the desktop/apps
+        document.getElementById('os-root').style.display = 'none';
+        
+        // 3. FORCE-SHOW the auth.js form immediately
+        const gate = document.getElementById('login-gate');
+        gate.style.display = 'flex';
+        gate.style.opacity = '1';
+        
+        if (!this.auth) {
+            this.auth = new SovereignAuth(gate, this);
+        }
+        this.auth.render();
+        
+        // 4. Update the status to show WHY they were kicked out
+        const status = document.querySelector('#auth-status');
+        if (status) {
+            // Map the reason to the display text
+            if (reason === "HARDWARE_ID_REJECTED") {
+                status.innerText = "SECURITY_INTERCEPT: HARDWARE_MISMATCH";
+            } else if (reason === "NETWORK_UPLINK_REJECTED") {
+                status.innerText = "SECURITY_INTERCEPT: NETWORK_MISMATCH";
+            } else {
+                status.innerText = "CRITICAL_RE-AUTH: " + reason;
+            }
+            status.style.color = "#ff4444";
+        }
+    }  
+
+async attemptLogin(id, pass) {
+    try {
+        // Capture THIS machine's unique hardware signature
+        const hwSig = await this.getHardwareEntropy();
+
+        const response = await fetch('http://localhost:3000/api/vpu/login', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ 
+                username: id,             // Matches 'user_name' in SQL
+                password: pass,           // Matches server variable
+                machineFingerprint: hwSig, // Matches server variable
+                ipAddress: "127.0.0.1"    // Explicitly provided
+            })
+        });
+
+        const data = await response.json();
+
+        if (data.success) {
+            // Success: Server verified credentials + hardware
+            localStorage.setItem('vpu_last_auth', Date.now());
+            await this.transitionToShell(id, pass);
+            return true;
+        } else {
+            this.lastAuthError = data.message;
+            return false;
+        }
+    } catch (e) {
+        this.lastAuthError = "SERVER_OFFLINE";
+        return false;
+    }
+}
+//The Unified Binding Function
+async getSecurityBinding() {
+    // 1. Hardware Fingerprint Logic
+    const canvas = document.createElement('canvas');
+    const gl = canvas.getContext('webgl');
+    const debugInfo = gl ? gl.getExtension('WEBGL_debug_renderer_info') : null;
+    const hardwareEntropy = [
+        navigator.hardwareConcurrency,
+        screen.width + 'x' + screen.height,
+        debugInfo ? gl.getParameter(debugInfo.UNMASKED_RENDERER_WEBGL) : 'no-gpu',
+        Intl.DateTimeFormat().resolvedOptions().timeZone
+    ].join('|');
+
+    // 2. IP Binding Logic (Using a public API)
+    let ip = null;
+    try {
+        const response = await fetch('https://api.ipify.org?format=json');
+        const data = await response.json();
+        ip = data.ip;
+    } catch (e) {
+        console.error("VPU_NETWORK_ERROR: Could not resolve Public IP.");
+        // THROW ERROR INSTEAD OF FALLBACK
+        throw new Error("NETWORK_UPLINK_OFFLINE");
+    }
+
+    // Combine hardware entropy with the STRICT IP
+    const hardware = [
+        navigator.hardwareConcurrency,
+        screen.width + "x" + screen.height,
+        new Date().getTimezoneOffset(),
+        ip // Using the real IP here
+    ].join('|');
+
+    const msgBuffer = new TextEncoder().encode(hardware);
+    const hashBuffer = await crypto.subtle.digest('SHA-256', msgBuffer);
+    const fingerprint = Array.from(new Uint8Array(hashBuffer)).map(b => b.toString(16).padStart(2, '0')).join('');
+
+    return { fingerprint, ip };
+}
     // For testing new Apps by Devs
 
         executeTemporary(code, manifest) {
@@ -900,6 +1087,14 @@ async shutdown() {
             this.logEvent('WARN', `System recovered from critical halt: ${lastPanic}`); 
         }
     }); // End of boot()
+
+    const gateContainer = document.getElementById('login-gate'); // The div in your HTML
+    
+    // LINKING: Pass 'this' (the kernel instance) to the Auth class
+    this.auth = new SovereignAuth(gateContainer, this); 
+    
+    // RENDER: Show the purple Enclave UI
+    this.auth.render();
     
 }
 
@@ -1019,55 +1214,24 @@ async runRecoverySequence(errorCode) {
     }
 
     init() {
+
+    // HARD GATE: Prevent UI initialization if not authenticated
+    if (!this.isBooted) {
+        console.log("Kernel: Standby mode active. Awaiting Handshake.");
+        return; 
+    }
+
+    console.log("KERNEL: Identity Verified. Initializing Sovereign Environment...");
+    this.initDOM();
+    this.initTray();
+    this.initClock();
+
     const loginBtn = document.getElementById('login-btn');
     const status = document.getElementById('auth-status');
 
     if (!loginBtn) return;
 
-    loginBtn.onclick = async () => {
-        // 1. Enter Secure State
-        loginBtn.disabled = true;
-        loginBtn.style.opacity = '0.3';
-
-        // Add a "Shake" class to the box during sequence
-        const box = document.querySelector('.login-box');
-        box.style.animation = "shake 0.2s infinite";
-
-        // After the sequence finishes, stop the shake
-        box.style.animation = "none";
-        
-        // 2. Cryptographic Sequence (The Visual Build-up)
-        const sequence = [
-            { msg: "» REQUESTING_HANDSHAKE...", delay: 600 },
-            { msg: "» DERIVING_GENESIS_ENTROPY...", delay: 1000 },
-            { msg: "» VALIDATING_MEMBER_SIGNATURE...", delay: 800 },
-            { msg: "» MOUNTING_VFS_PARTITION_2025_12_26...", delay: 1200 },
-            { msg: "» ALLOTMENT_ENCLAVE_SYNCHRONIZED.", delay: 500 }
-        ];
-
-        for (const step of sequence) {
-            if (status) {
-                status.innerText = step.msg;
-                status.style.color = "#00ff41";
-            }
-            // Visual Flicker Effect on the Box
-            const box = document.querySelector('.login-box');
-            if (box) box.style.borderColor = '#00ff41';
-            
-            await new Promise(r => setTimeout(r, step.delay));
-            
-            if (box) box.style.borderColor = '#004411';
-        }
-
-        // 3. AUTOMATIC TRANSITION (The "Gate" Opens)
-        if (status) status.innerHTML = `<span style="color: #bcff00;">ACCESS_GRANTED. INITIALIZING_SHELL...</span>`;
-        
-        // Wait a final moment for the user to read 'Access Granted'
-        await new Promise(r => setTimeout(r, 600));
-
-        // CRITICAL: Now we call the shell transition
-        await this.transitionToShell(); 
-    };
+    
 
     // 4. PERSISTENT SYSTEM LISTENERS
     this.setupContextMenu();
@@ -1166,7 +1330,27 @@ async unlockSystem() {
 
         const password = passInput ? passInput.value : "default_gateway";
         const memberId = document.getElementById('username')?.value || "GUEST";
+        try {
+        // a. GET BINDING
+        const binding = await this.getSecurityBinding();
+        console.log(`Kernel: Secured on IP ${binding.ip}`);
 
+        // b. DERIVE KEY (Bound to Password + Machine + IP)
+        // If the user moves to a different Wi-Fi or PC, this salt fails.
+        const secureSalt = `${memberId}_${binding.fingerprint}_${binding.ip}`;
+        
+        this.sessionKey = await SovereignVFS.deriveKey(password, secureSalt);
+        
+        if (!this.sessionKey) throw new Error("Binding Conflict Detected");
+
+        // c. PROVISION ALLOTMENTS (2025-12-26)
+        await this.provisionInitialFiles();
+
+        } catch (e) {
+            console.error("VPU_CORE_REJECTION:", e);
+            alert("CRITICAL: Binding Mismatch. Device or Network not authorized.");
+            return;
+        }
         // FORCING FULLSCREEN LOCK
         const docElm = document.documentElement;
         if (docElm.requestFullscreen) {
@@ -4071,6 +4255,88 @@ async runRecoverySequence(errorCode) {
     setTimeout(() => recoveryScreen.remove(), 1000);
 }
 
+// generates a unique fingerprint based on how your hardware draws pixels
+async getHardwareEntropy() {
+    // 1. Create a dedicated canvas for GPU info
+    const canvasGL = document.createElement('canvas');
+    const gl = canvasGL.getContext('webgl') || canvasGL.getContext('experimental-webgl');
+    
+    // Multi-layer Renderer Detection (Firefox-safe)
+    let renderer = "UNKNOWN_GPU";
+    if (gl) {
+        const debugInfo = gl.getExtension('WEBGL_debug_renderer_info');
+        if (debugInfo) {
+            renderer = gl.getParameter(debugInfo.UNMASKED_RENDERER_WEBGL);
+        } else {
+            renderer = gl.getParameter(gl.RENDERER) + gl.getParameter(gl.VENDOR);
+        }
+    }
+
+    // 2. Create a SECOND dedicated canvas for 2D pixel drawing
+    const canvas2D = document.createElement('canvas');
+    const ctx = canvas2D.getContext('2d');
+    
+    // Safety check for privacy-hardened browsers
+    if (!ctx) return `HARDWARE_FALLBACK_${renderer.replace(/\s/g, '_')}_2025_12_26`;
+
+    // Draw complex geometry to capture sub-pixel rendering differences
+    ctx.textBaseline = "alphabetic"; // Case-sensitive correction
+    ctx.font = "16px 'Courier'";
+    ctx.fillStyle = "#f60";
+    ctx.fillRect(125, 1, 62, 20);
+    ctx.fillStyle = "#069";
+    ctx.fillText("Sovereign_VPU_Auth", 2, 15);
+    ctx.fillStyle = "rgba(102, 204, 0, 0.7)";
+    ctx.fillText("Sovereign_VPU_Auth", 4, 17);
+    
+    const rawData = canvas2D.toDataURL();
+
+    // 3. Generate the SHA-256 hash
+    const hashBuffer = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(rawData + renderer));
+    return Array.from(new Uint8Array(hashBuffer)).map(b => b.toString(16).padStart(2, '0')).join('');
+}
+
+// --- SECURITY MONITORING: PHASES 3, 4, & 5 ---
+
+startSecurityPulse(expectedSignature) {
+    this.currentUserSignature = expectedSignature;
+    this.sessionStart = Date.now();
+
+    setInterval(async () => {
+        if (!this.isBooted) return;
+
+        // 30s Perimeter Pulse: Detect if the machine/hardware changed mid-session
+        const currentHW = await this.getHardwareEntropy();
+        
+        // Use a simple string comparison for the signatures
+        if (currentHW !== this.currentUserSignature) {
+            console.warn("VPU_SECURITY: Signature mismatch. Shredding session...");
+            this.shredAndLock("HARDWARE_TAMPER_DETECTED");
+        }
+
+        // 24h Dead-Drop: Automatic Memory Purge
+        const twentyFourHours = 24 * 60 * 60 * 1000;
+        if (Date.now() - this.sessionStart > twentyFourHours) {
+            this.shredAndLock("TEMPORAL_DEAD_DROP_TRIGGERED");
+        }
+    }, 30000); 
+}
+
+shredAndLock(reason) {
+    this.sessionKey = null; // The "Wipe": Clears the Enclave Key from RAM
+    this.isBooted = false;
+    
+    console.error(`[SECURITY_CRITICAL] ${reason}`);
+    
+    // Notify the UI to show the Reset/Contact form
+    window.dispatchEvent(new CustomEvent('os:security_violation', { detail: { reason } }));
+    
+    // Hide the desktop and force return to login gate
+    document.getElementById('os-root').style.display = 'none';
+    const gate = document.getElementById('login-gate');
+    if (gate) gate.style.display = 'flex';
+}
+
 //System log Events
 
 logEvent(type, message) {
@@ -4227,5 +4493,96 @@ window.addEventListener('resize', () => {
             win.style.height = '100vh';
             win.style.borderRadius = '0';
         });
+    }
+});
+
+document.addEventListener('DOMContentLoaded', () => {
+    const loginBtn = document.getElementById('login-btn');
+    const status = document.getElementById('auth-status');
+    const box = document.querySelector('.login-box');
+    const userField = document.getElementById('username');
+    const passField = document.getElementById('pass-input');
+
+    if (loginBtn) {
+        loginBtn.onclick = async () => {
+            const user = userField.value;
+            const pass = passField.value;
+
+            // 1. Enter Secure State (Single Impact Shake)
+            loginBtn.disabled = true;
+            loginBtn.style.opacity = '0.5';
+            loginBtn.innerHTML = `<span class="btn-text">UPLINKING TO VPU...</span>`;
+            box.classList.add('impact-shake', 'uplink-glow');
+            setTimeout(() => box.classList.remove('impact-shake'), 500);
+
+            // 2. Start Database Auth in background immediately
+            const authPromise = window.kernel.attemptLogin(user, pass);
+
+            // 3. Visual Cryptographic Sequence
+            const sequence = [
+                { msg: "» REQUESTING_HANDSHAKE...", delay: 600 },
+                { msg: "» SCANNING_HARDWARE_SIGNATURE...", delay: 800 }, // Machine Binding
+                { msg: "» VERIFYING_NETWORK_UPLINK...", delay: 800 },    // IP Binding
+                { msg: "» DERIVING_BOUND_ENCLAVE_KEY...", delay: 1000 },
+                { msg: "» DERIVING_GENESIS_ENTROPY...", delay: 800 },
+                { msg: "» VALIDATING_MEMBER_SIGNATURE...", delay: 600 },
+                { msg: "» MOUNTING_VFS_PARTITION_2025_12_26...", delay: 1000 },
+                { msg: "» ALLOTMENT_ENCLAVE_SYNCHRONIZED.", delay: 400 },
+                { msg: "» SYNCHRONIZING_BIRTHRIGHT...", delay: 400 },
+                { msg: "» UPLINKING TO VPU TERMINAL", delay: 400 }
+            ];
+
+            for (const step of sequence) {
+                status.innerText = step.msg;
+                status.style.color = "#00ff41";
+                box.style.borderColor = '#00ff41';
+                await new Promise(r => setTimeout(r, step.delay));
+                box.style.borderColor = '#004411';
+            }
+
+            // 4. THE UPDATED VERIFICATION CHECK
+            const success = await authPromise;
+
+            if (success) {
+                status.innerHTML = `<span style="color: #bcff00;">ACCESS_GRANTED. INITIALIZING_SHELL...</span>`;
+                loginBtn.innerHTML = `<span class="btn-text">UPLINK ACCEPTED</span>`;
+                box.style.borderColor = '#bcff00';
+                
+                await new Promise(r => setTimeout(r, 800));
+                await window.kernel.transitionToShell(); 
+                
+           } else {
+                // 1. Trigger Rejection Visuals
+                box.classList.remove('uplink-glow');
+                box.classList.add('impact-shake');
+                
+                // 2. LOGIC FIX: Determine exactly what to say
+                if (window.kernel.lastAuthError === "HARDWARE_ID_REJECTED") {
+                    status.innerText = "SECURITY_DENIAL: UNAUTHORIZED_HARDWARE";
+                } else if (window.kernel.lastAuthError === "NETWORK_UPLINK_REJECTED") {
+                    status.innerText = "SECURITY_DENIAL: UNAUTHORIZED_NETWORK";
+                } else {
+                    // THIS WAS MISSING: Handles wrong password or general failure
+                    status.innerText = "HANDSHAKE_FAILED: INVALID_CREDENTIALS";
+                }
+
+                // 3. Apply Rejection Styling
+                status.style.color = "#ff4444";
+                box.style.borderColor = '#ff4444';
+                
+                // 4. Reset Button
+                loginBtn.innerHTML = `<span class="btn-text">INITIATE_HANDSHAKE</span>`;
+                loginBtn.disabled = false;
+                loginBtn.style.opacity = '1';
+
+                // 5. Return to Standby after 3 seconds
+                setTimeout(() => {
+                    box.classList.remove('impact-shake');
+                    status.innerText = "STANDBY: Awaiting Credentials...";
+                    status.style.color = "#00ff41"; 
+                    box.style.borderColor = '#004411';
+                }, 3000);
+            }
+        };
     }
 });
