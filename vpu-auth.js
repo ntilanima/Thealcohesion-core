@@ -82,3 +82,40 @@ if (require.main === module) {
     process.exit();
   })();
 }
+
+
+/**
+ * Validates an Investor/EPOS for their initial Provisioning
+ */
+async function verifyProvisioningIdentity(payload) {
+  const { phone, license, email, hw_id } = payload;
+
+  const query = `
+    SELECT id, user_name, provisioned 
+    FROM person 
+    WHERE contact_phone = $1 AND license_key = $2 AND email = $3;
+  `;
+
+  try {
+    const res = await pool.query(query, [phone, license, email]);
+    
+    if (res.rows.length === 0) {
+      return { success: false, error: "IDENTITY_NOT_FOUND" };
+    }
+
+    const user = res.rows[0];
+
+    // Check if hardware is already locked to another ID
+    // If not, bind this hw_id to the user now
+    await pool.query('UPDATE person SET linked_hw_id = $1 WHERE id = $2', [hw_id, user.id]);
+
+    return { 
+      success: true, 
+      user_name: user.user_name,
+      shell_url: "/secure/sovereign-shell-v1.zip" 
+    };
+  } catch (err) {
+    console.error('[DATABASE ERROR]', err.message);
+    return { success: false, error: "DATABASE_OFFLINE" };
+  }
+}

@@ -225,60 +225,116 @@ pool.on('error', (err, client) => {
 
 // ---SPACS PROVISIONING WORKFLOW---
 // --- FORM A: EXPRESSION OF INTEREST ---
+/* --- LEAD INTAKE: EXPRESSION OF INTEREST --- */
 app.post('/api/spacs/interest', async (req, res) => {
-    const { name, email, phone, reason, country } = req.body;
+    const { name, country, phone, email, reason } = req.body;
+
     try {
-        await pool.query(
-            `INSERT INTO person (user_name, identity_state, contact_meta) 
-             VALUES ($1, 'PENDING_APPROVAL', $2)`,
-            [name, JSON.stringify({ email, phone, reason, country })]
+        // 1. CHECK FOR EXISTING IDENTITY (Email or Phone)
+        const checkQuery = `
+            SELECT p.id, p.official_name, p.identity_state 
+            FROM person p
+            LEFT JOIN contact_information c ON p.id = c.person_id
+            WHERE c.contact_value = $1 OR c.contact_value = $2
+            LIMIT 1
+        `;
+        const existing = await pool.query(checkQuery, [email, phone]);
+
+        if (existing.rows.length > 0) {
+            const user = existing.rows[0];
+            
+            // IF THEY EXIST: Tell them to go to Provisioning
+            return res.status(200).json({ 
+                success: false, // False because we aren't creating a new lead
+                already_exists: true,
+                message: `IDENTITY_FOUND: ${user.official_name}, your credentials are already in our registry. Please use the 'Verify & Provision' form to claim your architecture.`,
+                action: "SWITCH_TO_PROVISION" 
+            });
+        }
+
+        // 2. NEW PROSPECT: Create the Person Entry
+        const newPerson = await pool.query(
+            `INSERT INTO person (official_name, country, identity_state, contact_meta) 
+             VALUES ($1, $2, 'PENDING_APPROVAL', $3) RETURNING id`,
+            [name, country, `INITIAL_INTEREST: ${reason}`]
         );
-        res.json({ success: true, message: "REQUEST_LOGGED: Awaiting Admin Dispatch." });
+
+        const personId = newPerson.rows[0].id;
+
+        // 3. STORE CONTACT DETAILS
+        await pool.query(
+            `INSERT INTO contact_information (person_id, contact_type, contact_value) 
+             VALUES ($1, 'EMAIL', $2), ($1, 'PHONE', $3)`,
+            [personId, email, phone]
+        );
+
+        res.status(201).json({ 
+            success: true, 
+            message: "SOVEREIGN_REGISTRY_UPDATED: Your interest has been logged. Admin review pending." 
+        });
+
     } catch (err) {
-        res.status(500).json({ error: "REGISTRATION_FAULT" });
+        console.error("INTEREST_SUBMISSION_ERROR:", err);
+        res.status(500).json({ error: "REGISTRY_LINK_FAULT" });
     }
 });
 
 // --- FORM B: VERIFY & PROVISION (With Shell Logic) ---
 // Handle Verify & Provision
 app.post('/api/spacs/verify-provision', async (req, res) => {
-    const { license, membership_no, hw_id, arch, name, phone, email, country } = req.body;
+    const { name, license, membership_no, phone, email, hw_id, arch } = req.body;
 
     try {
-        // 1. HARDWARE REGISTRY (Ensures fingerprint exists in security_device)
-        let device = await pool.query('SELECT id FROM security_device WHERE device_fingerprint_hash = $1', [hw_id]);
-        if (device.rows.length === 0) {
-            await pool.query('INSERT INTO security_device (device_fingerprint_hash, os_signature) VALUES ($1, $2)', [hw_id, arch]);
-        }
-
-        // 2. STRICT IDENTITY JOIN (Matches Person + Email + Phone)
-        const userQuery = `
-            SELECT p.id FROM person p
-            JOIN contact_information c_email ON p.id = c_email.person_id
-            JOIN contact_information c_phone ON p.id = c_phone.person_id
-            WHERE p.membership_no = $1 
-              AND p.license_key = $2
-              AND p.official_name ILIKE $3
-              AND p.country ILIKE $4
-              AND c_email.contact_value = $5 
-              AND c_phone.contact_value = $6
-        `;
-        
-        const userCheck = await pool.query(userQuery, [membership_no, license, `%${name}%`, country, email, phone]);
-
-        if (userCheck.rows.length === 0) {
-            return res.status(403).json({ error: "VERIFICATION_FAILED: Identity or Contact details mismatch." });
-        }
-
-        const personId = userCheck.rows[0].id;
-
-        // 3. BIND PERSON TO HARDWARE
-        await pool.query(
-            `UPDATE security_device SET person_id = $1, enclave_attested = TRUE WHERE device_fingerprint_hash = $2`,
-            [personId, hw_id]
+        // 1. CHECK LICENSE & MEMBERSHIP EXISTENCE
+        const licenseCheck = await pool.query(
+            `SELECT p.id, p.official_name, c.contact_value as phone, (SELECT c2.contact_value FROM contact_information c2 WHERE c2.person_id = p.id AND c2.contact_type = 'EMAIL' LIMIT 1) as registered_email
+             FROM person p
+             LEFT JOIN contact_information c ON p.id = c.person_id AND c.contact_type = 'PHONE'
+             WHERE p.license_key = $1 OR p.membership_no = $2`,
+            [license, membership_no]
         );
 
-        // 4. DELIVERY FROM operating_system TABLE
+        if (licenseCheck.rows.length === 0) {
+            return res.status(401).json({ error: "INVALID_PROTOCOL: License or Membership No. not found in Sovereign Registry." });
+        }
+
+        const registeredUser = licenseCheck.rows[0];
+
+        // 2. DETECT IDENTITY MISMATCH (Security Flag)
+        // If the license exists but the name provided doesn't match the database
+        if (registeredUser.official_name.toLowerCase() !== name.toLowerCase()) {
+            console.warn(`[SECURITY ALERT] Identity Mismatch for License ${license}. Provided: ${name}, Expected: ${registeredUser.official_name}`);
+            return res.status(403).json({ 
+                error: "IDENTITY_CONFLICT: The provided name does not match the record bound to this License Key. Verification logged." 
+            });
+        }
+
+        // 3. DETECT CONTACT MISMATCH
+        // If phone/email is valid elsewhere but doesn't match this specific license
+        if (registeredUser.registered_phone !== phone || registeredUser.registered_email !== email) {
+            return res.status(403).json({ 
+                error: "CONTACT_MISMATCH: Provided phone or email does not match..." 
+            });
+        }
+
+        // 4. HARDWARE BINDING CHECK
+        const hardwareCheck = await pool.query(
+            `SELECT person_id FROM security_device WHERE device_fingerprint_hash = $1`,
+            [hw_id]
+        );
+
+        if (hardwareCheck.rows.length > 0 && hardwareCheck.rows[0].person_id !== registeredUser.id) {
+            return res.status(403).json({ 
+                error: "HARDWARE_LOCK: This device is already bound to another Sovereign Identity." 
+            });
+        }
+
+        // 5. SUCCESS: UPDATE & DELIVER
+        await pool.query(
+            `UPDATE security_device SET person_id = $1, enclave_attested = TRUE, last_sync = NOW() WHERE device_fingerprint_hash = $2`,
+            [registeredUser.id, hw_id]
+        );
+
         const download = await pool.query(
             `SELECT download_url FROM operating_system WHERE os_name ILIKE $1 AND is_active = TRUE`,
             [`%${arch}%`]
@@ -286,13 +342,13 @@ app.post('/api/spacs/verify-provision', async (req, res) => {
 
         res.json({ 
             success: true, 
-            shell_url: download.rows[0]?.download_url,
-            message: "PROVISION_SUCCESSFUL" 
+            shell_url: download.rows[0]?.download_url || "/builds/default-kernel.iso",
+            message: "PROVISION_GRANTED" 
         });
 
     } catch (err) {
-        console.error("PROVISION_ERROR:", err);
-        res.status(500).json({ error: "DATABASE_LINK_FAULT" });
+        console.error("SEC_ENGINE_CRASH:", err);
+        res.status(500).json({ error: "INTERNAL_KERNEL_ERROR" });
     }
 });
 app.listen(3000, () => console.log('Sovereign Link: Port 3000'));

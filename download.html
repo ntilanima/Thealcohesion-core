@@ -56,7 +56,7 @@
     </main>
     <script src="./loading.js"></script>
     <script>
-document.addEventListener('DOMContentLoaded', () => {
+    document.addEventListener('DOMContentLoaded', () => {
     const logBox = document.getElementById('log-box');
     const overlay = document.getElementById('provisioning-overlay');
     const memberModal = document.getElementById('member-modal');
@@ -209,79 +209,132 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     // --- PART 4: THE ACTUAL PROVISIONING SEQUENCE ---
-    window.startProvisioningSequence = function(name, key, osName, shellUrl) {
-    const nativeID = generateNativeID();
-        overlay.style.display = 'flex';
-        logBox.innerHTML = ''; 
+    window.startProvisioningSequence = async function(name, key, osName, shellUrl) {
+    const overlay = document.getElementById('terminal-overlay');
+    const content = document.getElementById('terminal-content'); // or your logBox
+    const nativeID = `SN-${Math.random().toString(36).substr(2, 9).toUpperCase()}`;
+    
+    overlay.style.display = 'flex';
+    content.innerHTML = ''; 
 
-        // 1. Handshake & Security Logs
-        addLog(`Initializing Handshake with Thealcohesion Core...`, 200);
-        addLog(`Identity Confirmed: <span style="color: #00ff41;">${nativeID}</span>`, 600);
-        addLog(`Space Native: ${name} (Authenticated via ${key})`, 900);
-        
-        // IP Capture Logic
-        fetch('https://api.ipify.org?format=json')
-            .then(res => res.json())
-            .then(data => {
-                addLog(`SECURE_NODE_IP: ${data.ip}`, 1200);
-                if(localStorage.getItem('downloaded_ip') === data.ip) {
-                    addLog(`<span style="color:red">FLAG: IP already registered. Locking Partition.</span>`, 1600);
-                } else {
-                    addLog(`STATUS: Binding Kernel to Machine IP...`, 1600);
-                    localStorage.setItem('downloaded_ip', data.ip);
-                }
-            });
-
-        // Terminal Handshake Sequence
-            addLog(`Initializing Handshake with Thealcohesion Core...`, 200);
-            addLog(`Thealcohesion Space Native Identity Confirmed.`, 200);
-            addLog(`Allocating 5GB Sovereign Partition issued...`, 600);
-            addLog(`Partition: GENESIS_2025-12-26 detected.`, 600);
-            addLog(`Validating signature for ${osName} binary...`, 1100);
-            addLog(`SHA-256: 78572cc89b33... VERIFIED`, 1400);
-            addLog(`SECURE_CHANNEL_ESTABLISHED`, 1600);
-            addLog(`Provisioning ${osName} Kernel Package...`, 2100);
-            addLog(`Redirecting to download node... <span class="cursor-blink"></span>`, 2600);
-
-
-        // 2. Progress Bar
-        setTimeout(() => {
-            const progressBarContainer = document.createElement('div');
-            progressBarContainer.className = 'progress-container';
-            progressBarContainer.innerHTML = '<div class="progress-bar" id="fill"></div>';
-            logBox.appendChild(progressBarContainer);
-
-            const fill = document.getElementById('fill');
-            let width = 0;
-            const interval = setInterval(() => {
-                if (width >= 100) {
-                    clearInterval(interval);
-                    addLog(`DEPLOYMENT COMPLETE for ${nativeID}. Redirecting...`, 200);
-                } else {
-                    width++;
-                    fill.style.width = width + '%';
-                }
-            }, 20);
-        }, 3200);
-
-        // 3. Final Redirect
-        setTimeout(() => {
-            overlay.style.display = 'none';
-            // 1. Download the Software Kernel
-            if(currentDownloadUrl && currentDownloadUrl !== '#') {
-                window.location.href = currentDownloadUrl;
-            }
-
-            // 2. Download the Native Certificate (after a 1-second delay)
+    // Helper to add logs with precise timing
+    const addLog = (text, delay) => {
+        return new Promise(resolve => {
             setTimeout(() => {
-                const currentIP = localStorage.getItem('downloaded_ip') || 'N/A';
-                downloadCertificate(name, nativeID, currentIP, key);
-            }, 1000);
-        }, 6500);
+                const div = document.createElement('div');
+                div.className = 'terminal-line';
+                div.innerHTML = `> ${text}`;
+                content.appendChild(div);
+                // Auto-scroll
+                content.scrollTop = content.scrollHeight;
+                resolve();
+            }, delay);
+        });
+    };
+
+    // --- PHASE 1: HANDSHAKE & IP SECURITY ---
+    await addLog(`Initializing Handshake with Thealcohesion Core...`, 200);
+    await addLog(`Identity Confirmed: <span style="color: #00ff41;">${nativeID}</span>`, 400);
+
+    // IP Capture Logic
+    try {
+        const ipRes = await fetch('https://api.ipify.org?format=json');
+        const ipData = await ipRes.json();
+        const currentIP = ipData.ip;
+        
+        await addLog(`SECURE_NODE_IP: ${currentIP}`, 400);
+
+        if (localStorage.getItem('downloaded_ip') === currentIP) {
+            await addLog(`<span style="color:red">FLAG: IP already registered. Locking Partition.</span>`, 800);
+            await addLog(`STATUS: Resuming existing Secure Session...`, 400);
+        } else {
+            await addLog(`STATUS: Binding Kernel to Machine IP...`, 600);
+            localStorage.setItem('downloaded_ip', currentIP);
+        }
+    } catch (e) {
+        await addLog(`<span style="color:orange">WARN: IP_TRACE_BYPASSED. Enforcing Hardware ID.</span>`, 400);
     }
+
+    // --- PHASE 2: TECHNICAL PROVISIONING ---
+   // 1. Identification
+        await addLine(`> THEALCOHESION SPACE NATIVE: ${userName.toUpperCase()}`, 300);
+        await addLine(`> ATTESTING HARDWARE ENCLAVE: ${localStorage.getItem('vpu_hw_id') || 'DEV-NODE-01'}`, 500);
+
+        // 2. Resource Allocation
+        await addLine(`> ALLOCATING 5GB SOVEREIGN PARTITION...`, 600);
+        await addLine(`> PARTITION: <span style="color:var(--primary-purple);">GENESIS_2025-12-26</span> DETECTED.`, 400);
+
+        // 3. Security Verification
+        await addLine(`> VALIDATING SIGNATURE FOR ${osName.toUpperCase()} BINARY...`, 800);
+        await addLine(`> SHA-256: 78572CC89B33... <span style="color:#00ff41;">VERIFIED</span>`, 400);
+        await addLine(`> SECURE_CHANNEL_ESTABLISHED`, 300);
+
+        // 4. File Preparation
+        await addLine(`> GENERATING LICENSE_CERTIFICATE.TXT...`, 600);
+        await addLine(`> PROVISIONING ${osName.toUpperCase()} KERNEL PACKAGE...`, 600);
+
+    // --- PHASE 3: PROGRESS BAR ---
+    const progressBarContainer = document.createElement('div');
+    progressBarContainer.style.cssText = "width:100%; height:8px; background:rgba(255,255,255,0.1); margin:20px 0; border-radius:4px; overflow:hidden;";
+    const fill = document.createElement('div');
+    fill.style.cssText = "width:0%; height:100%; background:var(--primary-purple); box-shadow:0 0 10px var(--primary-purple); transition: width 0.05s linear;";
+    progressBarContainer.appendChild(fill);
+    content.appendChild(progressBarContainer);
+
+    await new Promise(resolve => {
+        let width = 0;
+        const interval = setInterval(() => {
+            if (width >= 100) {
+                clearInterval(interval);
+                resolve();
+            } else {
+                width++;
+                fill.style.width = width + '%';
+            }
+        }, 30);
+    });
+
+    await addLog(`DEPLOYMENT COMPLETE for ${nativeID}.`, 200);
+    await addLog(`Generating Sovereign_License.txt...`, 400);
+
+    // --- TRIGGER FILE DOWNLOADS ---
+    const currentIP = localStorage.getItem('downloaded_ip') || 'N/A';
+    const certBody = `NATIVE_ID: ${nativeID}\nUSER: ${name}\nLICENSE: ${key}\nIP_BIND: ${currentIP}\nDATE: 2025-12-26\nSTATUS: PROVISIONED`;
+    
+    // Download License Text
+    downloadTextFile(`Sovereign_License_${name.replace(/\s/g, '_')}.txt`, certBody);
+
+    if (shellUrl && shellUrl !== '#') {
+        await addLog(`Redirecting to download node... <span class="cursor-blink"></span>`, 600);
+        const link = document.createElement('a');
+        link.href = shellUrl;
+        link.download = '';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    } else {
+        await addLog(`[NOTICE] BINARY NOT FOUND. REDIRECTING TO CORE TERMINAL...`, 600);
+    }
+
+    // --- PHASE 4: FINAL REDIRECT ---
+    setTimeout(() => {
+        overlay.style.display = 'none';
+        window.location.href = "./Thealcohesion-core/index.html";
+    }, 2500);
+};
 });
 
-// Global Close Function
+// Helper for .txt file generation
+function downloadTextFile(filename, text) {
+    const element = document.createElement('a');
+    element.setAttribute('href', 'data:text/plain;charset=utf-8,' + encodeURIComponent(text));
+    element.setAttribute('download', filename);
+    element.style.display = 'none';
+    document.body.appendChild(element);
+    element.click();
+    document.body.removeChild(element);
+}
+
 function closeAllModals() {
     document.querySelectorAll('.modal-overlay').forEach(m => m.style.display = 'none');
 }

@@ -61,22 +61,63 @@ document.addEventListener('DOMContentLoaded', () => {
 // Handle the Interest Form
 document.getElementById('interest-form').onsubmit = async (e) => {
     e.preventDefault();
+    const btn = e.submitter;
+    
+    // UI Feedback
+    btn.disabled = true;
+    btn.innerText = "CHECKING REGISTRY...";
+
     const formData = {
         name: e.target[0].value,
         country: e.target[1].value,
-        phone: e.target[2].value,
+        phone: `${document.getElementById('i-country-code').value}${e.target.querySelector('input[type="tel"]').value}`,
         email: e.target[3].value,
         reason: e.target[4].value
     };
 
-    const res = await fetch('http://localhost:3000/api/spacs/interest', {
-        method: 'POST',
-        headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify(formData)
-    });
-    const data = await res.json();
-    alert(data.message || data.error);
-    if(data.success) closeAllModals();
+    try {
+        const res = await fetch('http://localhost:3000/api/spacs/interest', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify(formData)
+        });
+        const data = await res.json();
+
+       if (data.already_exists) {
+        // 1. Alert the user they are already recognized
+        alert(data.message);
+        
+        // 2. Visual "Rerouting" Effect
+        const interestModal = document.getElementById('interest-modal');
+        const provisionModal = document.getElementById('member-modal');
+        
+        interestModal.style.opacity = '0';
+        setTimeout(() => {
+            interestModal.style.display = 'none';
+            interestModal.style.opacity = '1';
+            
+            // 3. Open Provisioning Form
+            provisionModal.style.display = 'flex';
+            
+            // 4. PRE-FILL (Transfer their data over to save time)
+            document.getElementById('m-name').value = formData.name;
+            document.getElementById('m-email').value = formData.email;
+            // Strip country code for the phone input if necessary
+            document.getElementById('m-phone').value = e.target.querySelector('input[type="tel"]').value;
+        }, 300);
+
+    } else if (data.success) {
+        alert(data.message);
+        closeAllModals();
+    } else {
+        alert("SEC_ERROR: " + data.error);
+    }
+    } catch (err) {
+        alert("CRITICAL: Bridge connection failed.");
+    } finally {
+        btn.disabled = false;
+        btn.innerText = "SUBMIT TO ADMIN";
+    }
 };
 
 // Handle Verify & Provision (Form B)
@@ -142,9 +183,22 @@ document.getElementById('provision-form').onsubmit = async (e) => {
             
         } else {
             btn.disabled = false;
-            btn.innerText = "VERIFICATION FAILED";
-            alert("SEC_ERROR: " + (data.error || "Identity Mismatch"));
-            setTimeout(() => { btn.innerText = originalText; }, 2000);
+            if (data.error.includes("IDENTITY_CONFLICT")) {
+                btn.innerText = "IDENTITY_MISMATCH";
+                btn.style.borderColor = "#ff4545"; // Red Border
+                alert("CRITICAL: Name/License mismatch. This attempt has been logged for Admin review.");
+            } else if (data.error.includes("HARDWARE_LOCK")) {
+                btn.innerText = "DEVICE_LOCKED";
+                alert("SEC_ERROR: This hardware is already bound to a different Sovereign ID.");
+            } else {
+                btn.innerText = "AUTH_FAILED";
+                alert("ERROR: " + data.error);
+            }
+            
+            setTimeout(() => { 
+                btn.innerText = originalText;
+                btn.style.borderColor = ""; 
+            }, 3000);
         }
     } catch (err) {
         btn.disabled = false;
@@ -234,3 +288,18 @@ document.querySelectorAll('.btn-dist').forEach(button => {
         }
     };
 });
+
+
+const addLine = (text, delay) => {
+    return new Promise(resolve => {
+        setTimeout(() => {
+            const div = document.createElement('div');
+            div.className = 'terminal-line';
+            // Prepend the prompt character here
+            div.innerHTML = text.startsWith('>') ? text : `> ${text}`;
+            content.appendChild(div);
+            content.scrollTop = content.scrollHeight;
+            resolve();
+        }, delay);
+    });
+};
