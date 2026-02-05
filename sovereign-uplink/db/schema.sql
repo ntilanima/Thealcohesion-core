@@ -88,6 +88,9 @@ CREATE TABLE person (
     date_of_birth DATE,
     country VARCHAR(100),
     password_hash TEXT,
+    membership_no VARCHAR(64) UNIQUE,
+    license_key VARCHAR(64) UNIQUE,
+    contact_meta JSONB,
     identity_state TEXT DEFAULT 'INITIAL',
     is_frozen BOOLEAN DEFAULT FALSE, 
     created_at TIMESTAMP DEFAULT NOW(),
@@ -108,6 +111,7 @@ CREATE TABLE person_security (
     is_mfa_enabled BOOLEAN DEFAULT FALSE,
     failed_login_attempts INT DEFAULT 0,
     locked_until TIMESTAMP,
+    client_version TEXT,
     root_identity_hash TEXT UNIQUE,             -- Hash of sovereign identity
     enclave_public_key TEXT,                    -- Device enclave key
     enclave_attested BOOLEAN DEFAULT FALSE,     -- Hardware attestation status
@@ -118,6 +122,26 @@ CREATE TABLE person_security (
 );
 
 CREATE INDEX idx_person_security_person_id ON person_security(person_id);
+
+
+-- Platform (Shell & Binary Delivery)
+CREATE TABLE operating_system (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    code VARCHAR(64) UNIQUE NOT NULL,           -- e.g., 'VPU_WIN_X64'
+    name TEXT NOT NULL,                         -- e.g., 'Sovereign Shell Windows'
+    os_name TEXT NOT NULL,                      -- e.g., 'Win32', 'Linux' (Matches navigator.platform)
+    download_url TEXT,                          -- e.g., '/builds/vpu_shell_win.msi'
+    version_tag VARCHAR(32),                    -- e.g., 'v1.0.1'
+    is_active BOOLEAN DEFAULT TRUE,             -- Used to toggle availability
+    start_date DATE,
+    end_date DATE,
+    created_at TIMESTAMP DEFAULT NOW(),
+    updated_at TIMESTAMP DEFAULT NOW()
+);
+
+-- Index for the Bridge to find downloads instantly
+CREATE INDEX idx_operating_system_lookup ON operating_system(os_name, is_active);
+
 
 
 CREATE TABLE identity_document (
@@ -1115,7 +1139,7 @@ CREATE TABLE security_device (
     device_type TEXT,
     os_signature TEXT,
     enclave_attested BOOLEAN DEFAULT FALSE,
-    client_version TEXT NOT NULL,
+    client_version TEXT,
     first_seen TIMESTAMP DEFAULT NOW(),
     last_seen TIMESTAMP,
     revoked BOOLEAN DEFAULT FALSE,

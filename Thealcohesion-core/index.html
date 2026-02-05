@@ -228,6 +228,11 @@
     </template>
 
     <!-- SCRIPTS -->
+     <script>
+       if (!window.isNativeShell && status.hasShellAvailableForOS) {
+            showNotification("Native Shell Available for your OS. [Download Now]");
+        } 
+     </script>
      <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
      <script src="https://leaflet.github.io/Leaflet.heat/dist/leaflet-heat.js"></script>
      <script type="module" src="./js/os-core/boot.js"></script>

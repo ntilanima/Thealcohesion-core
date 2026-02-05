@@ -224,7 +224,7 @@ pool.on('error', (err, client) => {
 });
 
 // ---SPACS PROVISIONING WORKFLOW---
-// A. EXPRESSION OF INTEREST (PRE-REGISTRATION)
+// --- FORM A: EXPRESSION OF INTEREST ---
 app.post('/api/spacs/interest', async (req, res) => {
     const { name, email, phone, reason, country } = req.body;
     try {
@@ -233,51 +233,66 @@ app.post('/api/spacs/interest', async (req, res) => {
              VALUES ($1, 'PENDING_APPROVAL', $2)`,
             [name, JSON.stringify({ email, phone, reason, country })]
         );
-        res.json({ success: true, message: "REQUEST_LOGGED: Wait for Admin Dispatch." });
+        res.json({ success: true, message: "REQUEST_LOGGED: Awaiting Admin Dispatch." });
     } catch (err) {
         res.status(500).json({ error: "REGISTRATION_FAULT" });
     }
 });
 
-// B. VERIFY & PROVISION (FINAL BINDING)
+// --- FORM B: VERIFY & PROVISION (With Shell Logic) ---
+// Handle Verify & Provision
 app.post('/api/spacs/verify-provision', async (req, res) => {
-    const { license, membership_no, hw_id, arch } = req.body;
+    const { license, membership_no, hw_id, arch, name, phone, email, country } = req.body;
 
     try {
-        // 1. Check if License and Member No. exist and are valid
-        // Note: In production, you'd have a 'license_keys' table linked to 'person'
-        const userCheck = await pool.query(
-            `SELECT p.id, p.user_name FROM person p 
-             WHERE p.membership_no = $1 AND p.license_key = $2`,
-            [membership_no, license]
-        );
+        // 1. HARDWARE REGISTRY (Ensures fingerprint exists in security_device)
+        let device = await pool.query('SELECT id FROM security_device WHERE device_fingerprint_hash = $1', [hw_id]);
+        if (device.rows.length === 0) {
+            await pool.query('INSERT INTO security_device (device_fingerprint_hash, os_signature) VALUES ($1, $2)', [hw_id, arch]);
+        }
+
+        // 2. STRICT IDENTITY JOIN (Matches Person + Email + Phone)
+        const userQuery = `
+            SELECT p.id FROM person p
+            JOIN contact_information c_email ON p.id = c_email.person_id
+            JOIN contact_information c_phone ON p.id = c_phone.person_id
+            WHERE p.membership_no = $1 
+              AND p.license_key = $2
+              AND p.official_name ILIKE $3
+              AND p.country ILIKE $4
+              AND c_email.contact_value = $5 
+              AND c_phone.contact_value = $6
+        `;
+        
+        const userCheck = await pool.query(userQuery, [membership_no, license, `%${name}%`, country, email, phone]);
 
         if (userCheck.rows.length === 0) {
-            return res.status(403).json({ error: "INVALID_CREDENTIALS" });
+            return res.status(403).json({ error: "VERIFICATION_FAILED: Identity or Contact details mismatch." });
         }
 
         const personId = userCheck.rows[0].id;
 
-        // 2. Bind the Hardware
+        // 3. BIND PERSON TO HARDWARE
         await pool.query(
-            `UPDATE security_device 
-             SET person_id = $1, enclave_attested = TRUE, os_signature = $2 
-             WHERE device_fingerprint_hash = $3`,
-            [personId, arch, hw_id]
+            `UPDATE security_device SET person_id = $1, enclave_attested = TRUE WHERE device_fingerprint_hash = $2`,
+            [personId, hw_id]
         );
 
-        // 3. Check for Shell Availability (Logic for your question)
-        const shellCheck = await pool.query(`SELECT download_url FROM platform WHERE os_name = $1`, [arch]);
-        const shellUrl = shellCheck.rows[0]?.download_url || null;
+        // 4. DELIVERY FROM operating_system TABLE
+        const download = await pool.query(
+            `SELECT download_url FROM operating_system WHERE os_name ILIKE $1 AND is_active = TRUE`,
+            [`%${arch}%`]
+        );
 
         res.json({ 
             success: true, 
-            shell_download: shellUrl, 
-            message: shellUrl ? "SHELL_FOUND: INITIALIZING_DOWNLOAD" : "WEB_ONLY_PROVISION_COMPLETE" 
+            shell_url: download.rows[0]?.download_url,
+            message: "PROVISION_SUCCESSFUL" 
         });
 
     } catch (err) {
-        res.status(500).json({ error: "PROVISIONING_CRITICAL_FAILURE" });
+        console.error("PROVISION_ERROR:", err);
+        res.status(500).json({ error: "DATABASE_LINK_FAULT" });
     }
 });
 app.listen(3000, () => console.log('Sovereign Link: Port 3000'));

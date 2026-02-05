@@ -11,7 +11,7 @@
 }
 
 :root {
-    --primary-purple: #a445ff;
+    --primary-purple: #461673;
     --bg-black: #050505;
     /* RE-ADDED BORDER CONSTANTS */
     --card-bg: rgba(20, 20, 20, 0.6);
@@ -309,35 +309,203 @@ body {
     z-index: 11000;
 }
 
-.modal-content {
-    background: #0a0a0a;
-    border: 1px solid var(--primary-purple);
-    padding: 30px;
-    width: 90%;
-    max-width: 400px;
-    box-shadow: 0 0 50px rgba(164, 69, 255, 0.3);
+/* --- SOVEREIGN TACTICAL INPUTS --- */
+
+.modal-content input, 
+.modal-content select, 
+.modal-content textarea {
+    background: rgba(255, 255, 255, 0.03) !important;
+    border: 1px solid rgba(164, 69, 255, 0.4) !important;
+    color: #ffffff !important;
+    font-family: 'Sovereign-Mono', monospace;
+    
+    /* 1. Significant Height */
+    min-height: 60px; 
+    padding: 0 25px !important;
+    font-size: 1rem;
+    width: 100%;
+    box-sizing: border-box;
+
+    /* 2. Round Borders */
+    border-radius: 15px !important; 
+    
+    /* 3. Tactical Clip-Path 
+       This cuts a small notch off the bottom-right corner 
+       without destroying the rounded feel of the other three corners. */
+    clip-path: polygon(
+        0% 0%, 
+        100% 0%, 
+        100% 75%, 
+        92% 100%, 
+        0% 100%
+    );
+
+    transition: all 0.3s ease;
+    margin-bottom: 5px;
 }
 
-.modal-content input, .modal-content textarea {
-    width: 100%;
-    padding: 12px;
-    margin-bottom: 10px;
-    background: #111;
-    border: 1px solid #333;
-    color: white;
-    font-family: 'Sovereign-Mono', monospace;
+/* Hover & Focus Effects */
+.modal-content input:focus, 
+.modal-content select:focus {
+    background: rgba(164, 69, 255, 0.1) !important;
+    border-color: var(--primary-purple) !important;
+    box-shadow: 0 0 20px rgba(164, 69, 255, 0.2);
+    outline: none;
+    /* Slightly reduce the clip for a "pushed" feel */
+    clip-path: polygon(0% 0%, 100% 0%, 100% 80%, 95% 100%, 0% 100%);
 }
+
+/* Special fix for the Phone Group to ensure clips don't overlap awkwardly */
+.phone-input-group select {
+    flex: 0 0 120px;
+    clip-path: polygon(0% 0%, 100% 0%, 100% 100%, 0% 100%); /* No clip on the code dropdown */
+    border-radius: 15px 0 0 15px !important; /* Round only left side */
+}
+
+.phone-input-group input {
+    clip-path: polygon(0% 0%, 100% 0%, 100% 75%, 92% 100%, 0% 100%);
+    border-radius: 0 15px 15px 0 !important; /* Round only right side */
+}
+
+/* Textarea needs a different clip-path due to its height */
+.modal-content textarea {
+    min-height: 120px;
+    padding-top: 15px !important;
+    clip-path: polygon(0% 0%, 100% 0%, 100% 90%, 95% 100%, 0% 100%);
+}
+
+/* --- SOVEREIGN TACTICAL BUTTONS --- */
 
 .modal-btn {
     width: 100%;
-    padding: 15px;
-    border: none;
+    min-height: 60px; /* Matching input height */
+    border-radius: 15px !important;
+    font-family: 'Sovereign-Mono', monospace;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 2px;
     cursor: pointer;
-    font-family: 'Sovereign-Sans', sans-serif;
-    font-weight: bold;
+    border: none;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    
+    /* Tactical Clip (Matching inputs) */
+    clip-path: polygon(0% 0%, 100% 0%, 100% 75%, 92% 100%, 0% 100%);
+    
+    display: flex;
+    align-items: center;
+    justify-content: center;
     margin-top: 10px;
 }
 
-.confirm { background: var(--primary-purple); color: black; }
-.interest { background: transparent; border: 1px solid var(--primary-purple); color: var(--primary-purple); }
-.cancel { color: #888; background: transparent; font-size: 0.8rem; }
+/* Specific Button Themes */
+
+.modal-btn.confirm {
+    background: var(--primary-purple);
+    color: #000;
+}
+
+.modal-btn.confirm:hover {
+    background: #1f9141;
+    box-shadow: 0 0 25px var(--primary-purple);
+    transform: translateY(-2px);
+    /* Invert clip-path on hover for a "scan" effect */
+    clip-path: polygon(0% 0%, 92% 0%, 100% 25%, 100% 100%, 0% 100%);
+}
+
+.modal-btn.interest {
+    background: var(--primary-purple);
+    color: #000;
+}
+
+.modal-btn.interest:hover {
+    background: #1f9141;
+    box-shadow: 0 0 25px var(--primary-purple);
+    transform: translateY(-2px);
+    /* Invert clip-path on hover for a "scan" effect */
+    clip-path: polygon(0% 0%, 92% 0%, 100% 25%, 100% 100%, 0% 100%);
+}
+
+/* Button Loading State */
+.modal-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    background: #333;
+    color: #666;
+}
+
+/* --- EXPRESSION OF INTEREST BUTTONS --- */
+
+/* The 'Submit to Admin' button */
+#interest-form .modal-btn.interest {
+    background: var(--primary-purple); /* Give it the same weight as the Confirm button */
+    color: #000;
+    min-height: 60px;
+    border-radius: 15px !important;
+    clip-path: polygon(0% 0%, 100% 0%, 100% 75%, 92% 100%, 0% 100%);
+    font-weight: 700;
+    border: none;
+    margin-top: 15px;
+}
+
+#interest-form .modal-btn.interest:hover {
+    background: #308f28;
+    box-shadow: 0 0 25px var(--primary-purple);
+    transform: translateY(-2px);
+    clip-path: polygon(0% 0%, 92% 0%, 100% 25%, 100% 100%, 0% 100%);
+}
+
+/* The 'Cancel' button */
+#interest-form .modal-btn.cancel {
+    background: rgba(255, 69, 69, 0.1);
+    border: 1px solid rgba(255, 69, 69, 0.3);
+    color: #ff4545;
+    min-height: 50px;
+    border-radius: 15px !important;
+    margin-top: 5px;
+    clip-path: none; /* Keep secondary actions simple or use a smaller clip */
+    font-size: 0.85rem;
+    transition: all 0.3s ease;
+}
+
+#interest-form .modal-btn.cancel:hover {
+    background: #ff4545;
+    color: #fff;
+    box-shadow: 0 0 15px rgba(255, 69, 69, 0.3);
+}
+
+/* Ensure the Textarea in Interest Form also matches */
+#interest-form textarea {
+    min-height: 150px;
+    border-radius: 15px !important;
+    padding: 20px !important;
+    clip-path: polygon(0% 0%, 100% 0%, 100% 92%, 96% 100%, 0% 100%);
+}
+
+/* --- SOVEREIGN FORM BORDER & GLOW --- */
+.modal-content {
+    background: rgba(5, 5, 5, 0.98);
+    
+    /* 1. THE MAIN BORDER: Solid and Vibrant */
+    border: 1px solid var(--primary-purple); 
+    
+    /* 2. THE GLOW: Double layer for depth */
+    box-shadow: 
+        0 0 20px rgba(164, 69, 255, 0.3), /* Inner soft glow */
+        0 0 60px rgba(0, 0, 0, 1),        /* Deep shadow for contrast */
+        inset 0 0 15px rgba(164, 69, 255, 0.1); /* Subtle inner-border glow */
+
+    padding: 20px;
+    position: relative;
+    width: 80%;
+    clip-path: polygon(0% 0%, 100% 0%, 100% 97%, 92% 100%, 0% 100%);
+    z-index: 12000;
+}
+
+/* Ensure the form inside doesn't overflow the rounded border */
+.modal-content form {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    width: 100%;
+    overflow: hidden; 
+}
