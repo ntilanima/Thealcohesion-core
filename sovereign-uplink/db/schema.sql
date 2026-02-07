@@ -68,12 +68,12 @@ DROP TABLE IF EXISTS biometric_data CASCADE;
 DROP TABLE IF EXISTS identity_document CASCADE;
 DROP TABLE IF EXISTS person CASCADE;
 DROP TABLE IF EXISTS admin_provision_action CASCADE;
-DROP TABLE IF EXISTS admin_provision_action CASCADE;
 DROP TABLE IF EXISTS security_device CASCADE;
 DROP TABLE IF EXISTS identity_trust_chain CASCADE;
 DROP TABLE IF EXISTS security_session CASCADE;
 DROP TABLE IF EXISTS birthright_claim CASCADE;
 DROP TABLE IF EXISTS offline_provision_packet CASCADE;
+DROP TABLE IF EXISTS operating_system CASCADE;
 
 -- ===========================
 -- Core tables
@@ -91,7 +91,9 @@ CREATE TABLE person (
     membership_no VARCHAR(64) UNIQUE,
     license_key VARCHAR(64) UNIQUE,
     contact_meta JSONB,
-    identity_state TEXT DEFAULT 'INITIAL',
+    identity_state VARCHAR(50) DEFAULT 'PROSPECT' CHECK (identity_state IN ('PROSPECT', 'UNVERIFIED', 'VERIFIED', 'LOCKED', 'REVOKED', 'ACTIVE')),
+    registration_state VARCHAR(50) DEFAULT 'incomplete',
+    declaration_of_intent TEXT,
     is_frozen BOOLEAN DEFAULT FALSE, 
     created_at TIMESTAMP DEFAULT NOW(),
     updated_at TIMESTAMP DEFAULT NOW(),
@@ -100,6 +102,19 @@ CREATE TABLE person (
     binding_date TIMESTAMP,
     failed_attempts INT DEFAULT 0
 );
+
+CREATE TABLE contact_information (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    person_id UUID REFERENCES person(id) ON DELETE CASCADE,
+    contact_type VARCHAR(50), 
+    contact_value VARCHAR(255) UNIQUE NOT NULL, -- Crucial for preventing double registration
+    is_primary BOOLEAN DEFAULT FALSE,
+    verified BOOLEAN DEFAULT FALSE,
+    created_at TIMESTAMP DEFAULT NOW(),
+    updated_at TIMESTAMP DEFAULT NOW()
+);
+ALTER TABLE contact_information ADD CONSTRAINT unique_contact_value UNIQUE (contact_value);
+ALTER TABLE contact_information ADD CONSTRAINT unique_person_contact_type UNIQUE (person_id, contact_type);
 
 
 CREATE TABLE person_security (
@@ -178,14 +193,6 @@ CREATE TABLE address (
     updated_at TIMESTAMP DEFAULT NOW()
 );
 
-CREATE TABLE contact_information (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    person_id UUID REFERENCES person(id) ON DELETE CASCADE,
-    contact_type VARCHAR(50) NOT NULL,
-    contact_value TEXT NOT NULL,
-    created_at TIMESTAMP DEFAULT NOW(),
-    updated_at TIMESTAMP DEFAULT NOW()
-);
 
 CREATE TABLE verification_log (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
@@ -1126,7 +1133,7 @@ CREATE TABLE member_birthright (
 );
 
 CREATE INDEX idx_member_birthright_person_id ON member_birthright(person_id);
-
+ALTER TABLE member_birthright ADD CONSTRAINT unique_person_birthright UNIQUE (person_id);
 
 -- ===========================
 -- SECURITY DEVICES
@@ -1135,10 +1142,11 @@ CREATE INDEX idx_member_birthright_person_id ON member_birthright(person_id);
 CREATE TABLE security_device (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     person_id UUID REFERENCES person(id) ON DELETE CASCADE,
-    device_fingerprint_hash TEXT NOT NULL,
+    device_fingerprint_hash TEXT UNIQUE NOT NULL,
     device_type TEXT,
     os_signature TEXT,
     enclave_attested BOOLEAN DEFAULT FALSE,
+    provision_management VARCHAR(64),
     client_version TEXT,
     first_seen TIMESTAMP DEFAULT NOW(),
     last_seen TIMESTAMP,
@@ -1147,6 +1155,7 @@ CREATE TABLE security_device (
     created_at TIMESTAMP DEFAULT NOW()
 );
 CREATE INDEX idx_security_device_fingerprint ON security_device(device_fingerprint_hash);  
+
 
 -- ===========================
 -- IDENTITY TRUST CHAIN

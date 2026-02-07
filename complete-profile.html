@@ -1,0 +1,509 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sovereign | Identity Ingress</title>
+    <link rel="stylesheet" href="./download.css">
+    <style>
+        :root {
+            --neon-green: #00ff88;
+            --sov-purple: #461673;
+            --deep-bg: #020202;
+            --panel-bg: rgba(5, 5, 5, 0.95);
+        }
+
+        body {
+            margin: 0; padding: 0;
+            background: var(--deep-bg);
+            color: white;
+            font-family: 'Sovereign-Mono', monospace;
+            height: 100vh;
+            display: flex; justify-content: center; align-items: center;
+            overflow: hidden;
+        }
+
+        /* Scanline Effect */
+        body::before {
+            content: " ";
+            position: absolute; inset: 0;
+            background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%), 
+                        linear-gradient(90deg, rgba(255, 0, 0, 0.06), rgba(0, 255, 0, 0.02), rgba(0, 0, 255, 0.06));
+            background-size: 100% 2px, 3px 100%;
+            pointer-events: none; z-index: 1000;
+        }
+
+        .ingress-steps {
+            position: absolute; top: 5%;
+            display: flex; gap: 40px;
+        }
+        .step {
+            font-size: 0.7rem; color: #333;
+            letter-spacing: 2px; position: relative;
+        }
+        .step.active { color: var(--neon-green); text-shadow: 0 0 10px var(--neon-green); }
+        .step.active::after {
+            content: ""; position: absolute; bottom: -10px; left: 0; width: 100%;
+            height: 2px; background: var(--neon-green); box-shadow: 0 0 10px var(--neon-green);
+        }
+
+        .module-stack { position: relative; width: 600px; height: 500px; }
+        #sov-notification {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            
+            width: 90%;
+            max-width: 450px;
+            min-height: 200px;
+            z-index: 9999; /* Higher than modules */
+            
+            /* Layout when active */
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+            
+            background: #050505;
+            border: 2px solid var(--neon-green);
+            box-shadow: 0 0 100px #000, 0 0 30px rgba(0, 255, 136, 0.4);
+            text-align: center;
+            clip-path: polygon(10% 0, 100% 0, 100% 90%, 90% 100%, 0 100%, 0 10%);
+        }
+
+        #sov-title {
+            font-size: 1.1rem;
+            margin-bottom: 15px;
+            letter-spacing: 3px;
+            font-weight: bold;
+        }
+
+        #sov-message {
+            font-size: 0.8rem;
+            color: #ffffff;
+            margin-bottom: 25px;
+            line-height: 1.6;
+        }
+        .ingress-module {
+            position: absolute; inset: 0;
+            background: var(--panel-bg);
+            border: 1px solid var(--sov-purple);
+            box-shadow: inset 0 0 20px rgba(70, 22, 115, 0.4);
+            padding: 40px;
+            display: flex; flex-direction: column;
+            opacity: 0; transform: scale(0.9) translateX(50px);
+            transition: all 0.5s cubic-bezier(0.19, 1, 0.22, 1);
+            pointer-events: none;
+            clip-path: polygon(10% 0, 100% 0, 100% 90%, 90% 100%, 0 100%, 0 10%);
+        }
+
+        .ingress-module.active { opacity: 1; transform: scale(1) translateX(0); pointer-events: auto; }
+
+
+
+        .sov-field { margin-bottom: 25px; position: relative; }
+        .sov-field label {
+            display: block; font-size: 0.6rem; color: var(--neon-green);
+            margin-bottom: 10px; text-transform: uppercase; letter-spacing: 2px;
+        }
+        .sov-input {
+            width: 100%; background: rgba(0, 0, 0, 0.8); border: 1px solid #222;
+            padding: 15px; color: #fff; font-family: 'Sovereign-Mono';
+            font-size: 0.9rem; border-left: 3px solid var(--sov-purple);
+            box-sizing: border-box;
+        }
+        .sov-input:focus { outline: none; border-color: var(--neon-green); background: rgba(0, 255, 136, 0.03); }
+
+        /* --- SOVEREIGN BUTTON CORE --- */
+        .sov-btn {
+            position: relative;
+            padding: 15px 30px;
+            cursor: pointer;
+            font-family: 'Sovereign-Mono', monospace;
+            font-size: 0.8rem;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            transition: all 0.3s cubic-bezier(0.19, 1, 0.22, 1);
+            border: none;
+            outline: none;
+            overflow: hidden;
+        }
+
+        /* --- PRIMARY ACTION (Neon Green) --- */
+        .primary-btn {
+            background: var(--neon-green);
+            color: #000;
+            font-weight: 900;
+            flex: 2;
+            /* Brutalist clipped corner */
+            clip-path: polygon(0 0, 100% 0, 100% 70%, 85% 100%, 0 100%);
+        }
+
+        .primary-btn:hover:not(:disabled) {
+            background: #fff;
+            box-shadow: 0 0 20px var(--neon-green);
+            transform: translateY(-2px);
+        }
+
+        .primary-btn:active {
+            transform: translateY(1px);
+            filter: brightness(0.8);
+        }
+
+        .primary-btn:disabled {
+            background: #1a1a1a;
+            color: #444;
+            cursor: not-allowed;
+            clip-path: none;
+        }
+
+        /* --- BACK/SECONDARY ACTION (Stealth) --- */
+        .back-btn {
+            background: rgba(255, 255, 255, 0.05);
+            color: #666;
+            border: 1px solid #222;
+            flex: 1;
+            clip-path: polygon(15% 0, 100% 0, 100% 100%, 0 100%, 0 30%);
+        }
+
+        .back-btn:hover {
+            color: #fff;
+            border-color: #444;
+            background: rgba(255, 255, 255, 0.1);
+        }
+
+        /* --- BUTTON GLITCH EFFECT (Optional) --- */
+        .primary-btn::after {
+            content: "READY";
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: var(--neon-green);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            opacity: 0;
+        }
+
+        .primary-btn:hover::after {
+            animation: glitch-btn 0.3s infinite;
+        }
+
+        @keyframes glitch-btn {
+            0% { opacity: 0.1; transform: translateX(-2px); }
+            50% { opacity: 0.2; transform: translateX(2px); }
+            100% { opacity: 0; }
+        }
+
+        /* --- LAYOUT ADJUSTMENT --- */
+        .action-row {
+            display: flex;
+            gap: 15px;
+            margin-top: auto; /* Pushes buttons to bottom of card */
+            padding-top: 20px;
+        }
+
+        /* --- THE MODAL DISMISS BUTTON --- */
+#sov-notification button {
+    margin-top: 10px;
+    background: transparent;
+    border: 1px solid #333; /* Dark border by default */
+    color: #666; /* Dimmed text */
+    padding: 12px 25px;
+    cursor: pointer;
+    font-family: 'Sovereign-Mono', monospace;
+    font-size: 0.7rem;
+    text-transform: uppercase;
+    letter-spacing: 3px;
+    transition: all 0.3s ease;
+    
+    /* Clipped corner for the modal button */
+    clip-path: polygon(0 0, 100% 0, 100% 100%, 15% 100%, 0 70%);
+    
+    /* Ensure it's clickable */
+    pointer-events: auto;
+    position: relative;
+    z-index: 3001;
+}
+
+#sov-notification button:hover {
+    color: var(--neon-green);
+    border-color: var(--neon-green);
+    background: rgba(0, 255, 136, 0.05);
+    box-shadow: 0 0 15px rgba(0, 255, 136, 0.2);
+    transform: translateY(-2px);
+}
+
+#sov-notification button:active {
+    transform: translateY(0);
+    filter: brightness(1.5);
+}
+
+/* Optional: Add a small [ ] bracket feel around the text */
+#sov-notification button::before {
+    content: "[ ";
+    opacity: 0.5;
+}
+
+#sov-notification button::after {
+    content: " ]";
+    opacity: 0.5;
+}
+        </style>
+</head>
+<body class="sovereign-theme">
+    <div class="background-glow"></div>
+
+    <nav class="ingress-steps">
+        <span class="step active" id="s1">01_SECURITY</span>
+        <span class="step" id="s2">02_BIO_HANDSHAKE</span>
+        <span class="step" id="s3">03_CORE_ALIAS</span>
+        <span class="step" id="s4">04_ENCLAVE_INIT</span>
+    </nav>
+
+    <div class="module-stack">
+            <div id="sov-notification" style="display: none;">
+                <div id="sov-title"></div>
+                <div id="sov-message"></div>
+                <button onclick="closeSovModal()">[ DISMISS_PROTOCOL ]</button>
+            </div>
+        <div class="ingress-module active" id="mod-1">
+            <h2 style="margin: 0; font-size: 1.2rem; color: #fff;">[ MODULE: SECURITY_ENCRYPTION ]</h2>
+            <p style="color: #666; font-size: 0.7rem; margin-bottom: 40px;">Initialize your local access hash.</p>
+            <div class="sov-field">
+                <label>ENCLAVE_PASSPHRASE</label>
+                <input type="password" id="p-pass" class="sov-input" placeholder="********">
+            </div>
+            <div class="sov-field">
+                <label>RE_VERIFY_PASSPHRASE</label>
+                <input type="password" id="p-confirm" class="sov-input" placeholder="********">
+            </div>
+            <div class="action-row">
+                <button class="sov-btn primary-btn" onclick="navTo(2)">Lock Security Layer</button>
+            </div>
+        </div>
+
+        <div class="ingress-module" id="mod-2">
+            <h2 style="margin: 0; font-size: 1.2rem; color: #fff;">[ MODULE: BIO_PARAMETERS ]</h2>
+            <p style="color: #666; font-size: 0.7rem; margin-bottom: 30px;">Syncing biological time-stamps.</p>
+            <div style="text-align: center; margin-bottom: 20px;">
+                <div class="avatar-upload" onclick="document.getElementById('avatar-input').click()" style="width: 100px; height: 100px; border: 1px solid var(--sov-purple); margin: 0 auto; display: flex; align-items: center; justify-content: center; background: #000; cursor: pointer;">
+                    <span id="up-hint" style="font-size: 0.5rem; color: var(--neon-green);">[ UPLOAD_AVATAR ]</span>
+                    <img id="avatar-preview" style="width:100%; height:100%; object-fit:cover; display:none;">
+                </div>
+                <input type="file" id="avatar-input" hidden accept="image/*">
+            </div>
+            <div class="sov-field">
+                <label>GENESIS_DATE (DOB)</label>
+                <input type="date" id="p-dob" class="sov-input" style="color-scheme: dark;">
+                <small id="age-feedback" style="color: #444; font-size: 0.6rem; display: block; margin-top: 5px;">[ AWAITING_DATE ]</small>
+            </div>
+            <div class="action-row">
+                <button class="sov-btn back-btn" onclick="navTo(1)">BACK</button>
+                <button class="sov-btn primary-btn" onclick="navTo(3)">Initialize Bio-Sync</button>
+            </div>
+        </div>
+
+        <div class="ingress-module" id="mod-3">
+            <h2 style="margin: 0; font-size: 1.2rem; color: #fff;">[ MODULE: CORE_REGISTRY ]</h2>
+            <p style="color: #666; font-size: 0.7rem; margin-bottom: 40px;">Assign identity to global schema.</p>
+            <div class="sov-field">
+                <label>NATIVE_ALIAS (user_name)</label>
+                <input type="text" id="p-username" class="sov-input" placeholder="Enter Alias...">
+            </div>
+            <div class="sov-field">
+                <label>GENDER_PROTOCOL</label>
+                <select id="p-gender" class="sov-input">
+                    <option value="Not Set">AWAITING_INPUT...</option>
+                    <option value="Male">MALE</option>
+                    <option value="Female">FEMALE</option>
+                    <option value="Other">OTHER</option>
+                </select>
+            </div>
+            <div class="action-row">
+                <button class="sov-btn back-btn" onclick="navTo(2)">BACK</button>
+                <button class="sov-btn primary-btn" onclick="navTo(4)">Verify Registry</button>
+            </div>
+        </div>
+
+        <div class="ingress-module" id="mod-4">
+            <h2 style="margin: 0; font-size: 1.2rem; color: #fff;">[ MODULE: FINAL_HANDSHAKE ]</h2>
+            <p style="color: #666; font-size: 0.7rem; margin-bottom: 40px;">Final integration parameters.</p>
+            <div class="sov-field">
+                <label>SERVICE_TITLES</label>
+                <input type="text" id="p-titles" class="sov-input" placeholder="Engineer, Founder...">
+            </div>
+            <div class="sov-field">
+                <label>NATIVE_MANIFESTO (BIO)</label>
+                <textarea id="p-bio" class="sov-input" style="height: 80px; resize: none;"></textarea>
+            </div>
+            <div class="action-row">
+                <button class="sov-btn back-btn" onclick="navTo(3)">BACK</button>
+                <button class="sov-btn primary-btn" id="final-btn" onclick="finalizeIngress()">Execute Ingress</button>
+            </div>
+        </div>
+    </div>
+    <script>
+    // GATED NAVIGATION: Prevents moving forward if the current module is invalid
+    function navTo(step) {
+        const currentActive = document.querySelector('.ingress-module.active').id;
+        const currentStepNum = parseInt(currentActive.split('-')[1]);
+
+        // Only validate if trying to go FORWARD
+        if (step > currentStepNum) {
+            if (!validateModule(currentStepNum)) return;
+        }
+
+        // UI Switch
+        document.querySelectorAll('.ingress-module').forEach(m => m.classList.remove('active'));
+        document.getElementById(`mod-${step}`).classList.add('active');
+        
+        // Nav Switch
+        document.querySelectorAll('.step').forEach((s, idx) => {
+            s.classList.toggle('active', (idx + 1) === step);
+        });
+    }
+
+    // MODULE VALIDATION ENGINE
+    function validateModule(step) {
+        switch(step) {
+            case 1: // Security Gate
+                const pass = document.getElementById('p-pass').value;
+                const confirm = document.getElementById('p-confirm').value;
+                if (pass.length < 8) {
+                    showSovModal("VALIDATION_ERROR", "Passphrase must be at least 8 characters.", "#ff4444");
+                    return false;
+                }
+                if (pass !== confirm) {
+                    showSovModal("VALIDATION_ERROR", "Passphrase mismatch detected.", "#ff4444");
+                    return false;
+                }
+                return true;
+
+            case 2: // Bio Gate
+                const dob = document.getElementById('p-dob').value;
+                const avatar = document.getElementById('avatar-preview').src;
+                if (!dob) {
+                    showSovModal("VALIDATION_ERROR", "Genesis Date (DOB) is required for time-stamping.", "#ff4444");
+                    return false;
+                }
+                if (!avatar || avatar === window.location.href) { // Check if default/empty
+                    showSovModal("VALIDATION_ERROR", "Bio-visual (Avatar) missing.", "#ff4444");
+                    return false;
+                }
+                return true;
+
+            case 3: // Registry Gate
+                const alias = document.getElementById('p-username').value;
+                const gender = document.getElementById('p-gender').value;
+                if (alias.length < 3) {
+                    showSovModal("VALIDATION_ERROR", "Native Alias too short (min 3 characters).", "#ff4444");
+                    return false;
+                }
+                if (gender === "Not Set") {
+                    showSovModal("VALIDATION_ERROR", "Gender protocol must be defined.", "#ff4444");
+                    return false;
+                }
+                return true;
+
+            default:
+                return true;
+        }
+    }
+
+    // AVATAR PREVIEW
+    document.getElementById('avatar-input').onchange = (e) => {
+    const file = e.target.files[0];
+    const reader = new FileReader();
+
+    reader.onload = (event) => {
+        const img = new Image();
+        img.onload = () => {
+            const canvas = document.createElement('canvas');
+            const MAX_WIDTH = 400; // Shrink to 400px width
+            const scale = MAX_WIDTH / img.width;
+            canvas.width = MAX_WIDTH;
+            canvas.height = img.height * scale;
+
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+
+            // Export as low-quality JPEG to save space
+            const compressedBase64 = canvas.toDataURL('image/jpeg', 0.7);
+            
+            const preview = document.getElementById('avatar-preview');
+            preview.src = compressedBase64;
+            preview.style.display = 'block';
+            document.getElementById('up-hint').style.display = 'none';
+        };
+        img.src = event.target.result;
+    };
+    reader.readAsDataURL(file);
+};
+
+    // AGE FEEDBACK
+    document.getElementById('p-dob').addEventListener('input', function(e) {
+        const dob = new Date(e.target.value);
+        const today = new Date();
+        const feedback = document.getElementById('age-feedback');
+        if (dob > today) {
+            feedback.innerText = "[ ERROR: INVALID_DATE ]";
+            feedback.style.color = "#ff4444";
+            return;
+        }
+        let age = today.getFullYear() - dob.getFullYear();
+        feedback.innerText = `[ AGE_CONFIRMED: ${age} CYCLES ]`;
+        feedback.style.color = "#00ff88";
+    });
+
+    // FINAL UPLINK
+    async function finalizeIngress() {
+        // Final sanity check
+        const bio = document.getElementById('p-bio').value;
+        if (bio.length < 10) {
+            showSovModal("VALIDATION_ERROR", "Native Manifesto (Bio) is too brief.", "#ff4444");
+            return;
+        }
+
+        const btn = document.getElementById('final-btn');
+        btn.innerText = "WRITING_TO_CORE...";
+        btn.disabled = true;
+
+        const payload = {
+            hw_id: localStorage.getItem('vpu_hw_id'),
+            password: document.getElementById('p-pass').value,
+            user_name: document.getElementById('p-username').value,
+            date_of_birth: document.getElementById('p-dob').value,
+            gender: document.getElementById('p-gender').value,
+            bio: bio,
+            titles: document.getElementById('p-titles').value.split(',').map(t => t.trim()),
+            avatar: document.getElementById('avatar-preview').src
+        };
+
+        try {
+            const response = await fetch('http://localhost:3000/api/spacs/complete-profile', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+
+            const result = await response.json();
+
+            if (response.ok) {
+                showSovModal("INGRESS_SUCCESS", "Identity written to Sovereign Core.", "#00ff88");
+                setTimeout(() => {
+                    window.location.href = '/Thealcohesion-core/index.html';
+                }, 2000);
+            } else {
+                throw new Error(result.error || "Uplink Interrupted");
+            }
+        } catch (err) {
+            showSovModal("DATABASE_ERROR", err.message, "#ff4444");
+            btn.disabled = false;
+            btn.innerText = "RETRY_INGRESS";
+        }
+    }
+</script>
+<script src="./loading.js"></script>
+</body>
+</html>

@@ -481,31 +481,3 @@ body {
     clip-path: polygon(0% 0%, 100% 0%, 100% 92%, 96% 100%, 0% 100%);
 }
 
-/* --- SOVEREIGN FORM BORDER & GLOW --- */
-.modal-content {
-    background: rgba(5, 5, 5, 0.98);
-    
-    /* 1. THE MAIN BORDER: Solid and Vibrant */
-    border: 1px solid var(--primary-purple); 
-    
-    /* 2. THE GLOW: Double layer for depth */
-    box-shadow: 
-        0 0 20px rgba(164, 69, 255, 0.3), /* Inner soft glow */
-        0 0 60px rgba(0, 0, 0, 1),        /* Deep shadow for contrast */
-        inset 0 0 15px rgba(164, 69, 255, 0.1); /* Subtle inner-border glow */
-
-    padding: 20px;
-    position: relative;
-    width: 80%;
-    clip-path: polygon(0% 0%, 100% 0%, 100% 97%, 92% 100%, 0% 100%);
-    z-index: 12000;
-}
-
-/* Ensure the form inside doesn't overflow the rounded border */
-.modal-content form {
-    display: flex;
-    flex-direction: column;
-    gap: 2px;
-    width: 100%;
-    overflow: hidden; 
-}

@@ -1,0 +1,308 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sovereign Registry | Pending</title>
+    <link rel="stylesheet" href="./download.css">
+    <style>
+        :root {
+            --neon-green: #00ff88;
+        }
+
+        body, html {
+            margin: 0;
+            padding: 0;
+            overflow-x: hidden;
+            background: #020202;
+        }
+
+        .pending-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            text-align: center;
+            padding: 10px;
+            box-sizing: border-box;
+        }
+
+        .status-box {
+            border: 1px solid var(--neon-green);
+            padding: 40px 20px;
+            width: 99%;
+            max-width: 600px;
+            background: rgba(0, 255, 136, 0.05);
+            box-shadow: 0 0 30px rgba(0, 255, 136, 0.1);
+            position: relative;
+            box-sizing: border-box;
+            /* Adaptive clip-path */
+            clip-path: polygon(30px 0, 100% 0, 100% calc(100% - 30px), calc(100% - 30px) 100%, 0 100%, 0 30px);
+        }
+
+        .pulsing-text {
+            color: var(--neon-green);
+            animation: pulse 2s infinite;
+            word-wrap: break-word;
+            font-size: clamp(1.0rem, 3vw, 1.2rem);
+            margin: 0;
+        }
+
+        .allotment-info {
+            margin: 20px 0;
+            padding: 15px;
+            border-left: 3px solid var(--neon-green);
+            text-align: left;
+            background: rgba(0,0,0,0.4);
+        }
+
+        #system-log {
+            height: 80px;
+            overflow: hidden;
+            background: #000;
+            font-family: 'Sovereign-Mono', monospace;
+            font-size: 0.7rem;
+            color: #444;
+            padding: 12px;
+            margin-bottom: 20px;
+            text-align: left;
+            border: 1px solid #111;
+        }
+
+        .action-row {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+            width: 100%;
+        }
+
+        .bottom-meta {
+            position: fixed;
+            bottom: 20px;
+            font-size: clamp(7px, 2vw, 9px);
+            color: #333;
+            letter-spacing: 4px;
+            text-align: center;
+            width: 100%;
+            pointer-events: none;
+        }
+
+        .live-indicator {
+            display: inline-block;
+            width: 6px;
+            height: 6px;
+            background: var(--neon-green);
+            border-radius: 50%;
+            margin-right: 8px;
+            box-shadow: 0 0 8px var(--neon-green);
+            animation: blink 1s step-end infinite;
+        }
+
+@keyframes blink {
+    50% { opacity: 0; }
+}
+
+        /* MOBILE OPTIMIZATION */
+        @media (max-width: 480px) {
+            .status-box {
+                padding: 30px 20px;
+                clip-path: polygon(15px 0, 100% 0, 100% calc(100% - 15px), calc(100% - 15px) 100%, 0 100%, 0 15px);
+            }
+
+            .allotment-info div {
+                font-size: 0.7rem !important;
+            }
+
+            .action-row {
+                flex-direction: column;
+            }
+
+            .modal-btn {
+                width: 100%;
+                padding: 15px !important;
+            }
+
+            .pending-container {
+                justify-content: flex-start;
+                padding-top: 60px;
+            }
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; filter: brightness(1); }
+            50% { opacity: 0.6; filter: brightness(1.5); }
+        }
+    </style>
+</head>
+<body class="sovereign-theme">
+    <div class="background-glow"></div>
+    
+    <div class="scanline"></div>
+
+    <main class="pending-container">
+        <div id="sov-notification" style="display: none; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); z-index: 10000; flex-direction: column; align-items: center; justify-content: center; background: #050505; border: 1px solid var(--neon-green); padding: 30px; text-align: center; width: 85%; max-width: 400px; box-shadow: 0 0 100px rgba(0,0,0,1); clip-path: polygon(10% 0, 100% 0, 100% 90%, 90% 100%, 0 100%, 0 10%);">
+            <div id="sov-title" style="font-family: 'Sovereign-Mono', monospace; text-transform: uppercase; letter-spacing: 2px; margin-bottom: 10px;"></div>
+            <div id="sov-message" style="font-size: 0.8rem; color: #fff; margin-bottom: 20px; font-family: 'Sovereign-Mono', monospace;"></div>
+            <button id="modal-close-btn" onclick="document.getElementById('sov-notification').style.display='none'" style="background: transparent; border: 1px solid #333; color: #666; padding: 10px 20px; cursor: pointer; font-family: 'Sovereign-Mono'; font-size: 0.6rem;">[ DISMISS_PROTOCOL ]</button>
+        </div>
+        <div class="status-box modal-content" style="clip-path: polygon(5% 0, 100% 0, 100% 90%, 95% 100%, 0 100%, 0 10%);">
+            <h1 class="pulsing-text">> IDENTITY_PENDING</h1>
+            
+            <div class="allotment-info" style="margin: 20px 0; padding: 15px; border-left: 3px solid #00ff88; text-align: left; background: rgba(0,0,0,0.3);">
+                <div style="font-size: 0.6rem; color: #00ff88; letter-spacing: 2px;">[ VERIFICATION_CRITERIA ]</div>
+                <div style="font-size: 0.8rem; color: #fff; margin-top: 5px;">
+                    PROTOCOL: NATIVE_VERIFICATION <br>
+                    NATIVE: NATIVE REGISTRATION CONFIRMATION
+                </div>
+            </div>
+
+            <p style="font-size: 1rem; margin: 20px 0; color: #ccc;">Registry received. Your identity is currently held in the <strong>Sovereign Buffer</strong>.</p>
+            
+            <div id="system-log" style="height: 60px; overflow: hidden; background: #000; font-family: 'Sovereign-Mono', monospace; font-size: 0.6rem; color: #444; padding: 10px; margin-bottom: 20px; text-align: left;">
+                <div>> Pinging Sovereign Core...</div>
+                <div>> Syncing with REGISTRY Oracle...</div>
+                <div class="pulsing-text">> Awaiting Native Handshake...</div>
+            </div>
+
+            <p style="color: #666; font-size: 0.8rem;">Once citizenship is approved by the administrative node, your Membership_number and License Key will be generated and send to your registered email address.</p>
+            
+            <hr style="border: 0; border-top: 1px solid rgba(0,255,136,0.1); margin: 30px 0;">
+            
+            <div class="action-row" style="display: flex; gap: 10px; justify-content: center;">
+                <button id="sync-btn" onclick="manualSync()" class="modal-btn" style="border: 1px solid #00ff88; background: rgba(0,255,136,0.1); color: #00ff88; padding: 12px 25px; cursor: pointer; font-family: 'Sovereign-Mono'; text-transform: uppercase; font-size: 0.7rem;">
+                   <div class="live-indicator"></div> Sync Status
+                </button>
+            </div>
+        </div>
+
+        <div style="position: fixed; bottom: 20px; font-size: 9px; color: #333; letter-spacing: 4px;">
+            SOV_OS // REGISTERED_TO_LOCAL_NODE // PHASE_01_CITIZENSHIP_PENDING_APPROVAL.
+        </div>
+    </main>
+
+    <script>
+        // Simple log animator to make the page feel "Alive"
+        const log = document.getElementById('system-log');
+        const messages = [
+            "> Requesting Citizenship from REGISTRY...",
+            "> Scanning Registry Buffer...",
+            "> Validating Bio-Hash...",
+            "> Awaiting Admin Signal...",
+            "> Node: 0x1226 responding...",
+            "> Packet loss: 0.00%..."
+        ];
+        
+        setInterval(() => {
+            const div = document.createElement('div');
+            div.innerText = messages[Math.floor(Math.random() * messages.length)];
+            log.prepend(div);
+            if (log.children.length > 5) log.lastChild.remove();
+        }, 3000);
+
+        let isSyncing = false;
+
+        async function manualSync() {
+        if (isSyncing) return;
+        
+        const btn = document.getElementById('sync-btn');
+        const originalHTML = btn.innerHTML; // Store HTML to keep the live-indicator
+        
+        isSyncing = true;
+        btn.innerHTML = '<div class="live-indicator"></div> RESYNCING...';
+        btn.style.opacity = "0.7";
+
+        await checkAllotmentStatus(true); 
+
+        setTimeout(() => {
+            btn.innerHTML = originalHTML; // Restore the dot and text
+            btn.style.opacity = "1";
+            isSyncing = false;
+        }, 2000);
+    }
+
+async function checkAllotmentStatus(isManual = false) {
+    const hw_id = localStorage.getItem('vpu_hw_id');
+    if (!hw_id) {
+        if (isManual) showSovModal("ERROR", "No Hardware ID detected. Restarting Ingress.", "#ff4444");
+        return false;
+    }
+
+    try {
+        const response = await fetch(`http://localhost:3000/api/spacs/check-status?hw_id=${hw_id}`);
+        
+        // Handle the 404 you were getting
+        if (response.status === 404) {
+            if (isManual) {
+                showSovModal("REGISTRY_ERROR", "Identity not found in database. Please ensure your registration was successful.", "#ff4444");
+            }
+            return false;
+        }
+
+        const data = await response.json();
+
+        // 1. Success: identity_state is 'verified'
+        if (data.status === 'APPROVED') {
+            const log = document.getElementById('system-log');
+            const msg = document.createElement('div');
+            msg.style.color = "#00ff88";
+            msg.innerText = "> IDENTITY_STATE: VERIFIED. REDIRECTING...";
+            log.prepend(msg);
+
+            setTimeout(() => {
+                window.location.href = './download.html';
+            }, 2000);
+            return true;
+        } 
+        
+        // 2. Pending: identity_state is 'unverified'
+        if (isManual && data.status === 'PENDING') {
+            showSovModal(
+                "ALLOTMENT_IN_PROGRESS", 
+                "Your identity is currently [unverified]. Please remain patient while EPOS and Investors finalize the initial allotment.", 
+                "#888"
+            );
+        }
+        return false;
+
+    } catch (err) {
+        console.error("Uplink jitter:", err);
+        if (isManual) showSovModal("UPLINK_ERROR", "Could not reach the Sovereign Core. Check if server is running on port 3000.", "#ff4444");
+        return false;
+    }
+}
+
+// Keep the background auto-check running every 15 seconds
+setInterval(() => checkAllotmentStatus(false), 15000);
+
+function showSovModal(title, message, color) {
+    const modal = document.getElementById('sov-notification');
+    const t = document.getElementById('sov-title');
+    const m = document.getElementById('sov-message');
+    const btn = document.getElementById('modal-close-btn');
+    
+    if (modal && t && m) {
+        t.innerText = title;
+        t.style.color = color;
+        m.innerText = message;
+        modal.style.display = 'flex';
+
+        // AUTO-CLOSE TIMER: 5 Seconds
+        let count = 5;
+        const btn = modal.querySelector('button');
+        const originalBtnText = "[ DISMISS_PROTOCOL ]";
+
+        const timer = setInterval(() => {
+            count--;
+            btn.innerText = `[ DISMISSING IN ${count} ]`;
+            if (count <= 0) {
+                clearInterval(timer);
+                modal.style.display = 'none';
+                btn.innerText = originalBtnText;
+            }
+        }, 1000);
+    }
+}
+    </script>
+</body>
+</html>

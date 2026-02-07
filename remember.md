@@ -25,3 +25,38 @@ Security Observations
     Bridge Resiliency: If the bridge is offline, the sniffer catches the fetch error and displays "BRIDGE_OFFLINE" rather than crashing the frontend.
 
     Silent Enrollment: If a machine is unknown, it is silently inserted into the security_device table with enclave_attested = FALSE, allowing administrators to review new candidates.
+
+
+
+
+
+Technical Breakdown of the Gates
+1. The Sniffer Decision (landing.js & vpu-bridge.js)
+
+    The sniffer captures a hardware fingerprint using generateLocalFingerprint() and sends it to the bridge.
+
+    The bridge queries the security_device table (linked to the person table via person_id).
+
+    If the user is found but marked as is_frozen in the person table, the sniffer rejects the probe entirely.
+
+2. The Approval Loop (waiting-approval.html)
+
+    While on this page, the frontend polls the /api/spacs/check-status endpoint.
+
+    The bridge checks the identity_state for the person bound to that hardware.
+
+    If the state is 'ACTIVE' or 'verified', the bridge returns status: 'APPROVED', triggering the jump to /complete-profile.html.
+
+3. The Provisioning Handshake (complete-profile.html)
+
+    This is the "Final Sync" gate.
+
+    Once bio-data and a password hash are saved to the person and person_security tables, the provision_stage is updated to 'COMPLETE'.
+
+    This transition allows the Sniffer to finally authorize entry to /Thealcohesion-core/index.html.
+
+4. Security Enforcement (vpu-bridge.js)
+
+    If the bound_machine_id in the person table does not match the machineFingerprint sent during login, the system increments failed_attempts.
+
+    After 3 failed hardware matches, the is_frozen flag is set to TRUE, locking the identity out of all target URLs.

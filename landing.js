@@ -119,30 +119,28 @@ async function generateLocalFingerprint() {
 
 
 /* === SOVEREIGN SNIFFER: ORCHESTRATED EXECUTION === */
+/* === SOVEREIGN SNIFFER: ORCHESTRATED EXECUTION (LEAN SPACS) === */
 
 async function runSovereignSniffer(btn) {
     // 1. Initial UI Transition
     btn.innerHTML = `<span class="text">ACCESSING_VPU_KERNEL...</span>`;
-    await new Promise(r => setTimeout(r, 800));
+    await new Promise(r => setTimeout(r, 600));
     
-    btn.innerHTML = `<span class="text">ISOLATING_HARDWARE_SIG...</span>`;
-    await new Promise(r => setTimeout(r, 800));
-
-    // 2. Inject High-End HUD
+    // 2. Inject High-End HUD Overlay
     const overlay = document.createElement('div');
     overlay.id = 'sniffer-overlay';
     overlay.innerHTML = `
         <div class="hud-noise"></div>
         <div class="scanner-bar"></div>
         <div class="sniffer-hud">
-            <div class="status-title">SOVEREIGN_SNIFFER</div>
+            <div class="status-title">SOVEREIGN_SNIFFER_v2.6</div>
             <div class="sniffer-log" id="sniffer-log"></div>
         </div>
     `;
     document.body.appendChild(overlay);
 
     const log = document.getElementById('sniffer-log');
-    const addLog = async (msg, type = '', delay = 600) => {
+    const addLog = async (msg, type = '', delay = 500) => {
         const div = document.createElement('div');
         div.className = type;
         div.innerText = `[${new Date().toLocaleTimeString().split(' ')[0]}] ${msg}`;
@@ -152,112 +150,77 @@ async function runSovereignSniffer(btn) {
     };
 
     try {
-        // Step 1: Local Forensic Layer
-        await addLog("INITIALIZING_FORENSIC_BUFFER...", "", 1000);
+        // --- STAGE 1: HARDWARE PROBE ---
+        await addLog("INITIALIZING_FORENSIC_BUFFER...", "", 800);
         const hwFingerprint = await generateLocalFingerprint(); 
         const currentPlatform = detectProvisionManagement().toLowerCase(); 
 
-        await addLog(`MACHINE_ID: ${hwFingerprint.substring(0, 24)}...`, "success", 800);
-        await addLog(`LOCAL_ARCH: ${currentPlatform.toUpperCase()}`, "success", 800);
+        await addLog(`MACHINE_ID: ${hwFingerprint.substring(0, 24)}...`, "success", 600);
+        await addLog(`LOCAL_ARCH: ${currentPlatform.toUpperCase()}`, "success", 600);
 
-        // Step 2: Network Handshake
-        await addLog("UPLINKING_TO_VPU_BRIDGE...", "", 1200);
+        // --- STAGE 2: UPLINK ---
+        await addLog("UPLINKING_TO_VPU_BRIDGE...", "", 1000);
         const response = await fetch('http://localhost:3000/api/spacs/sniffer', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ hw_id: hwFingerprint, arch: currentPlatform })
         });
         
-        const status = await response.json();
-        const boundPlatform = status.provision_management ? status.provision_management.toLowerCase() : null;
+        const data = await response.json();
+        // We now look for 'status' per our agreement
+        const result = data.status; 
 
-        await addLog("HANDSHAKE_ESTABLISHED. ANALYZING_IDENTITY_STATE...", "success", 1000);
+        await addLog("HANDSHAKE_ESTABLISHED. ANALYZING_HIERARCHY...", "success", 800);
 
-        // Step 3: Granular Decision Logic
+        // --- STAGE 3: THE 5-STAGE REDIRECT ENGINE ---
 
-        // 1. CRITICAL FAILURES (REVOKED / BLACKLISTED)
-        if (['REVOKED', 'BLACKLISTED'].includes(status.provision_stage)) {
-            // Visual red-out
-            const reticle = document.getElementById('reticle');
-            if(reticle) reticle.style.borderColor = "#ff0000";
-            document.body.style.boxShadow = "inset 0 0 100px #ff0000";
-            
-            // Audible alarm
+        // 1. SECURITY KILL-SWITCH (REVOKED / LOCKED)
+        if (result === 'REVOKED') {
+            await addLog("!! SECURITY_ALERT: IDENTITY_TERMINATED !!", "critical", 1500);
             playSound(60, 'sawtooth', 2.0, 0.4); 
-
-            await addLog(`!! SECURITY_ALERT: ${status.provision_stage} !!`, "critical", 1500);
-            await addLog("SYSTEM_LOCK: SEIZING_VPU_RESOURCES...", "critical", 1000);
-            
             setTimeout(() => {
-                triggerRealPanic(
-                    `0x_SOV_${status.provision_stage}`, 
-                    `HW_HASH: ${hwFingerprint.substring(0, 16)} | ARCH: ${currentPlatform}`
-                );
+                triggerRealPanic("0x_SOV_REVOKED", `HW_ID: ${hwFingerprint.substring(0, 8)}`);
             }, 1000);
             return;
         }
 
-        // 2. REGISTRATION STATE CHECK
-        if (status.registration_state === 'incompleteRegistration') {
-            await addLog("IDENTITY_FOUND: REGISTRATION_INCOMPLETE", "warning", 1200);
-            await addLog("REDIRECTING TO BIO-SYNC TERMINAL...", "warning", 800);
-            setTimeout(() => window.location.href = './Thealcohesion-core/index.html', 1500);
+        // 2. IDENTITY GATE (WAITING ROOM)
+        if (result === 'PENDING') {
+            await addLog("IDENTITY_LOCKED: AWAITING_ADMIN_KEY.", "warning", 1200);
+            await addLog("REDIRECTING TO APPROVAL_QUEUE...", "warning", 800);
+            setTimeout(() => window.location.href = './waiting-approval.html', 1500);
             return;
         }
 
-        // 3. ACCESS GRANTED (PROVISIONED) + ARCH_LOCKED CHECK
-        if (status.provision_stage === 'PROVISIONED') {
-            // Check if the current detected 'arch' matches the DB's bound 'os_signature'
-            if (status.provision_management && status.provision_management !== arch) {
-                await addLog("SECURITY_BREACH: ARCHITECTURE_MISMATCH", "critical", 1500);
-                await addLog(`IDENTITY_LOCKED TO: ${status.provision_management}`, "critical", 1500);
-                await addLog("ACCESS_DENIED: ARCHITECTURE_DUPLICATION_DETECTED.", "critical", 2000);
-                
-                btn.innerHTML = `<span class="text">ARCH_LOCKED</span>`;
-                btn.classList.add('btn-error'); // Optional: style this in CSS for a red glow
-                return; // HALT: Do not redirect
-            }
+        // 3. BIRTHRIGHT CLAIM (SYSTEM PROVISIONING - FORM B)
+        if (result === 'REQUIRE_FORM_B') {
+            await addLog("BIRTHRIGHT_OFFLINE: PROVISIONING_REQUIRED.", "info", 1200);
+            await addLog("ALLOCATING_SYSTEM_RESOURCES...", "info", 800);
+            
+            // Add the #provision hash to the URL
+            setTimeout(() => window.location.href = './download.html#provision', 1500);
+            return;
+        }
 
-            // If match is successful
+        // 4. PROFILE SYNC (HUMAN IDENTITY - COMPLETE PROFILE)
+        if (result === 'INCOMPLETE') {
+            await addLog("IDENTITY_INCOMPLETE: SYNCING_PROFILE.", "info", 1200);
+            await addLog("REDIRECTING TO BIO-SYNC TERMINAL...", "info", 800);
+            setTimeout(() => window.location.href = './complete-profile.html', 1500);
+            return;
+        }
+
+        // 5. ACCESS GRANTED (PROVISIONED)
+        if (result === 'PROVISIONED') {
             await addLog("HARDWARE_MATCH: IDENTITY_VERIFIED.", "success", 1200);
             await addLog("BYPASSING INGRESS...", "success", 800);
             setTimeout(() => window.location.href = './Thealcohesion-core/index.html', 1000);
             return;
         }
 
-
-        // 4. ARCHITECTURE LOCK (DUPLICATION PREVENTION)
-        if (boundPlatform && boundPlatform.includes(currentPlatform) && status.provision_stage !== 'PROVISIONED') {
-            await addLog("!! SOVEREIGN_ERROR: ARCH_DUPLICATION !!", "critical", 1500);
-            await addLog(`IDENTITY ALREADY BOUND TO ${boundPlatform.toUpperCase()}.`, "critical", 2000);
-            
-            overlay.remove();
-            btn.innerHTML = `<span class="text">ACCESS_DENIED: ARCH_LOCKED</span>`;
-            setTimeout(() => {
-                btn.innerHTML = `<span class="text">INITIALIZE_DOWNLOAD</span>`;
-                btn.style.pointerEvents = "auto";
-            }, 3000);
-            return;
-        }
-
-        // 5. WAITING FOR LOGIN (KNOWN HARDWARE BUT NO ACTIVE SESSION)
-        if (status.provision_stage === 'WAITING_LOGIN') {
-            await addLog("HARDWARE_MATCH: IDENTITY_CHALLENGE_REQUIRED", "success", 1200);
-            await addLog("OPENING SECURE_UPLINK_TERMINAL...", "success", 800);
-            
-            // If you have a function to show a login modal, call it here
-            if (typeof showLoginInterface === "function") {
-                showLoginInterface();
-            } else {
-                // Fallback: Redirect to a login page if no modal exists
-                window.location.href = './Thealcohesion-core/index.html';
-            }
-            return;
-        }
-
-        // 6. INITIAL (NEW HARDWARE / NOT PROVISIONED)
-        if (status.provision_stage === 'INITIAL' || status.provision_stage === 'UNPROVISIONED') {
-            await addLog("STATE: INITIAL_PROVISION_REQUIRED.", "success", 1200);
+        // 6. FALLBACK: NEW USER (UNPROVISIONED)
+        if (result === 'UNPROVISIONED') {
+            await addLog("STATE: INITIAL_REGISTRATION_REQUIRED.", "success", 1200);
             await addLog("ADMITTING_TO_TERMINAL...", "success", 800);
             setTimeout(() => window.location.href = './download.html', 1000);
         }
@@ -265,9 +228,11 @@ async function runSovereignSniffer(btn) {
     } catch (err) {
         console.error("SNIFFER_CRITICAL_ERROR:", err);
         await addLog("UPLINK_FAILURE: BRIDGE_OFFLINE", "critical", 2000);
-        overlay.remove();
-        btn.innerHTML = `<span class="text">BRIDGE_OFFLINE</span>`;
-        btn.style.pointerEvents = "auto";
+        setTimeout(() => {
+            overlay.remove();
+            btn.innerHTML = `<span class="text">BRIDGE_OFFLINE</span>`;
+            btn.style.pointerEvents = "auto";
+        }, 2000);
     }
 }
 // 5. BINDING (SINGLE HANDLER)
@@ -276,3 +241,9 @@ document.querySelector('.download-btn').onclick = function(e) {
     this.style.pointerEvents = "none"; // Lock button during sequence
     runSovereignSniffer(this);
 };
+
+// SOVEREIGN NOTIFICATION MODAL FOR COMPLETE REGISTRATION
+function closeSovModal() {
+    const modal = document.getElementById('sov-notification');
+    if (modal) modal.style.display = 'none';
+}

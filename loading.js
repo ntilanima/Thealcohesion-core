@@ -1,9 +1,29 @@
+// --- HARDWARE UTILITIES FOR LOADING.JS ---
+function detectProvisionManagement() {
+    const ua = navigator.userAgent;
+    if (ua.indexOf("Win") !== -1) return "Windows";
+    if (ua.indexOf("Mac") !== -1) return "macOS";
+    if (ua.indexOf("Linux") !== -1) return "Linux";
+    return "Unknown_Arch";
+}
+
+async function generateLocalFingerprint() {
+    try {
+        const canvas = document.createElement('canvas');
+        const gl = canvas.getContext('webgl');
+        const renderer = gl.getParameter(gl.RENDERER);
+        const entropy = [navigator.hardwareConcurrency, renderer, screen.colorDepth, navigator.deviceMemory].join("||");
+        const msgBuffer = new TextEncoder().encode(entropy);
+        const hashBuffer = await crypto.subtle.digest('SHA-256', msgBuffer);
+        return Array.from(new Uint8Array(hashBuffer)).map(b => b.toString(16).padStart(2, '0')).join('');
+    } catch (e) { return "0x_ANONYMOUS_GENESIS_CORE"; }
+}
+// --- 1. GLOBAL UI & POINTER ---
 const pointer = document.createElement('div');
 pointer.id = 'custom-pointer';
 document.body.appendChild(pointer);
 
 let mouseX = 0, mouseY = 0;
-
 document.addEventListener('mousemove', e => {
     mouseX = e.clientX - 15;
     mouseY = e.clientY - 15;
@@ -15,147 +35,106 @@ function animatePointer() {
 }
 animatePointer();
 
-
-    const getArchitecture = () => {
-        const ua = navigator.userAgent;
-        const platform = navigator.platform || ""; // Fallback
-        
-        // 1. Check for Mobile
-        if (/android/i.test(ua)) return "Android";
-        if (/iPad|iPhone|iPod/.test(ua)) return "iOS";
-
-        // 2. Check for Windows
-        if (/Win/i.test(platform) || /Windows/i.test(ua)) {
-            if (/x64|Win64|WOW64/i.test(ua)) return "Windows x64";
-            return "Windows x32";
-        }
-
-        // 3. Check for Mac (Intel vs ARM)
-        if (/Mac/i.test(platform) || /Macintosh/i.test(ua)) {
-            // Modern Macs (Apple Silicon) often report 'MacIntel' but have 0 maxTouchPoints
-            const isAppleSilicon = navigator.maxTouchPoints > 0 || (typeof Deno !== 'undefined');
-            return isAppleSilicon ? "macOS ARM" : "macOS Intel";
-        }
-
-        // 4. Check for Linux
-        if (/Linux/i.test(platform) || /Linux/i.test(ua)) return "Linux";
-
-        return "Sovereign Core (Unknown)";
-    };
-
-// Enforce digits-only input for phone fields
-document.addEventListener('DOMContentLoaded', () => {
-    const phoneInputs = document.querySelectorAll('#m-phone');
-    phoneInputs.forEach(input => {
-        input.addEventListener('input', (e) => {
-            // Remove any non-digit characters
-            e.target.value = e.target.value.replace(/[^0-9]/g, '');
-            // Enforce max length of 15
-            if (e.target.value.length > 15) {
-                e.target.value = e.target.value.slice(0, 15);
-            }
-        });
-    });
-});
-
-// Handle the Interest Form
-document.getElementById('interest-form').onsubmit = async (e) => {
-    e.preventDefault();
-    const btn = e.submitter;
-    
-    // UI Feedback
-    btn.disabled = true;
-    btn.innerText = "CHECKING REGISTRY...";
-
-    const formData = {
-        name: e.target[0].value,
-        country: e.target[1].value,
-        phone: `${document.getElementById('i-country-code').value}${e.target.querySelector('input[type="tel"]').value}`,
-        email: e.target[3].value,
-        reason: e.target[4].value
-    };
-
-    try {
-        const res = await fetch('http://localhost:3000/api/spacs/interest', {
-            method: 'POST',
-            headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify(formData)
-        });
-        const data = await res.json();
-
-       if (data.already_exists) {
-        // 1. Alert the user they are already recognized
-        alert(data.message);
-        
-        // 2. Visual "Rerouting" Effect
-        const interestModal = document.getElementById('interest-modal');
-        const provisionModal = document.getElementById('member-modal');
-        
-        interestModal.style.opacity = '0';
-        setTimeout(() => {
-            interestModal.style.display = 'none';
-            interestModal.style.opacity = '1';
-            
-            // 3. Open Provisioning Form
-            provisionModal.style.display = 'flex';
-            
-            // 4. PRE-FILL (Transfer their data over to save time)
-            document.getElementById('m-name').value = formData.name;
-            document.getElementById('m-email').value = formData.email;
-            // Strip country code for the phone input if necessary
-            document.getElementById('m-phone').value = e.target.querySelector('input[type="tel"]').value;
-        }, 300);
-
-    } else if (data.success) {
-        alert(data.message);
-        closeAllModals();
-    } else {
-        alert("SEC_ERROR: " + data.error);
-    }
-    } catch (err) {
-        alert("CRITICAL: Bridge connection failed.");
-    } finally {
-        btn.disabled = false;
-        btn.innerText = "SUBMIT TO ADMIN";
-    }
+// --- 2. ARCHITECTURE & STATE MAPS ---
+const osMapping = {
+    'btn-win': 'Win32', 'btn-mac': 'Darwin', 'btn-linux': 'Linux',
+    'btn-android': 'Android', 'btn-ios': 'iOS'
 };
 
-// Handle Verify & Provision (Form B)
-document.getElementById('provision-form').onsubmit = async (e) => {
-    e.preventDefault();
-        // VALIDATION FIRST
-    const phoneBase = document.getElementById('m-phone').value.trim();
-    const countryCode = document.getElementById('m-country-code').value;
+const getArchitecture = () => {
+    const ua = navigator.userAgent;
+    const platform = navigator.platform || "";
+    if (/android/i.test(ua)) return "Android";
+    if (/iPad|iPhone|iPod/.test(ua)) return "iOS";
+    if (/Win/i.test(platform) || /Windows/i.test(ua)) return /x64|Win64|WOW64/i.test(ua) ? "Windows x64" : "Windows x32";
+    return "Sovereign Core";
+};
 
-    if (!/^[0-9]{7,15}$/.test(phoneBase)) {
-        alert("INVALID PHONE");
-        return;
-    }
-    if (!countryCode) {
-        alert("MISSING COUNTRY CODE");
-        return;
-    }
-    const btn = e.submitter;
-    const originalText = btn.innerText;
+// --- 3. SOVEREIGN NOTIFICATION SYSTEM ---
+// Optimized to be persistent and high-priority
+const showSovModal = (title, message, color = "#00ff88") => {
+    const modal = document.getElementById('sov-notification');
+    if (!modal) return console.error("SOV_FAULT: Notification container missing.");
     
-    // UI Feedback
+    document.getElementById('sov-title').innerText = `> ${title}`;
+    document.getElementById('sov-title').style.color = color;
+    document.getElementById('sov-message').innerText = message;
+    
+    modal.style.display = 'flex';
+};
+
+const closeSovModal = () => {
+    const modal = document.getElementById('sov-notification');
+    if (modal) modal.style.display = 'none';
+};
+
+// --- 4. GLOBAL INITIALIZATION ---
+document.addEventListener('DOMContentLoaded', () => {
+    initDistributionButtons();
+    initPhoneValidation();
+    initInterestForm();
+    initProvisionForm();   
+});
+
+
+// --- 5. STRICT REGEX MASKING ---
+function initPhoneValidation() {
+    const phoneInputs = document.querySelectorAll('input[type="tel"], #m-phone, #m-phone-interest');
+    phoneInputs.forEach(input => {
+        // Prevent alpha characters from ever appearing
+        input.addEventListener('keypress', (e) => {
+            if (!/[0-9]/.test(e.key)) e.preventDefault();
+        });
+        // Sanitize paste actions
+        input.addEventListener('input', (e) => {
+            e.target.value = e.target.value.replace(/\D/g, '').slice(0, 15);
+        });
+    });
+}
+
+// --- 6. FORM A: INTEREST BRIDGE (Goal 1: Identity Awareness) ---
+function initInterestForm() {
+    let form = document.getElementById('interest-form');
+    if (!form) return;
+
+    // Remove existing listeners
+    const newForm = form.cloneNode(true);
+    form.parentNode.replaceChild(newForm, form);
+    
+    newForm.onsubmit = async (e) => {
+    e.preventDefault();
+    const btn = newForm.querySelector('button[type="submit"]');
+    
+    // 1. PREVENT MULTI-SUBMIT BUG
+    if (btn.disabled) return; 
     btn.disabled = true;
-    btn.innerText = "AUTHENTICATING...";
-    const archValue = osMapping[selectedClass] || getArchitecture();
-    localStorage.setItem('pending_arch', archValue);
-    const payload = {
-        name: document.getElementById('m-name').value,       
-        license: document.getElementById('m-license').value,
-        membership_no: document.getElementById('m-no').value,
-        phone: document.getElementById('m-phone').value,     
-        email: document.getElementById('m-email').value,     
-        country: document.getElementById('m-country').value, 
-        hw_id: localStorage.getItem('vpu_hw_id'),
-        arch: archValue
-    };
+    btn.innerText = "LOCKING_HARDWARE...";
+
+    const phoneRaw = document.getElementById('m-phone-interest');
+    const selects = newForm.querySelectorAll('select');
+
+    if (phoneRaw.value.length < 7) {
+        showSovModal("INVALID_PHONE", "Identity requires at least 7 digits.", "#ff4444");
+        btn.disabled = false;
+        btn.innerText = "SUBMIT TO ADMIN";
+        return;
+    }
 
     try {
-        const res = await fetch('http://localhost:3000/api/spacs/verify-provision', {
+        const hwFingerprint = await generateLocalFingerprint(); 
+        const currentPlatform = detectProvisionManagement();
+
+        const payload = {
+            name: newForm.querySelector('input[type="text"]').value.trim(),
+            email: newForm.querySelector('input[type="email"]').value.trim(),
+            phone: `${selects[1].value}${phoneRaw.value}`,
+            country: selects[0].value,
+            reason: newForm.querySelector('textarea').value.trim(),
+            hw_id: hwFingerprint,
+            arch: currentPlatform
+        };
+
+        const res = await fetch('http://localhost:3000/api/spacs/interest', {
             method: 'POST',
             headers: {'Content-Type': 'application/json'},
             body: JSON.stringify(payload)
@@ -163,143 +142,263 @@ document.getElementById('provision-form').onsubmit = async (e) => {
 
         const data = await res.json();
 
-        if (data.success) {
-            // 1. CLEAR THE SECURITY TIMER (from the HTML script)
-            if (typeof countdown !== 'undefined') clearInterval(countdown);
-            
-            // 2. CLOSE THE INPUT MODAL
-            closeAllModals();
-
-            // 3. TRIGGER THE VISUAL TERMINAL SEQUENCE
-            // Pass the data to the function in your HTML
-            if (typeof startProvisioningSequence === 'function') {
-                const selectedOS = localStorage.getItem('pending_arch') || 'Unknown OS';
-                startProvisioningSequence(payload.name, payload.license, selectedOS, data.shell_url);
-            } else {
-                // Fallback if sequence function is missing
-                alert("PROVISIONING SUCCESSFUL. STARTING DOWNLOAD.");
-                window.location.href = data.shell_url;
-            }
-            
-        } else {
+        // 2. LOGIC HANDLING
+        if (data.device_locked) {
+            showSovModal("HARDWARE_LOCK", data.message, "#ff4444");
             btn.disabled = false;
-            if (data.error.includes("IDENTITY_CONFLICT")) {
-                btn.innerText = "IDENTITY_MISMATCH";
-                btn.style.borderColor = "#ff4545"; // Red Border
-                alert("CRITICAL: Name/License mismatch. This attempt has been logged for Admin review.");
-            } else if (data.error.includes("HARDWARE_LOCK")) {
-                btn.innerText = "DEVICE_LOCKED";
-                alert("SEC_ERROR: This hardware is already bound to a different Sovereign ID.");
-            } else {
-                btn.innerText = "AUTH_FAILED";
-                alert("ERROR: " + data.error);
-            }
+            btn.innerText = "SUBMIT TO ADMIN";
+        } 
+        else if (data.already_exists) {
+            showSovModal("IDENTITY_RECOGNIZED", "Identity already logged. Redirecting to status...");
+            setTimeout(() => { window.location.href = './waiting-approval.html'; }, 2000);
+        } 
+        else if (data.success) {
+            // 3. SECURE STATE SYNC
+            localStorage.setItem('sov_identity_confirmed', 'true');
+            localStorage.setItem('sov_member_email', payload.email); 
+
+            // Clear the form modal so the Success Notification is visible
+            closeAllModals(); 
             
-            setTimeout(() => { 
-                btn.innerText = originalText;
-                btn.style.borderColor = ""; 
-            }, 3000);
+            // Explicitly show the Registry Success
+            showSovModal("REGISTRY_SUCCESS", "Hardware Bound. Redirecting to Approval Queue...", "#00ff88");
+            
+            // Longer delay to ensure DB and LocalStorage are synced before redirect
+            setTimeout(() => {
+                window.location.href = './waiting-approval.html';
+            }, 2500);
         }
     } catch (err) {
+        console.error(err);
+        showSovModal("BRIDGE_FAULT", "Connection to Sovereign Bridge failed.", "#ff4444");
         btn.disabled = false;
-        btn.innerText = "BRIDGE_OFFLINE";
-        alert("CRITICAL: Connection to Sovereign Bridge failed.");
-        console.error("Fetch Error:", err);
+        btn.innerText = "SUBMIT TO ADMIN";
     }
-
-    // 2. COMBINE FOR SOVEREIGN IDENTITY
-    const fullPhone = `${countryCode}${phoneBase}`;
-    console.log("Verified Identity String:", fullPhone);
-
-    // Proceed to check License Key as before
-    const licenseKey = document.getElementById('m-license').value.toUpperCase();
-    if (licenseKey.startsWith('SOV-') && licenseKey.length > 8) {
-        // Valid - trigger sequence
-        startProvisioningSequence(memberName, licenseKey);
-    }
-
-    const phoneInput = document.getElementById('m-phone');
-
-    phoneInput.oninput = (e) => {
-        // Automatically remove any non-digit characters as the user types
-        e.target.value = e.target.value.replace(/\D/g, '');
-    };
-
-    // Check length on submit
-    if (phoneInput.value.length < 7) {
-        alert("INVALID PHONE: Number is too short for Sovereign validation.");
-        return false;
-    }
-
-    const phoneInputs = document.querySelectorAll('input[type="tel"]');
-
-    phoneInputs.forEach(input => {
-        // 1. PREVENT typing non-digits
-        input.addEventListener('keydown', (e) => {
-            // Allow: Backspace, Tab, Enter, Escape, Arrow keys
-            const allowKeys = ['Backspace', 'Tab', 'Enter', 'Escape', 'ArrowLeft', 'ArrowRight', 'Delete'];
-            
-            if (allowKeys.includes(e.key)) {
-                return; // Let it happen
-            }
-
-            // Block if the key is NOT a number (0-9)
-            if (!/^[0-9]$/.test(e.key)) {
-                e.preventDefault();
-            }
-        });
-
-        // 2. CATCH Paste attempts (e.g. if they copy-paste "ABC-123")
-        input.addEventListener('input', (e) => {
-            e.target.value = e.target.value.replace(/\D/g, '');
-        });
-    });
 };
+}
 
-// Map button classes to OS signatures
-const osMapping = {
-    'btn-win': 'Win32',
-    'btn-mac': 'Darwin',
-    'btn-linux': 'Linux',
-    'btn-android': 'Android',
-    'btn-ios': 'iOS'
-};
+// --- 7. FORM B: PROVISIONING BRIDGE ---
+function initProvisionForm() {
+    const form = document.getElementById('provision-form');
+    if (!form) return;
 
-// Unified listener: This handles Windows, Linux, Mac, etc.
-document.querySelectorAll('.btn-dist').forEach(button => {
-    button.onclick = (e) => {
+    form.onsubmit = async (e) => {
         e.preventDefault();
-        
-        // 1. Capture/Ensure HW ID
-        if (!localStorage.getItem('vpu_hw_id')) {
-            const fingerprint = 'DEV-' + Math.random().toString(36).substr(2, 9).toUpperCase();
-            localStorage.setItem('vpu_hw_id', fingerprint);
-        }
+        const btn = form.querySelector('button[type="submit"]');
 
-        // 2. Store selected architecture
-        const selectedClass = [...button.classList].find(cls => osMapping[cls]);
-        localStorage.setItem('pending_arch', osMapping[selectedClass] || navigator.platform);
+        btn.disabled = true;
+        btn.innerText = "AUTHENTICATING...";
 
-        // 3. FIXED: Open the modal using the ID present in your HTML
-        const modal = document.getElementById('member-modal'); 
-        if(modal) {
-            modal.style.display = 'flex';
-            if (typeof startTimeoutTimer === 'function') startTimeoutTimer();
+        // Capturing all required vectors for identity verification and hardware binding
+        const payload = {
+            official_name: document.getElementById('m-name').value.trim(),
+            membership_no: document.getElementById('m-member-no').value.trim(),
+            license_key: document.getElementById('m-license').value.trim(),
+            email: document.getElementById('m-email').value.trim(),
+            phone: document.getElementById('m-phone').value.trim(),
+            phone_code: document.getElementById('m-phone-code')?.value || "",
+            country: document.getElementById('m-country')?.value || "Unknown",
+            hw_id: localStorage.getItem('vpu_hw_id'),
+            arch: localStorage.getItem('pending_arch')
+        };
+
+        try {
+            const res = await fetch('http://localhost:3000/api/spacs/verify-provision', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify(payload)
+            });
+            const data = await res.json();
+
+            if (data.success) {
+                closeAllModals();
+                showSovModal("PROVISION_GRANTED", "Identity verified. Initializing download sequence.");
+                if (typeof startProvisioningSequence === 'function') {
+                    startProvisioningSequence(payload.name, payload.license, payload.arch, data.shell_url);
+                }
+            } else {
+                showSovModal("AUTH_FAILED", data.error || "Credentials rejected.", "#ff4444");
+                btn.disabled = false;
+                btn.innerText = "VERIFY & PROVISION";
+            }
+        } catch (err) {
+            showSovModal("OFFLINE", "Database connection lost.", "#ff4444");
+            btn.disabled = false;
         }
     };
-});
+}
 
+// --- 8. UI HELPERS ---
+function initDistributionButtons() {
+    // 1. Correctly parse the Hash and Parameters
+    const currentHash = window.location.hash;
+    const params = new URLSearchParams(currentHash.replace('#', '').replace('&', '?')); // Format for URLSearchParams
+    const lockedArch = params.get('arch');
+    
+    // Check if the hash starts with 'provision' rather than an exact match
+    const isProvisionMode = currentHash.includes('provision');
 
-const addLine = (text, delay) => {
-    return new Promise(resolve => {
-        setTimeout(() => {
-            const div = document.createElement('div');
-            div.className = 'terminal-line';
-            // Prepend the prompt character here
-            div.innerHTML = text.startsWith('>') ? text : `> ${text}`;
-            content.appendChild(div);
-            content.scrollTop = content.scrollHeight;
-            resolve();
-        }, delay);
+    // 2. Visual Lockdown (Grey out other kernels immediately)
+    if (lockedArch) applyKernelEnforcement(lockedArch);
+
+    document.querySelectorAll('.btn-dist').forEach(button => {
+        button.onclick = async (e) => {
+            e.preventDefault();
+
+            // 1. Capture Hardware & Architecture
+            const hwFingerprint = await generateLocalFingerprint(); 
+            localStorage.setItem('vpu_hw_id', hwFingerprint);
+            
+            const selectedClass = [...button.classList].find(cls => osMapping[cls]);
+            const architecture = osMapping[selectedClass] || getArchitecture();
+
+            // 2. ENFORCEMENT: Block click if it doesn't match the lock
+            if (lockedArch && architecture !== lockedArch) {
+                showSovModal("SECURITY_VIOLATION", `Identity locked to ${lockedArch}.`, "#ff4444");
+                return;
+            }
+            
+            // 3. Update state
+            localStorage.setItem('pending_arch', architecture);
+
+            // 4. THE SPACS ROUTER (Priority Logic)
+            const isRegistered = localStorage.getItem('sov_identity_confirmed');
+
+            if (isProvisionMode) {
+                // FORCE FORM B: Arrived via Sniffer Redirect (Approved User)
+                closeAllModals();
+                const memberModal = document.getElementById('member-modal');
+                if (memberModal) {
+                    memberModal.style.display = 'flex';
+                    
+                    // Transform the "Become a Native" button into an "Approved" Badge
+                    const interestBtn = document.getElementById('interested-btn');
+                    if (interestBtn) {
+                        interestBtn.innerText = "✓ IDENTITY_VERIFIED_BY_ADMIN";
+                        interestBtn.style.background = "rgba(0, 255, 128, 0.1)";
+                        interestBtn.style.color = "#00ff80";
+                        interestBtn.style.border = "1px solid #00ff80";
+                        interestBtn.style.cursor = "default";
+                        interestBtn.style.pointerEvents = "none";
+                        interestBtn.classList.remove('interest');
+                    }
+                }
+            } 
+            else if (isRegistered === 'true') {
+                const provModal = document.getElementById('member-modal');
+                if (provModal) provModal.style.display = 'flex';
+            } 
+            else {
+                const interestModal = document.getElementById('interest-modal');
+                if (interestModal) interestModal.style.display = 'flex';
+            }
+
+            // Start the global timer (Ensure this is in the global scope)
+            if (typeof startTimeoutTimer === 'function') startTimeoutTimer();
+        };
     });
-};
+}
+//UI should automatically disable the kernels that don't match their locked_arch returned from the sniffer API, and only allow clicking the compatible one. 
+// This ensures users can't bypass the hardware lock by selecting a different OS option.
+function enforceKernelLock(lockedArch) {
+    const cards = document.querySelectorAll('.card');
+    
+    cards.forEach(card => {
+        const btn = card.querySelector('.btn-dist');
+        const selectedClass = [...btn.classList].find(cls => osMapping[cls]);
+        const cardArch = osMapping[selectedClass];
+
+        if (cardArch !== lockedArch) {
+            // Disable wrong kernels
+            card.style.opacity = "0.3";
+            card.style.filter = "grayscale(1)";
+            btn.style.pointerEvents = "none";
+            btn.innerHTML = "INCOMPATIBLE_ARCH";
+            
+            // Add a small warning label
+            const warning = document.createElement('small');
+            warning.innerText = `IDENTITY_LOCKED_TO: ${lockedArch}`;
+            warning.style.color = "#ff4444";
+            card.appendChild(warning);
+        } else {
+            // Highlight the correct one
+            card.style.border = "1px solid #00ff88";
+            card.style.boxShadow = "0 0 20px rgba(0, 255, 136, 0.3)";
+            btn.innerHTML = "VERIFIED_ARCH: PROCEED";
+        }
+    });
+}
+
+/**
+ * REFINES THE MEMBER MODAL FOR APPROVED USERS
+ * Transforms the 'Become a Space Native' button into a Status Badge
+ */
+function lockProvisioningUI() {
+    const interestBtn = document.getElementById('interested-btn');
+    
+    if (interestBtn && window.location.hash === '#provision') {
+        // 1. Change Text to show Authorization
+        interestBtn.innerText = "✓ IDENTITY_VERIFIED_BY_ADMIN";
+        
+        // 2. Change Styling to look like a Badge rather than a Button
+        interestBtn.style.background = "rgba(0, 255, 128, 0.1)"; // Faint green glow
+        interestBtn.style.color = "#00ff80";
+        interestBtn.style.border = "1px solid #00ff80";
+        interestBtn.style.boxShadow = "0 0 10px rgba(0, 255, 128, 0.2)";
+        
+        // 3. Disable Interactivity
+        interestBtn.style.cursor = "default";
+        interestBtn.style.pointerEvents = "none"; 
+        
+        // 4. Remove the original hover class
+        interestBtn.classList.remove('interest');
+        
+        console.log("SPACS: Member UI locked to 'Approved' state.");
+    }
+
+    if (mismatchDetected) {
+    const switchBtn = document.getElementById('interested-btn');
+    switchBtn.innerText = "REQUEST_ARCH_RESET";
+    switchBtn.style.color = "#ffbc00";
+    switchBtn.style.pointerEvents = "auto";
+    switchBtn.onclick = () => {
+        showSovModal("RESET_REQUESTED", "Admin notified. Hardware signature reset pending.");
+        // Call an endpoint to notify Admin
+    };
+}
+}
+
+// This function is called by the sniffer sequence if the user's hardware is locked to a specific architecture. 
+// It disables all incompatible options and only allows the user to select the correct one, ensuring they can't bypass the hardware lock.
+function applyKernelEnforcement(allowedArch) {
+    const allButtons = document.querySelectorAll('.btn-dist');
+    
+    allButtons.forEach(btn => {
+        const selectedClass = [...btn.classList].find(cls => osMapping[cls]);
+        const btnArch = osMapping[selectedClass];
+
+        if (btnArch !== allowedArch) {
+            // Disable the card
+            const card = btn.closest('.card');
+            card.style.opacity = "0.4";
+            card.style.filter = "grayscale(1) contrast(0.8)";
+            btn.style.pointerEvents = "none";
+            btn.innerHTML = `<span class="icon">🔒</span> LOCKED_ARCH`;
+        } else {
+            // Highlight the correct one
+            const card = btn.closest('.card');
+            card.style.border = "1px solid #00ff88";
+            card.style.boxShadow = "0 0 15px rgba(0, 255, 136, 0.2)";
+            btn.innerHTML = `<span class="icon">✓</span> VERIFIED_ARCH`;
+        }
+    });
+}
+
+function closeAllModals() {
+    // Hide all modals EXCEPT the sovereign notification
+    document.querySelectorAll('.modal-overlay, .modal').forEach(m => {
+        if (m.id !== 'sov-notification') {
+            m.style.display = 'none';
+        }
+    });
+}
