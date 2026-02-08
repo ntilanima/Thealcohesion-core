@@ -1147,7 +1147,6 @@ CREATE TABLE security_device (
     os_signature TEXT,
     enclave_attested BOOLEAN DEFAULT FALSE,
     provision_management VARCHAR(64),
-    client_version TEXT,
     first_seen TIMESTAMP DEFAULT NOW(),
     last_seen TIMESTAMP,
     revoked BOOLEAN DEFAULT FALSE,

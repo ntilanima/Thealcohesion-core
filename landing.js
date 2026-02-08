@@ -22,43 +22,6 @@ function updateLiveFeed() {
 
 updateLiveFeed();
 
-//The Verification Script
-
-document.querySelector('.download-btn').onclick = function(e) {
-    e.preventDefault();
-    const btn = this;
-    const url = this.href;
-
-    // 1. Enter Verification State
-    btn.innerHTML = `<span class="text">VERIFYING_HASH...</span>`;
-    btn.style.borderColor = "#fff";
-    document.body.style.animation = "flash 0.4s ease-out";
-
-    // 2. Mock Security Sequence
-    const sequence = [
-        { text: "CHECKING_MD5", delay: 800 },
-        { text: "SIG_GENESIS_2025_MATCH", delay: 1500 },
-        { text: "DECRYPTING_BINARY", delay: 2200 },
-        { text: "HANDSHAKE_COMPLETE", delay: 3000 }
-    ];
-
-    sequence.forEach((step, index) => {
-        setTimeout(() => {
-            btn.querySelector('.text').innerText = step.text;
-            if(index === sequence.length - 1) {
-                // Final Flash and Trigger Download
-                document.body.style.background = "#fff";
-                setTimeout(() => {
-                    document.body.style.background = "#050505";
-                    window.location.href = url; //Starts the download
-                    // Trigger the guide after a short delay
-                     setTimeout(showProvisioningGuide, 1500);
-                    btn.innerHTML = `<span class="text">DOWNLOAD_STARTED</span><span class="version">HASH: 0x1226_VPU_ALPHA</span>`;
-                }, 100);
-            }
-        }, step.delay);
-    });
-};
 // SOUND UTILITIES
 function playSound(frequency, type, duration, volume) {
     const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
@@ -123,8 +86,8 @@ async function generateLocalFingerprint() {
 
 async function runSovereignSniffer(btn) {
     // 1. Initial UI Transition
-    btn.innerHTML = `<span class="text">ACCESSING_VPU_KERNEL...</span>`;
-    await new Promise(r => setTimeout(r, 600));
+    //btn.innerHTML = `<span class="text">ACCESSING_VPU_KERNEL...</span>`;
+    await new Promise(r => setTimeout(r, 6000));
     
     // 2. Inject High-End HUD Overlay
     const overlay = document.createElement('div');
@@ -236,14 +199,67 @@ async function runSovereignSniffer(btn) {
     }
 }
 // 5. BINDING (SINGLE HANDLER)
-document.querySelector('.download-btn').onclick = function(e) {
+document.querySelector('.download-btn').onclick = async function(e) {
     e.preventDefault();
-    this.style.pointerEvents = "none"; // Lock button during sequence
-    runSovereignSniffer(this);
+    const btn = this;
+    
+    // 1. Enter Verification State & Lock UI
+    btn.style.pointerEvents = "none"; 
+    // Ensure the structure is correct for the loop to find '.text'
+    btn.innerHTML = `<span class="text">VERIFYING_HASH...</span>`;
+    btn.style.borderColor = "#fff";
+    document.body.style.animation = "flash 0.4s ease-out";
+
+    // 2. Start the REAL backend sniffer
+    // We start it, but we don't 'await' it yet so the cinematic runs
+    const snifferTask = runSovereignSniffer(btn);
+
+    // 3. Cinematic Security Sequence
+    const sequence = [
+        { text: "CHECKING_MD5", delay: 800 },
+        { text: "SIG_GENESIS_2025_MATCH", delay: 1500 },
+        { text: "DECRYPTING_BINARY", delay: 2200 },
+        { text: "HANDSHAKE_COMPLETE", delay: 2500 },
+        { text: "SECURITY_CHECKS_PASSED", delay: 3000 },
+        { text: "STARTING SNIFFER...", delay: 3500 }
+    ];
+
+    for (const [index, step] of sequence.entries()) {
+        const timeToWait = index === 0 ? step.delay : step.delay - sequence[index-1].delay;
+        await new Promise(res => setTimeout(res, timeToWait));
+        
+        // Re-selecting to ensure we have the current DOM element
+        const textSpan = btn.querySelector('.text');
+        if(textSpan) {
+            textSpan.innerText = step.text;
+        }
+    }
+
+    // 4. Final Handover
+    document.body.style.background = "#fff";
+    
+    // Brief flash effect
+    await new Promise(res => setTimeout(res, 100));
+    document.body.style.background = "#050505";
+    
+    // 5. Sync with Backend Result
+    // Now we wait for the sniffer to finish its network/logic
+    await snifferTask; 
+    
+    // If the sniffer didn't redirect (e.g., error), show final state
+    if (btn.querySelector('.text')) {
+        btn.querySelector('.text').innerText = "ACCESS_GRANTED";
+    }
 };
 
-// SOVEREIGN NOTIFICATION MODAL FOR COMPLETE REGISTRATION
+// SOVEREIGN NOTIFICATION MODAL
 function closeSovModal() {
     const modal = document.getElementById('sov-notification');
-    if (modal) modal.style.display = 'none';
+    if (modal) {
+        modal.style.opacity = '0';
+        setTimeout(() => { modal.style.display = 'none'; }, 300);
+    }
 }
+
+// Alias to prevent "never read" or case-sensitivity errors
+window.closesovmodal = closeSovModal;

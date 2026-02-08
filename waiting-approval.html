@@ -222,7 +222,7 @@
     }
 
 async function checkAllotmentStatus(isManual = false) {
-    const hw_id = localStorage.getItem('vpu_hw_id');
+    const hw_id = localStorage.getItem('hw_id');
     if (!hw_id) {
         if (isManual) showSovModal("ERROR", "No Hardware ID detected. Restarting Ingress.", "#ff4444");
         return false;
@@ -279,7 +279,7 @@ function showSovModal(title, message, color) {
     const modal = document.getElementById('sov-notification');
     const t = document.getElementById('sov-title');
     const m = document.getElementById('sov-message');
-    const btn = document.getElementById('modal-close-btn');
+    const closeBtn = document.getElementById('modal-close-btn'); // Use unique variable
     
     if (modal && t && m) {
         t.innerText = title;
@@ -287,18 +287,16 @@ function showSovModal(title, message, color) {
         m.innerText = message;
         modal.style.display = 'flex';
 
-        // AUTO-CLOSE TIMER: 5 Seconds
         let count = 5;
-        const btn = modal.querySelector('button');
         const originalBtnText = "[ DISMISS_PROTOCOL ]";
 
         const timer = setInterval(() => {
             count--;
-            btn.innerText = `[ DISMISSING IN ${count} ]`;
+            closeBtn.innerText = `[ DISMISSING IN ${count} ]`;
             if (count <= 0) {
                 clearInterval(timer);
                 modal.style.display = 'none';
-                btn.innerText = originalBtnText;
+                closeBtn.innerText = originalBtnText;
             }
         }, 1000);
     }
