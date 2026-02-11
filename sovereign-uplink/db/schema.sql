@@ -91,7 +91,7 @@ CREATE TABLE person (
     membership_no VARCHAR(64) UNIQUE,
     license_key VARCHAR(64) UNIQUE,
     contact_meta JSONB,
-    identity_state VARCHAR(50) DEFAULT 'PROSPECT' CHECK (identity_state IN ('PROSPECT', 'UNVERIFIED', 'VERIFIED', 'LOCKED', 'REVOKED', 'ACTIVE')),
+    identity_state VARCHAR(50) DEFAULT 'PROSPECT' CHECK (identity_state IN ('PROSPECT', 'VERIFIED', 'LOCKED', 'BLACKLISTED')),
     registration_state VARCHAR(50) DEFAULT 'incomplete',
     declaration_of_intent TEXT,
     is_frozen BOOLEAN DEFAULT FALSE, 
@@ -1129,6 +1129,7 @@ CREATE TABLE member_birthright (
     person_id UUID REFERENCES person(id) ON DELETE CASCADE,
     storage_quota_mb INT DEFAULT 100,
     provisioning_status TEXT DEFAULT 'PENDING',
+    activated_at TIMESTAMP,
     updated_at TIMESTAMP DEFAULT NOW()
 );
 

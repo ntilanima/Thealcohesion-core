@@ -60,3 +60,10 @@ Technical Breakdown of the Gates
     If the bound_machine_id in the person table does not match the machineFingerprint sent during login, the system increments failed_attempts.
 
     After 3 failed hardware matches, the is_frozen flag is set to TRUE, locking the identity out of all target URLs.
+
+
+UPDATE person 
+SET 
+    membership_no = 'EPOS-2025-01226', 
+    license_key = 'SOV-AUDI-GENESIS-2025-1226-XX'
+WHERE official_name = 'Michael Audi';

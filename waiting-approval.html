@@ -256,10 +256,10 @@ async function checkAllotmentStatus(isManual = false) {
         } 
         
         // 2. Pending: identity_state is 'unverified'
-        if (isManual && data.status === 'PENDING') {
+        if (isManual && data.status === 'UNVERIFIED') { 
             showSovModal(
                 "ALLOTMENT_IN_PROGRESS", 
-                "Your identity is currently [unverified]. Please remain patient while EPOS and Investors finalize the initial allotment.", 
+                "Your identity is currently [UNVERIFIED]. Please remain patient while EPOS and Investors finalize the initial allotment.", 
                 "#888"
             );
         }

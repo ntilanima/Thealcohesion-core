@@ -146,21 +146,16 @@ app.post('/api/vpu/login', loginLimiter, async (req, res) => {
 });
 
 // SOVEREIGN SNIFFER (Ingress Verification) ---
-// SOVEREIGN SNIFFER (Ingress Verification) ---
 app.post('/api/spacs/sniffer', loginLimiter, async (req, res) => {
     const { hw_id, arch } = req.body;
-    console.log(`>>> SNIFFER_PROBE: HW_ID [${hw_id?.substring(0,16)}]`);
-
+     console.log(`>>> SNIFFER_PROBE: HW_ID [${hw_id?.substring(0,16)}]`);
+    
     try {
         const query = `
             SELECT 
-                p.id as person_id,
-                p.user_name,
-                p.identity_state,
-                p.password_hash,
-                sd.revoked, 
-                sd.os_signature,
-                mb.provisioning_status as birthright_status
+                p.id as person_id, p.official_name, p.identity_state,      
+                p.registration_state, p.membership_no, p.license_key,
+                sd.revoked, mb.provisioning_status 
             FROM security_device sd
             LEFT JOIN person p ON sd.person_id = p.id
             LEFT JOIN member_birthright mb ON p.id = mb.person_id
@@ -172,49 +167,55 @@ app.post('/api/spacs/sniffer', loginLimiter, async (req, res) => {
         if (result.rows.length > 0) {
             const entry = result.rows[0];
 
-            // STAGE 1: SECURITY KILL-SWITCH (REVOCATION)
-            if (entry.revoked || ['REVOKED', 'LOCKED', 'BLACKLISTED'].includes(entry.identity_state)) {
+            // 1. SECURITY KILL-SWITCH (Using exact DB strings)
+            if (entry.revoked || ['LOCKED', 'BLACKLISTED'].includes(entry.identity_state)) {
                 return res.json({ status: 'REVOKED' });
             }
 
-            // STAGE 2: IDENTITY GATE (WAITING ROOM)
-            // If they are a prospect or unverified, they stop here.
-            if (entry.identity_state === 'PROSPECT') {
-                return res.json({ status: 'PENDING' });
+            // 2. GHOST TRAP (Zero Room for Error)
+            // If name is placeholder, stay at Form A regardless of identity_state
+            if (entry.official_name === 'PROSPECT_RESERVED') {
+                return res.json({ status: 'UNPROVISIONED' });
             }
 
-            // STAGE 3: BIRTHRIGHT CLAIM (FORM B)
-            // User is ACTIVE/VERIFIED but has not provisioned system resources yet.
-            if ((entry.identity_state === 'VERIFIED' || entry.identity_state === 'ACTIVE') && 
-                entry.birthright_status !== 'ACTIVE') {
+            // 3. FORM B GATE (Admin set state to 'VERIFIED' and gave keys)
+            // INTELLIGENT AUTO-PROMOTION (Your Request)
+            // Logic: If Admin injected keys, bypass PENDING and go straight to FORM B
+            const hasCredentials = entry.membership_no && entry.license_key;
+            
+            if (hasCredentials && (entry.identity_state === 'VERIFIED' || entry.identity_state === 'PROSPECT')) {
                 return res.json({ 
-                    status: 'REQUIRE_FORM_B',
-                    locked_arch: entry.os_signature 
+                    status: 'REQUIRE_FORM_B', // Redirects to Form B
+                    membership_no: entry.membership_no,
+                    license_key: entry.license_key
                 });
             }
 
-            // STAGE 4: PROFILE SYNC (COMPLETE PROFILE)
-            // System is ready, but no password/sovereign profile exists.
-            if (!entry.password_hash) {
-                return res.json({ status: 'INCOMPLETE' });
+            // 4. STANDARD WAITING ROOM
+            if (entry.identity_state === 'PROSPECT' || entry.provisioning_status === 'PENDING') {
+                return res.json({ status: 'PENDING' });
             }
 
-            // FINAL STAGE: ACCESS GRANTED
-            return res.json({
-                status: 'PROVISIONED', 
-                user: entry.user_name,
-                management: entry.os_signature
-            });
+            // 5. FINAL ACCESS
+            if (entry.registration_state === 'complete' && entry.provisioning_status === 'PROVISIONED') {
+                return res.json({ status: 'PROVISIONED', user: entry.official_name });
+            }
         }
 
-        // AUTO-REGISTRATION HANDSHAKE
-        // If the hardware isn't in the DB, we record it and send them to Form A.
-        await pool.query(
-            `INSERT INTO security_device (device_fingerprint_hash, os_signature)
-             VALUES ($1, $2) ON CONFLICT DO NOTHING`,
-            [hw_id, arch]
+        // --- GHOST HANDSHAKE ---
+        const newPerson = await pool.query(
+            `INSERT INTO person (official_name, identity_state, registration_state) 
+             VALUES ('PROSPECT_RESERVED', 'PROSPECT', 'incomplete') RETURNING id`
         );
-        
+        const personId = newPerson.rows[0].id;
+
+        await pool.query(
+            `INSERT INTO security_device (person_id, device_fingerprint_hash, os_signature)
+             VALUES ($1, $2, $3) 
+             ON CONFLICT (device_fingerprint_hash) DO UPDATE SET person_id = EXCLUDED.person_id`,
+            [personId, hw_id, arch]
+        );
+
         return res.json({ status: 'UNPROVISIONED' });
 
     } catch (err) {
@@ -225,9 +226,10 @@ app.post('/api/spacs/sniffer', loginLimiter, async (req, res) => {
 
 // ---SPACS PROVISIONING WORKFLOW---
 // --- FORM A: EXPRESSION OF INTEREST (Identity Lockdown) ---
+// --- FORM A: EXPRESSION OF INTEREST (Update Existing Prospect) ---
 app.post('/api/spacs/interest', async (req, res) => {
     const { 
-        name, email, phone, country, declaration_of_intent, country_code, phone_code, 
+        name, email, phone, country, declaration_of_intent, phone_code, 
         hw_id, arch 
     } = req.body;
 
@@ -240,76 +242,86 @@ app.post('/api/spacs/interest', async (req, res) => {
     try {
         await client.query('BEGIN');
 
-        // 1. Check if hardware is ALREADY bound to a REAL person (not just a ghost entry)
-        const hwCheck = await client.query(
-            `SELECT p.official_name FROM person p 
+        // 1. Resolve Person ID (Link Ghost record to real identity)
+        const checkResult = await client.query(
+            `SELECT p.id FROM person p 
              JOIN security_device sd ON sd.person_id = p.id 
-             WHERE sd.device_fingerprint_hash = $1`, [hw_id]
+             WHERE sd.device_fingerprint_hash = $1`, 
+            [hw_id]
         );
 
-        if (hwCheck.rows.length > 0) {
-            await client.query('ROLLBACK');
-            return res.status(409).json({ 
-                success: false, 
-                device_locked: true, 
-                message: `HARDWARE_LOCKED: Bound to ${hwCheck.rows[0].official_name}` 
-            });
-        }
+        let personId;
 
-        // 2. Insert the Person using columns from your schema.sql
-        // Using 'declaration_of_intent' as provided by the frontend
-        const personRes = await client.query(
-            `INSERT INTO person (official_name, country, identity_state, declaration_of_intent) 
-             VALUES ($1, $2, 'PROSPECT', $3) RETURNING id`,
-            [name.trim(), country || 'Unknown', declaration_of_intent]
-        );
-        const personId = personRes.rows[0].id;
+        if (checkResult.rows.length > 0) {
+            personId = checkResult.rows[0].id;
+            // UPDATE: Graduates Ghost to Prospect with all metadata
+            await client.query(
+                `UPDATE person 
+                 SET official_name = $1, 
+                     country = $2, 
+                     identity_state = 'PROSPECT', 
+                     declaration_of_intent = $3
+                 WHERE id = $4`,
+                [name.trim(), country || 'Unknown', declaration_of_intent, personId]
+            );
+        } else {
+            // FALLBACK: Create fresh if Sniffer missed initial handshake
+            const personRes = await client.query(
+                `INSERT INTO person (official_name, country, identity_state, declaration_of_intent) 
+                 VALUES ($1, $2, 'PROSPECT', $3) RETURNING id`,
+                [name.trim(), country || 'Unknown', declaration_of_intent]
+            );
+            personId = personRes.rows[0].id;
 
-        // 3. Adopt the "Ghost Device" created by the Sniffer
-        // We UPDATE the record where person_id is currently NULL
-        const deviceUpdate = await client.query(
-            `UPDATE security_device 
-             SET person_id = $1, os_signature = $2 
-             WHERE device_fingerprint_hash = $3`,
-            [personId, arch || 'Unknown', hw_id]
-        );
-
-        // 4. If the device wasn't there (Sniffer missed it), Create it
-        if (deviceUpdate.rowCount === 0) {
             await client.query(
                 `INSERT INTO security_device (person_id, device_fingerprint_hash, os_signature)
-                 VALUES ($1, $2, $3)`,
+                 VALUES ($1, $2, $3) 
+                 ON CONFLICT (device_fingerprint_hash) DO UPDATE SET person_id = EXCLUDED.person_id`,
                 [personId, hw_id, arch || 'Unknown']
             );
         }
 
-        // 5. Bind Contact Info
-        const fullPhone = (phone_code && !phone.includes(phone_code)) ? `${phone_code}${phone}` : phone;
-        const contacts = [
-            ['EMAIL', email.toLowerCase().trim()],
-            ['PHONE', fullPhone.trim()]
-        ];
+        // 2. CONTACT VECTORS: Insert Phone, Phone Code, and Email
+        // We wipe old ghost contacts to ensure clean data
+        await client.query(`DELETE FROM contact_information WHERE person_id = $1`, [personId]);
+        
+        const cleanEmail = email.toLowerCase().trim();
+        const fullPhone = `${phone_code}${phone}`.replace(/\s+/g, ''); // Removes spaces to ensure uniqueness
 
-        for (let [type, val] of contacts) {
-            await client.query(
-                `INSERT INTO contact_information (person_id, contact_type, contact_value) VALUES ($1, $2, $3)`,
-                [personId, type, val]
-            );
-        }
+        // Insert Email
+        await client.query(
+            `INSERT INTO contact_information (person_id, contact_type, contact_value, is_primary) 
+             VALUES ($1, 'email', $2, TRUE) 
+             ON CONFLICT (contact_value) DO UPDATE SET person_id = $1`,
+            [personId, cleanEmail]
+        );
+
+        // Insert Combined Phone
+        await client.query(
+            `INSERT INTO contact_information (person_id, contact_type, contact_value, is_primary) 
+             VALUES ($1, 'phone', $2, FALSE) 
+             ON CONFLICT (contact_value) DO UPDATE SET person_id = $1`,
+            [personId, fullPhone]
+        );
+        // 3. INITIALIZE BIRTHRIGHT (Ensures Form B target exists)
+        await client.query(
+            `INSERT INTO member_birthright (person_id, provisioning_status) 
+             VALUES ($1, 'PENDING') ON CONFLICT DO NOTHING`,
+            [personId]
+        );
 
         await client.query('COMMIT');
-        return res.status(201).json({ success: true, message: "IDENTITY_INITIALIZED" });
+        return res.status(201).json({ success: true, message: "IDENTITY_LOCKED_PENDING_APPROVAL" });
 
     } catch (err) {
         await client.query('ROLLBACK');
-        if (err.code === '23505') {
-            return res.status(400).json({ 
-                success: false, 
-                already_exists: true, 
-                message: "This identity (Email or HW) is already registered." 
-            });
+        console.error("REGISTRY_LOCKDOWN_FAULT:", err.message);
+        
+        // Custom error for the user if they use an email already in the system
+        if (err.message.includes('unique_contact_value')) {
+            return res.status(409).json({ error: "CONTACT_VECTOR_ALREADY_REGISTERED" });
         }
-        console.error("DATABASE_GENESIS_FAULT:", err.message);
+        
         return res.status(500).json({ error: "REGISTRY_FAILURE" });
     } finally {
         client.release();
@@ -323,62 +335,59 @@ app.post('/api/spacs/verify-provision', async (req, res) => {
         email, phone, phone_code, country 
     } = req.body;
 
-    if (!hw_id || !membership_no || !license_key) {
+    // 1. STAGE 1: FULL VECTOR GATE
+    if (!hw_id || !membership_no || !license_key || !email || !phone || !official_name) {
         return res.status(400).json({ error: "REQUIRED_VECTORS_MISSING" });
     }
 
     const client = await pool.connect();
-
     try {
         await client.query('BEGIN');
 
-        // 1. Verify Member + Hardware Match
+        // 2. STAGE 2: IDENTITY & HARDWARE LOCK-IN
         const result = await client.query(
             `SELECT p.id FROM person p
              JOIN security_device sd ON sd.person_id = p.id
-             WHERE sd.device_fingerprint_hash = $1 
+             WHERE sd.device_fingerprint_hash LIKE $1
              AND p.membership_no = $2 
-             AND p.license_key = $3`,
-            [hw_id, membership_no, license_key]
+             AND p.license_key = $3
+             AND p.official_name = $4
+             AND p.country = $5`,
+            [`%${hw_id}%`, membership_no, license_key, official_name.trim(), country]
         );
 
         if (result.rows.length === 0) {
-            return res.status(401).json({ 
-                success: false, 
-                message: "INVALID_CREDENTIALS: Match not found in Sovereign Registry." 
-            });
+            await client.query('ROLLBACK');
+            return res.status(401).json({ error: "REGISTRY_MISMATCH" });
         }
 
         const personId = result.rows[0].id;
 
-        // 2. Update Person record with latest metadata
-        await client.query(
-            `UPDATE person SET 
-                official_name = $1, 
-                country = $2, 
-                identity_state = 'ACTIVE', 
-                registration_state = 'complete' 
-             WHERE id = $3`,
-            [official_name, country, personId]
+        // 3. STAGE 3: CONTACT VECTOR VALIDATION (Implicitly checks Phone Code)
+        const cleanEmail = email.toLowerCase().trim();
+        const fullPhoneCheck = `${phone_code}${phone}`.replace(/\s+/g, '');
+
+        const contactMatch = await client.query(
+            `SELECT id FROM contact_information 
+             WHERE person_id = $1 AND contact_value IN ($2, $3)`,
+            [personId, cleanEmail, fullPhoneCheck]
         );
 
-        // 3. Update or Insert Contact Info (Email and Phone)
-        const fullPhone = `${phone_code}${phone}`;
-        const contacts = [['EMAIL', email.toLowerCase()], ['PHONE', fullPhone]];
-
-        for (let [type, val] of contacts) {
-            await client.query(
-                `INSERT INTO contact_information (person_id, contact_type, contact_value)
-                 VALUES ($1, $2, $3)
-                 ON CONFLICT (person_id, contact_type) DO UPDATE SET contact_value = $3`,
-                [personId, type, val]
-            );
+        // Fail if we can't find both the email and the phone assigned to this person
+        if (contactMatch.rows.length < 2) {
+            await client.query('ROLLBACK');
+            return res.status(401).json({ error: "CONTACT_VERIFICATION_FAILED" });
         }
 
-        // 4. Activate Birthright
+        // 4. STAGE 4: PROVISIONING FINALIZATION
         await client.query(
-            `UPDATE member_birthright SET provisioning_status = 'ACTIVE', activated_at = NOW() 
-             WHERE person_id = $1`, [personId]
+            `UPDATE person SET identity_state = 'VERIFIED', registration_state = 'complete' WHERE id = $1`,
+            [personId]
+        );
+
+        await client.query(
+            `UPDATE member_birthright SET provisioning_status = 'PROVISIONED', updated_at = NOW() WHERE person_id = $1`,
+            [personId]
         );
 
         await client.query('COMMIT');
@@ -386,13 +395,12 @@ app.post('/api/spacs/verify-provision', async (req, res) => {
 
     } catch (err) {
         await client.query('ROLLBACK');
-        console.error("PROVISION_FAULT:", err.message);
+        console.error("VERIFY_PROVISION_FAULT:", err.message);
         res.status(500).json({ error: "INTERNAL_BRIDGE_FAULT" });
     } finally {
         client.release();
     }
 });
-
 // --- COMPLETE PROFILE (Final Identity Handshake) ---
 app.post('/api/spacs/complete-profile', async (req, res) => {
     const { 
@@ -436,35 +444,60 @@ app.post('/api/spacs/complete-profile', async (req, res) => {
                 date_of_birth = $2, 
                 gender = $3, 
                 contact_meta = jsonb_set(COALESCE(contact_meta, '{}'), '{bio}', $4),
-                titles = $5,
-                avatar_data = $6,
-                provision_stage = 'COMPLETE',
-                identity_state = 'ACTIVE',
+                identity_state = 'VERIFIED',
+                registration_state = 'complete',
                 updated_at = NOW()
-            WHERE id = $7
+            WHERE id = $5
         `;
         await client.query(updatePersonQuery, [
             user_name, 
             date_of_birth, 
             gender, 
             JSON.stringify(bio), 
-            titles, 
-            avatar, 
             personId
         ]);
 
-        // 3. SECURE PASSWORDS
-        // Hash the password and store in the person_security table
+        // --- NEW HANDLE TITLES IN person_titles TABLE ---
+        if (titles && titles.length > 0) { 
+            // Clear old titles first to prevent duplicates if re-syncing
+            await client.query(`DELETE FROM person_titles WHERE person_id = $1`, [personId]);
+
+            // Insert each title provided in the payload
+            for (let title of titles) {
+                await client.query(
+                    `INSERT INTO person_titles (person_id, title) VALUES ($1, $2)`,
+                    [personId, title]
+                );
+            }
+        }
+
+        // --- HANDLE AVATAR (person_media table)
+        if (avatar) {
+            await client.query(
+                `DELETE FROM person_media WHERE person_id = $1 AND media_type = 'profile'`, 
+                [personId]
+            );
+            await client.query(
+                `INSERT INTO person_media (person_id, url, media_type) 
+                 VALUES ($1, $2, 'profile')`,
+                [personId, avatar]
+            );
+        }
+
+
+       // -3. SECURE PASSWORDS ---
+        // Hash the password and update the 'password_hash' column directly in the 'person' table
         const saltRounds = 12;
         const passwordHash = await bcrypt.hash(password, saltRounds);
 
+        // Corrected: No person_security table exists. We update the person record created/updated in step 1.
         const securityQuery = `
-            INSERT INTO person_security (person_id, password_hash, updated_at)
-            VALUES ($1, $2, NOW())
-            ON CONFLICT (person_id) 
-            DO UPDATE SET password_hash = $2, updated_at = NOW()
+            UPDATE person 
+            SET password_hash = $1, 
+                updated_at = NOW() 
+            WHERE id = $2
         `;
-        await client.query(securityQuery, [personId, passwordHash]);
+        await client.query(securityQuery, [passwordHash, personId]);
 
         // 4. ATTEST THE DEVICE AS FULLY INITIALIZED
         await client.query(
@@ -492,22 +525,26 @@ app.post('/api/spacs/complete-profile', async (req, res) => {
 });
 
 // API: Check Citizenship Approval Status
-// API: Check Citizenship Approval Status
 app.get('/api/spacs/check-status', async (req, res) => {
     res.set({
-    'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate',
-    'Pragma': 'no-cache',
-    'Expires': '0'
+        'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate',
+        'Pragma': 'no-cache',
+        'Expires': '0'
     });
+    
     const { hw_id } = req.query;
 
     try {
-        // Query looking for the person bound to this hardware
-        // We check 'person' table because that's where identity_state lives
+        // IMPROVED QUERY: Join member_birthright to see the actual provisioning status
         const result = await pool.query(
-            `SELECT p.identity_state, p.is_frozen 
+            `SELECT 
+                p.identity_state, 
+                p.is_frozen, 
+                p.registration_state,
+                mb.provisioning_status 
              FROM person p
              JOIN security_device sd ON sd.person_id = p.id
+             LEFT JOIN member_birthright mb ON p.id = mb.person_id
              WHERE sd.device_fingerprint_hash = $1`, 
             [hw_id]
         );
@@ -515,23 +552,35 @@ app.get('/api/spacs/check-status', async (req, res) => {
         const user = result.rows[0];
 
         if (!user) {
-            return res.json({ status: 'NOT_FOUND', message: 'ID not in Registry.' });
+            return res.json({ status: 'NOT_FOUND' });
         }
 
         if (user.is_frozen) {
             return res.json({ status: 'FROZEN' });
         }
 
-        // Match the 'ACTIVE' state set in your /complete-profile route
-        if (user.identity_state === 'ACTIVE' || user.identity_state === 'verified') {
-            return res.json({ status: 'APPROVED' });
+        // Normalize states to uppercase to avoid case-sensitivity bugs
+        const idState = (user.identity_state || "").toUpperCase();
+        const provStatus = (user.provisioning_status || "").toUpperCase();
+        const regState = (user.registration_state || "").toLowerCase();
+
+        // SUCCESS CONDITION: 
+        // Either they are fully ACTIVE, or Form B marked them as VERIFIED + PROVISIONED
+        if (idState === 'ACTIVE' || 
+           (idState === 'VERIFIED' && provStatus === 'PROVISIONED') ||
+           (regState === 'complete')) {
+            
+            return res.json({ 
+                status: 'APPROVED',
+                provision_status: 'PROVISIONED' 
+            });
         }
 
-        // If state is 'PROSPECT' or 'unverified', it remains PENDING
-        res.json({ status: 'PENDING' });
+        // If they are still a PROSPECT, they stay in the waiting room
+        res.json({ status: 'UNVERIFIED' });
 
     } catch (err) {
-        console.error("DATABASE_ERROR:", err.message);
+        console.error("CHECK_STATUS_FAULT:", err.message);
         res.status(500).json({ error: "CORE_UPLINK_OFFLINE" });
     }
 });

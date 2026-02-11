@@ -56,6 +56,12 @@
     </main>
     <script>
     document.addEventListener('DOMContentLoaded', () => {
+    // --- NEW: SOVEREIGN PERSISTENCE LOCK ---
+    if (localStorage.getItem('sov_provision_complete') === 'true') {
+        window.location.href = "./complete-profile.html";
+        return; // Stop the rest of the script from running
+    }
+
     const logBox = document.getElementById('log-box');
     const overlay = document.getElementById('provisioning-overlay');
     const memberModal = document.getElementById('member-modal');
@@ -121,38 +127,6 @@
         return `TN-${segment()}-${segment()}`;
     }
 
-    //Certificate generator
-    function downloadCertificate(name, id, ip, key) {
-    const date = new Date().toLocaleDateString();
-    const content = `
-    =========================================
-        THEALCOHESION SPACE NATIVE
-        CERTIFICATE OF NATIVITY
-    =========================================
-
-    NATIVE_ID: ${dbMembershipNo}
-    HOLDER:    ${name}
-    LICENSE:   ${key}
-    IP_BIND:   ${currentIP}
-    HARDWARE:  ${localStorage.getItem('vpu_hw_id')}
-    PARTITION: 2025-12-26
-
-    -----------------------------------------
-    This document serves as proof of your 
-    Sovereign Identity within Thealcohesion.
-    =========================================
-        `;
-        downloadTextFile(`SOV_LICENSE_2025-12-26.txt`, content);
-        
-        const blob = new Blob([content], { type: 'text/plain' });
-        const url = URL.createObjectURL(blob);
-        const link = document.createElement('a');
-        link.href = url;
-        link.download = `NATIVE_CERTIFICATE_${id}.txt`;
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-    }
 
     // --- PART 2: PROVISIONING LOG LOGIC ---
     function addLog(text, delay) {
@@ -189,8 +163,9 @@
 
     // --- PART 4: THE ACTUAL PROVISIONING SEQUENCE ---
     window.startProvisioningSequence = async function(name, key, osName, shellUrl) {
-    const overlay = document.getElementById('terminal-overlay');
-    const content = document.getElementById('terminal-content'); // or your logBox
+    const overlay = document.getElementById('provisioning-overlay');
+    const content = document.getElementById('log-box'); 
+    const memberNo = document.getElementById('m-member-no').value; // Get this from the form
     const nativeID = `SN-${Math.random().toString(36).substr(2, 9).toUpperCase()}`;
     
     overlay.style.display = 'flex';
@@ -201,7 +176,7 @@
         return new Promise(resolve => {
             setTimeout(() => {
                 const div = document.createElement('div');
-                div.className = 'terminal-line';
+                div.className = 'log-line';
                 div.innerHTML = `> ${text}`;
                 content.appendChild(div);
                 // Auto-scroll
@@ -277,12 +252,52 @@
     await addLog(`Generating Sovereign_License.txt...`, 400);
 
     // --- TRIGGER FILE DOWNLOADS ---
-    const currentIP = localStorage.getItem('downloaded_ip') || 'N/A';
-    const certBody = `NATIVE_ID: ${nativeID}\nUSER: ${name}\nLICENSE: ${key}\nIP_BIND: ${currentIP}\nDATE: 2025-12-26\nSTATUS: PROVISIONED`;
-    
-    // Download License Text
-    downloadTextFile(`Sovereign_License_${name.replace(/\s/g, '_')}.txt`, certBody);
+const currentIP = localStorage.getItem('downloaded_ip') || 'N/A';
+const sigHash = Math.random().toString(16).toUpperCase().substring(2, 24);
 
+// Helper to ensure every line is exactly 100 characters wide
+const padLine = (text) => {
+    const width = 100;
+    const content = text.padEnd(width - 2, ' ');
+    return `║ ${content} ║`;
+};
+
+const certBody = [
+    "╔" + "═".repeat(100) + "╗",
+    padLine(""),
+    padLine("THEALCOHESION | SOVEREIGN SPACE NATIVE".padStart(69).padEnd(98)),
+    padLine("GENESIS ALLOTMENT: 2025-12-26".padStart(64).padEnd(98)),
+    "╠" + "═".repeat(100) + "╣",
+    padLine(""),
+    padLine("CERTIFICATE OF NATIVITY: [ ATTESTED ]"),
+    padLine(""),
+    padLine("IDENT_VECTORS:"),
+    padLine(`> NATIVE_ID:  ${memberNo}`),
+    padLine(`> HOLDER:     ${name.toUpperCase()}`),
+    padLine(`> LICENSE:    ${key}`),
+    padLine(`> IP_BIND:    ${currentIP}`),
+    padLine(`> HARDWARE:   ${localStorage.getItem('vpu_hw_id') || 'UNKNOWN'}`),
+    padLine(""),
+    "╠" + "═".repeat(100) + "╣",
+    padLine("PARTITION_INFO:"),
+    padLine("> STATUS:     GENESIS_ACTIVE"),
+    padLine("> SECTOR:     INITIAL_ALLOTMENT (NATIVE GATE)"),
+    padLine(`> TIMESTAMP:  ${new Date().toISOString()}`),
+    padLine(""),
+    "╠" + "═".repeat(100) + "╣",
+    padLine("PROCLAMATION:"),
+    padLine("This document serves as proof of Sovereign Identity. The bearer"),
+    padLine("is recognized as a Space Native within the Thealcohesion"),
+    padLine("Autonomous Partition. All digital rights are reserved under"),
+    padLine("the Sovereign Protocol."),
+    padLine(""),
+    padLine(`[ SIGNATURE_HASH: ${sigHash} ]`),
+    "╚" + "═".repeat(100) + "╝"
+].join('\n');
+
+downloadTextFile(`SOV_CERT_${name.replace(/\s/g, '_')}.txt`, certBody);
+
+// Trigger the actual binary download
     if (shellUrl && shellUrl !== '#') {
         await addLog(`Redirecting to download node... <span class="cursor-blink"></span>`, 600);
         const link = document.createElement('a');
@@ -296,9 +311,15 @@
     }
 
     // --- PHASE 4: FINAL REDIRECT ---
+    await addLog(`LOCKING SOVEREIGN IDENTITY TO HARDWARE...`, 400);
+    
+    // Set the permanent lock
+    localStorage.setItem('sov_provision_complete', 'true');
+    localStorage.setItem('sov_date', '2025-12-26'); //
+
     setTimeout(() => {
         overlay.style.display = 'none';
-        window.location.href = "./Thealcohesion-core/index.html";
+        window.location.href = "./complete-profile.html"; 
     }, 2500);
 };
 });
@@ -890,7 +911,6 @@ function closeAllModals() {
         </form>
     </div>
 </div>
-<script src="./loading.js"></script>
 <div id="sov-notification" class="modal-overlay" style="display: none; z-index: 99999;">
     <div class="modal-content terminal-theme" style="max-width: 500px; border: 1px solid #00ff88; box-shadow: 0 0 20px rgba(0, 255, 136, 0.2);">
         <h3 id="sov-title" style="color: #00ff88; font-family: 'Sovereign-Mono', monospace;">> SYSTEM_MESSAGE</h3>
@@ -900,6 +920,44 @@ function closeAllModals() {
             <button onclick="closeSovModal()" class="modal-btn" style="background: transparent; border: 1px solid #00ff88; color: #00ff88; padding: 10px 25px; cursor: pointer; font-family: 'Sovereign-Mono', monospace;">ACKNOWLEDGE</button>
         </div>
     </div>
+</div>    
+
+<div id="interestModal" class="terminal-modal" style="display:none;">
+    <div class="terminal-content">
+        <div class="terminal-header">REGISTRY_LOCKDOWN_VERIFICATION</div>
+        <div class="terminal-body">
+            <p>Confirm the following identity vectors before locking into the registry:</p>
+            <div id="interestSummary" class="vector-list">
+                <div class="vector-item"><span class="v-label">Name:</span> <span id="v-name" class="v-val"></span></div>
+                <div class="vector-item"><span class="v-label">Email:</span> <span id="v-email" class="v-val"></span></div>
+                <div class="vector-item"><span class="v-label">Phone:</span> <span id="v-phone" class="v-val"></span></div>
+                <div class="vector-item"><span class="v-label">Country:</span> <span id="v-country" class="v-val"></span></div>
+            </div>
+            <p class="blink-text">WARNING: This hardware will be tethered to this identity.</p>
+        </div>
+        <div class="terminal-footer">
+            <button onclick="closeInterestModal()" class="term-btn cancel" id="abortInterestBtn">ABORT</button>
+            <button id="confirmInterestBtn" class="term-btn proceed">COMMIT_TO_REGISTRY</button>
+        </div>
+    </div>
 </div>
+
+<style>
+    .terminal-modal { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.9); display: flex; justify-content: center; align-items: center; z-index: 99999; font-family: 'Courier New', monospace; }
+    .terminal-content { width: 450px; border: 1px solid #00ff00; background: #050505; box-shadow: 0 0 20px #00ff0044; }
+    .terminal-header { background: #00ff00; color: #000; padding: 5px 10px; font-weight: bold; }
+    .terminal-body { padding: 20px; color: #00ff00; }
+    .vector-list { background: #0a0a0a; border: 1px solid #333; padding: 10px; margin: 15px 0; }
+    .vector-item { display: flex; justify-content: space-between; margin-bottom: 5px; font-size: 0.85rem; }
+    .v-label { color: #888; text-transform: uppercase; }
+    .v-val { color: #fff; }
+    .term-btn { border: 1px solid #00ff00; background: transparent; color: #00ff00; padding: 8px 15px; cursor: pointer; font-family: inherit; }
+    .term-btn.proceed:hover { background: #00ff00; color: #000; }
+    .term-btn.cancel { border-color: #ff4444; color: #ff4444; }
+    .term-btn.cancel:hover { background: #ff4444; color: #000; }
+    .blink-text { animation: blink 1s infinite; font-size: 0.7rem; color: #ff4444; margin-top: 10px; }
+    @keyframes blink { 0% { opacity: 1; } 50% { opacity: 0; } 100% { opacity: 1; } }
+</style>
+<script src="./loading.js"></script>
 </body>
 </html>

@@ -102,80 +102,93 @@ function initInterestForm() {
     form.parentNode.replaceChild(newForm, form);
     
     newForm.onsubmit = async (e) => {
-    e.preventDefault();
-    const btn = newForm.querySelector('button[type="submit"]');
-    
-    // 1. PREVENT MULTI-SUBMIT BUG
-    if (btn.disabled) return; 
-    btn.disabled = true;
-    btn.innerText = "LOCKING_HARDWARE...";
+        e.preventDefault();
+        const btn = newForm.querySelector('button[type="submit"]');
+        
+        // 1. PREVENT MULTI-SUBMIT BUG
+        if (btn.disabled) return; 
+        btn.disabled = true;
+        btn.innerText = "PREPARING_VECTORS...";
 
-    const phoneRaw = document.getElementById('m-phone-interest');
-    const selects = newForm.querySelectorAll('select');
+        const phoneRaw = document.getElementById('m-phone-interest');
+        const selects = newForm.querySelectorAll('select');
+        const textarea = newForm.querySelector('textarea');
 
-    if (phoneRaw.value.length < 7) {
-        showSovModal("INVALID_PHONE", "Identity requires at least 7 digits.", "#ff4444");
-        btn.disabled = false;
-        btn.innerText = "SUBMIT TO ADMIN";
-        return;
-    }
-
-    try {
-        const hwFingerprint = await generateLocalFingerprint(); 
-        const currentPlatform = detectProvisionManagement();
-
-        const payload = {
-            name: newForm.querySelector('input[type="text"]').value.trim(),
-            email: newForm.querySelector('input[type="email"]').value.trim(),
-            phone: `${selects[1].value}${phoneRaw.value}`,
-            country: selects[0].value,
-            reason: newForm.querySelector('textarea').value.trim(),
-            hw_id: hwFingerprint,
-            arch: currentPlatform
-        };
-
-        const res = await fetch('http://localhost:3000/api/spacs/interest', {
-            method: 'POST',
-            headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify(payload)
-        });
-
-        const data = await res.json();
-
-        // 2. LOGIC HANDLING
-        if (data.device_locked) {
-            showSovModal("HARDWARE_LOCK", data.message, "#ff4444");
+        if (phoneRaw.value.length < 7) {
+            showSovModal("INVALID_PHONE", "Identity requires at least 7 digits.", "#ff4444");
             btn.disabled = false;
             btn.innerText = "SUBMIT TO ADMIN";
-        } 
-        else if (data.already_exists) {
-            showSovModal("IDENTITY_RECOGNIZED", "Identity already logged. Redirecting to status...");
-            setTimeout(() => { window.location.href = './waiting-approval.html'; }, 2000);
-        } 
-        else if (data.success) {
-            // 3. SECURE STATE SYNC
-            localStorage.setItem('sov_identity_confirmed', 'true');
-            localStorage.setItem('sov_member_email', payload.email); 
-
-            // Clear the form modal so the Success Notification is visible
-            closeAllModals(); 
-            
-            // Explicitly show the Registry Success
-            showSovModal("REGISTRY_SUCCESS", "Hardware Bound. Redirecting to Approval Queue...", "#00ff88");
-            
-            // Longer delay to ensure DB and LocalStorage are synced before redirect
-            setTimeout(() => {
-                window.location.href = './waiting-approval.html';
-            }, 2500);
+            return;
         }
-    } catch (err) {
-        console.error(err);
-        showSovModal("BRIDGE_FAULT", "Connection to Sovereign Bridge failed.", "#ff4444");
-        btn.disabled = false;
-        btn.innerText = "SUBMIT TO ADMIN";
-    }
-};
-}
+
+        try {
+            const hwFingerprint = await generateLocalFingerprint(); 
+            const currentPlatform = detectProvisionManagement();
+            
+            const payload = {
+                name: newForm.querySelector('input[type="text"]').value.trim(),
+                email: newForm.querySelector('input[type="email"]').value.trim(),
+                phone_code: (selects[1].value && selects[1].value !== 'undefined') ? selects[1].value : "+",
+                phone: phoneRaw.value.trim(),
+                country: selects[0].value || "KE",
+                declaration_of_intent: textarea ? textarea.value.trim() : "General Interest",
+                hw_id: hwFingerprint,
+                arch: currentPlatform
+            };
+
+            // 1. Fill the custom modal with data
+            document.getElementById('v-name').innerText = payload.name;
+            document.getElementById('v-email').innerText = payload.email;
+            document.getElementById('v-phone').innerText = `${payload.phone_code}${payload.phone}`;
+            document.getElementById('v-country').innerText = payload.country;
+
+            // 2. Show the modal (Fixed ID to match HTML)
+            const terminalModal = document.getElementById('interestModal');
+            terminalModal.style.display = 'flex';
+
+            // 3. Handle Buttons
+            document.getElementById('abortInterestBtn').onclick = () => {
+                terminalModal.style.display = 'none';
+                btn.disabled = false;
+                btn.innerText = "SUBMIT TO ADMIN";
+            };
+
+            document.getElementById('confirmInterestBtn').onclick = async () => {
+                terminalModal.style.display = 'none';
+                btn.innerText = "LOCKING_HARDWARE...";
+
+                try {
+                    const res = await fetch('http://localhost:3000/api/spacs/interest', {
+                        method: 'POST',
+                        headers: {'Content-Type': 'application/json'},
+                        body: JSON.stringify(payload)
+                    });
+                    const data = await res.json();
+                    
+                    if (data.success) {
+                        localStorage.setItem('sov_identity_confirmed', 'true');
+                        localStorage.setItem('vpu_hw_id', hwFingerprint);
+                        closeAllModals(); 
+                        showSovModal("REGISTRY_SUCCESS", "Hardware Bound. Redirecting...", "#00ff88");
+                        setTimeout(() => { window.location.href = './waiting-approval.html'; }, 2500);
+                    } else {
+                        showSovModal("REGISTRY_ERROR", data.error, "#ff4444");
+                        btn.disabled = false;
+                        btn.innerText = "SUBMIT TO ADMIN";
+                    }
+                } catch (err) {
+                    showSovModal("BRIDGE_FAULT", "Offline.", "#ff4444");
+                    btn.disabled = false;
+                    btn.innerText = "SUBMIT TO ADMIN";
+                }
+            };
+        } catch (err) {
+            console.error("IDENTITY_FAULT:", err);
+            btn.disabled = false;
+            btn.innerText = "SUBMIT TO ADMIN";
+        }
+    }; // End onsubmit
+} // End initInterestForm
 
 // --- 7. FORM B: PROVISIONING BRIDGE ---
 function initProvisionForm() {
@@ -196,10 +209,10 @@ function initProvisionForm() {
             license_key: document.getElementById('m-license').value.trim(),
             email: document.getElementById('m-email').value.trim(),
             phone: document.getElementById('m-phone').value.trim(),
-            phone_code: document.getElementById('m-phone-code')?.value || "",
-            country: document.getElementById('m-country')?.value || "Unknown",
-            hw_id: localStorage.getItem('vpu_hw_id'),
-            arch: localStorage.getItem('pending_arch')
+            phone_code: document.getElementById('m-phone-code')?.value || "+254", // Match saved code
+            country: document.getElementById('m-country')?.value || "KE",
+            hw_id: localStorage.getItem('vpu_hw_id'), // Ensure this matches the full hash
+            arch: detectProvisionManagement()
         };
 
         try {
@@ -214,8 +227,13 @@ function initProvisionForm() {
                 closeAllModals();
                 showSovModal("PROVISION_GRANTED", "Identity verified. Initializing download sequence.");
                 if (typeof startProvisioningSequence === 'function') {
-                    startProvisioningSequence(payload.name, payload.license, payload.arch, data.shell_url);
-                }
+                // FIXED: Using the exact keys from your payload object above
+                startProvisioningSequence(
+                    payload.official_name,
+                    payload.license_key,
+                    payload.arch, 
+                    data.shell_url
+                );}
             } else {
                 showSovModal("AUTH_FAILED", data.error || "Credentials rejected.", "#ff4444");
                 btn.disabled = false;

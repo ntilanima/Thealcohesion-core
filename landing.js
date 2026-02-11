@@ -166,7 +166,7 @@ async function runSovereignSniffer(btn) {
         }
 
         // 4. PROFILE SYNC (HUMAN IDENTITY - COMPLETE PROFILE)
-        if (result === 'INCOMPLETE') {
+        if (result === 'incomplete') {
             await addLog("IDENTITY_INCOMPLETE: SYNCING_PROFILE.", "info", 1200);
             await addLog("REDIRECTING TO BIO-SYNC TERMINAL...", "info", 800);
             setTimeout(() => window.location.href = './complete-profile.html', 1500);
