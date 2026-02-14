@@ -91,8 +91,8 @@ CREATE TABLE person (
     membership_no VARCHAR(64) UNIQUE,
     license_key VARCHAR(64) UNIQUE,
     contact_meta JSONB,
-    identity_state VARCHAR(50) DEFAULT 'PROSPECT' CHECK (identity_state IN ('PROSPECT', 'VERIFIED', 'LOCKED', 'BLACKLISTED')),
-    registration_state VARCHAR(50) DEFAULT 'incomplete',
+    identity_state VARCHAR(50) DEFAULT 'PROSPECT' CHECK (identity_state IN ('PROSPECT', 'UNVERIFIED', 'PREVERIFIED', 'VERIFIED', 'LOCKED', 'BLACKLISTED')),
+    registration_state VARCHAR(50) DEFAULT 'INITIAL', CHECK (registration_state IN ('INITIAL', 'PENDING', 'PRECOMPLETE','COMPLETE')), 
     declaration_of_intent TEXT,
     is_frozen BOOLEAN DEFAULT FALSE, 
     created_at TIMESTAMP DEFAULT NOW(),
@@ -1128,7 +1128,7 @@ CREATE TABLE member_birthright (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     person_id UUID REFERENCES person(id) ON DELETE CASCADE,
     storage_quota_mb INT DEFAULT 100,
-    provisioning_status TEXT DEFAULT 'PENDING',
+    provisioning_status TEXT DEFAULT 'PENDING', CHECK (provisioning_status IN ('PENDING', 'UNPROVISIONED','PROVISIONED')), 
     activated_at TIMESTAMP,
     updated_at TIMESTAMP DEFAULT NOW()
 );
@@ -1152,9 +1152,13 @@ CREATE TABLE security_device (
     last_seen TIMESTAMP,
     revoked BOOLEAN DEFAULT FALSE,
     UNIQUE (person_id, device_fingerprint_hash),
-    created_at TIMESTAMP DEFAULT NOW()
+    created_at TIMESTAMP DEFAULT NOW(),
+    CONSTRAINT unique_hardware_identity UNIQUE (device_fingerprint_hash),
+    CONSTRAINT unique_person_device_pair UNIQUE (person_id, device_fingerprint_hash)
 );
 CREATE INDEX idx_security_device_fingerprint ON security_device(device_fingerprint_hash);  
+CREATE INDEX idx_security_device_lookup ON security_device(device_fingerprint_hash, revoked);
+CREATE INDEX idx_security_device_owner ON security_device(person_id);
 
 
 -- ===========================

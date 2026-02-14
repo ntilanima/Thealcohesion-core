@@ -128,6 +128,11 @@ async function runSovereignSniffer(btn) {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ hw_id: hwFingerprint, arch: currentPlatform })
         });
+
+        if (response.status === 429) {
+            alert("SYSTEM_THROTTLED: Too many handshake attempts. Please wait.");
+            return;
+        }
         
         const data = await response.json();
         // We now look for 'status' per our agreement
@@ -148,7 +153,7 @@ async function runSovereignSniffer(btn) {
         }
 
         // 2. IDENTITY GATE (WAITING ROOM)
-        if (result === 'PENDING') {
+        if (result === 'WAITING') {
             await addLog("IDENTITY_LOCKED: AWAITING_ADMIN_KEY.", "warning", 1200);
             await addLog("REDIRECTING TO APPROVAL_QUEUE...", "warning", 800);
             setTimeout(() => window.location.href = './waiting-approval.html', 1500);
@@ -166,7 +171,7 @@ async function runSovereignSniffer(btn) {
         }
 
         // 4. PROFILE SYNC (HUMAN IDENTITY - COMPLETE PROFILE)
-        if (result === 'incomplete') {
+        if (result === 'REQUIRE_PROFILE') {
             await addLog("IDENTITY_INCOMPLETE: SYNCING_PROFILE.", "info", 1200);
             await addLog("REDIRECTING TO BIO-SYNC TERMINAL...", "info", 800);
             setTimeout(() => window.location.href = './complete-profile.html', 1500);
@@ -182,7 +187,7 @@ async function runSovereignSniffer(btn) {
         }
 
         // 6. FALLBACK: NEW USER (UNPROVISIONED)
-        if (result === 'UNPROVISIONED') {
+        if (result === 'INITIAL') {
             await addLog("STATE: INITIAL_REGISTRATION_REQUIRED.", "success", 1200);
             await addLog("ADMITTING_TO_TERMINAL...", "success", 800);
             setTimeout(() => window.location.href = './download.html', 1000);

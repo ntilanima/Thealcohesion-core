@@ -67,3 +67,64 @@ SET
     membership_no = 'EPOS-2025-01226', 
     license_key = 'SOV-AUDI-GENESIS-2025-1226-XX'
 WHERE official_name = 'Michael Audi';
+
+
+NEW SNIFER LOGIC
+
+1 CREATE GHOST: Whenever 
+fingerprint_hash not binded to any user, create ghost and bind it to Ghost 
+insert into person: Official_name = PROSPECT_RESERVED
+change;
+registration_state= INITIAL
+identity-state = PROSPECT
+Provisioning-status = PENDING
+
+
+2 TO FORM A: Whenever 
+official mame = PROSPECT_RESERVED
+fingerprint-Current fingerprint 
+registration = INITIAL
+identity-state = PROSPECT
+Provisioning-status = PENDING
+on submiting interests;
+Change/insert official_name, email, Rountry, phone + phone code,declaration_of_intent,
+Change: 
+registration = PENDING
+identity-state = UNVERIFIED
+Provisioning_Status= UNPROVISIONED
+
+3)GO To FORM B; whenever
+Membership_NO and License-Key is not empty
+registration = PENDING 
+Identity-state = UNVERIFIED 
+Provisioning-status = UNPROVISIONED
+
+on submiting Provision button! 
+Change ;
+registration=PRECOMPLETE
+Provisioning status = PROVISIONED
+identity-state = PREVERIFIED
+
+4) GO TO WAITING! Whenever
+registadion=PENDING 
+identity-state = UNVERIFIED
+Provisioning status = UNPROVISIONED 
+membership-no and lisence-Key is empty
+
+5) Go to Complete-profile whenever
+registration = PRECOMPLETE 
+Provisioning=PROVISIONED
+identity state = PREVERIFIED
+on submeting;
+insert: Password harsh, Avatar, D.D.B, Gender, user name,Bio
+Change
+registration = COMPLETE 
+identity-state = VERIFIED 
+Provisioning = PROVISIONED
+
+6) GO OS-CORE : Whenever: 
+Registration = COMPLETE
+identity-state= VERIFIED 
+Provisioning = PROVISIONED
+Pasword_harsh and user_name is not empty
+Go to OS CORE

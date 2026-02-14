@@ -146,78 +146,129 @@ app.post('/api/vpu/login', loginLimiter, async (req, res) => {
 });
 
 // SOVEREIGN SNIFFER (Ingress Verification) ---
+// SOVEREIGN SNIFFER (Ingress Verification) ---
 app.post('/api/spacs/sniffer', loginLimiter, async (req, res) => {
     const { hw_id, arch } = req.body;
-     console.log(`>>> SNIFFER_PROBE: HW_ID [${hw_id?.substring(0,16)}]`);
+    console.log(`>>> SNIFFER_PROBE: HW_ID [${hw_id?.substring(0,16)}]`);
     
     try {
-        const query = `
+        // 1. PRIMARY CHECK: Is this device already in our Registry?
+        const checkQuery = `
             SELECT 
-                p.id as person_id, p.official_name, p.identity_state,      
-                p.registration_state, p.membership_no, p.license_key,
-                sd.revoked, mb.provisioning_status 
+                p.id as person_id, 
+                p.official_name, 
+                p.identity_state,      
+                p.registration_state, 
+                p.membership_no, 
+                p.license_key,
+                p.password_hash,
+                p.user_name,
+                sd.revoked, 
+                mb.provisioning_status 
             FROM security_device sd
             LEFT JOIN person p ON sd.person_id = p.id
             LEFT JOIN member_birthright mb ON p.id = mb.person_id
             WHERE sd.device_fingerprint_hash = $1
         `;
         
-        const result = await pool.query(query, [hw_id]);
+        const result = await pool.query(checkQuery, [hw_id]);
 
+        // --- BLOCK A: HARDWARE RECOGNIZED (NO GHOST ALLOWED) ---
         if (result.rows.length > 0) {
-            const entry = result.rows[0];
+            const u = result.rows[0];
 
-            // 1. SECURITY KILL-SWITCH (Using exact DB strings)
-            if (entry.revoked || ['LOCKED', 'BLACKLISTED'].includes(entry.identity_state)) {
-                return res.json({ status: 'REVOKED' });
+            //If device exists but person is missing, 
+            // stop here so Case B is never reached.
+            if (!u.person_id) return res.json({ status: 'INITIAL' });
+
+            // 6) GO OS-CORE: Registration=COMPLETE, Identity=VERIFIED, Provisioning=PROVISIONED, Password & Username NOT EMPTY
+            if (u.registration_state === 'COMPLETE' && 
+                u.identity_state === 'VERIFIED' && 
+                u.provisioning_status === 'PROVISIONED' &&
+                u.password_hash && u.user_name) {
+                return res.json({ status: 'PROVISIONED', user: u.official_name });
             }
 
-            // 2. GHOST TRAP (Zero Room for Error)
-            // If name is placeholder, stay at Form A regardless of identity_state
-            if (entry.official_name === 'PROSPECT_RESERVED') {
-                return res.json({ status: 'UNPROVISIONED' });
+            // 5) GO TO COMPLETE-PROFILE: Registration=PRECOMPLETE, Provisioning=PROVISIONED, Identity=PREVERIFIED
+            if (u.registration_state === 'PRECOMPLETE' && 
+                u.provisioning_status === 'PROVISIONED' && 
+                u.identity_state === 'PREVERIFIED') {
+                return res.json({ status: 'REQUIRE_PROFILE' });
             }
 
-            // 3. FORM B GATE (Admin set state to 'VERIFIED' and gave keys)
-            // INTELLIGENT AUTO-PROMOTION (Your Request)
-            // Logic: If Admin injected keys, bypass PENDING and go straight to FORM B
-            const hasCredentials = entry.membership_no && entry.license_key;
+            // 3) GO TO FORM B: Registration=PENDING, Identity=UNVERIFIED, Provisioning=UNPROVISIONED, Keys NOT EMPTY
+            if (u.registration_state === 'PENDING' && 
+                u.identity_state === 'UNVERIFIED' && 
+                u.provisioning_status === 'UNPROVISIONED' && 
+                u.membership_no && u.license_key) {
+                return res.json({ status: 'REQUIRE_FORM_B' });
+            }
+
+            // 4) GO TO WAITING: Registration=PENDING, Identity=UNVERIFIED, Provisioning=UNPROVISIONED, Keys EMPTY
+            if (u.registration_state === 'PENDING' && 
+                u.identity_state === 'UNVERIFIED' && 
+                u.provisioning_status === 'UNPROVISIONED' && 
+                !u.membership_no) {
+                return res.json({ status: 'WAITING' });
+            }
+
+            // 2) TO FORM A: Official_name=PROSPECT_RESERVED, Registration=INITIAL, Identity=PROSPECT, Provisioning=PENDING
+            if (u.official_name === 'PROSPECT_RESERVED' && 
+                u.registration_state === 'INITIAL' && 
+                u.identity_state === 'PROSPECT') {
+                return res.json({ status: 'INITIAL' });
+            }
+
+            /** * CRITICAL FALLBACK: 
+             * If the hw_id exists but matched none of the specific logic above, 
+             * we return 'INITIAL' to prevent the code from continuing to Case B.
+             */
+            return res.json({ status: 'INITIAL' });
             
-            if (hasCredentials && (entry.identity_state === 'VERIFIED' || entry.identity_state === 'PROSPECT')) {
-                return res.json({ 
-                    status: 'REQUIRE_FORM_B', // Redirects to Form B
-                    membership_no: entry.membership_no,
-                    license_key: entry.license_key
-                });
-            }
+        } else {
+        // --- CASE B: GHOST HANDSHAKE (First time seeing this hardware) ---
+        // We use a transactional client to prevent "No Parameter $1" errors
+        const client = await pool.connect();
+        try {
+            await client.query('BEGIN');
 
-            // 4. STANDARD WAITING ROOM
-            if (entry.identity_state === 'PROSPECT' || entry.provisioning_status === 'PENDING') {
-                return res.json({ status: 'PENDING' });
-            }
+            // 1. Create Identity
+            const personRes = await client.query(
+                `INSERT INTO person (official_name, identity_state, registration_state) 
+                 VALUES ('PROSPECT_RESERVED', 'PROSPECT', 'INITIAL') RETURNING id`
+            );
+            const personId = personRes.rows[0].id;
 
-            // 5. FINAL ACCESS
-            if (entry.registration_state === 'complete' && entry.provisioning_status === 'PROVISIONED') {
-                return res.json({ status: 'PROVISIONED', user: entry.official_name });
+            // 2. Bind Hardware (Ensure all columns match your schema)
+            await client.query(
+                `INSERT INTO security_device (person_id, device_fingerprint_hash, device_type, os_signature)
+                 VALUES ($1, $2, $3, $4) 
+                 ON CONFLICT (device_fingerprint_hash) DO UPDATE SET person_id = EXCLUDED.person_id`,
+                [personId, hw_id, 'VPU_STATION', arch || 'Unknown']
+            );
+
+            // 3. Initialize Birthright Slot
+            await client.query(
+                `INSERT INTO member_birthright (person_id, provisioning_status) 
+                 VALUES ($1, 'PENDING')`, 
+                [personId]
+            );
+
+            await client.query('COMMIT');
+            console.log(`>>> GENESIS SUCCESS: HW_ID [${hw_id.substring(0,8)}] Registered to Person [${personId}]`);
+            return res.json({ status: 'INITIAL' });
+
+        } catch (handshakeErr) {
+            await client.query('ROLLBACK');
+            // Handle race condition if two requests hit at the exact same millisecond
+            if (handshakeErr.code === '23505') {
+                return res.json({ status: 'INITIAL' });
             }
+            throw handshakeErr; 
+        } finally {
+            client.release();
         }
-
-        // --- GHOST HANDSHAKE ---
-        const newPerson = await pool.query(
-            `INSERT INTO person (official_name, identity_state, registration_state) 
-             VALUES ('PROSPECT_RESERVED', 'PROSPECT', 'incomplete') RETURNING id`
-        );
-        const personId = newPerson.rows[0].id;
-
-        await pool.query(
-            `INSERT INTO security_device (person_id, device_fingerprint_hash, os_signature)
-             VALUES ($1, $2, $3) 
-             ON CONFLICT (device_fingerprint_hash) DO UPDATE SET person_id = EXCLUDED.person_id`,
-            [personId, hw_id, arch]
-        );
-
-        return res.json({ status: 'UNPROVISIONED' });
-
+    }
     } catch (err) {
         console.error("SNIFFER_FAULT:", err.message);
         res.status(500).json({ error: "BRIDGE_FAULT" });
@@ -233,7 +284,7 @@ app.post('/api/spacs/interest', async (req, res) => {
         hw_id, arch 
     } = req.body;
 
-    if (!hw_id || !email || !name) {
+    if (!hw_id || !email || !name || !phone || !country || !declaration_of_intent || !phone_code || !arch) {
         return res.status(400).json({ error: "REQUIRED_VECTORS_MISSING" });
     }
 
@@ -254,21 +305,22 @@ app.post('/api/spacs/interest', async (req, res) => {
 
         if (checkResult.rows.length > 0) {
             personId = checkResult.rows[0].id;
-            // UPDATE: Graduates Ghost to Prospect with all metadata
+            // UPDATE: Move from INITIAL to PENDING/UNVERIFIED logic
             await client.query(
                 `UPDATE person 
                  SET official_name = $1, 
                      country = $2, 
-                     identity_state = 'PROSPECT', 
+                     registration_state = 'PENDING', 
+                     identity_state = 'UNVERIFIED', 
                      declaration_of_intent = $3
                  WHERE id = $4`,
                 [name.trim(), country || 'Unknown', declaration_of_intent, personId]
             );
         } else {
-            // FALLBACK: Create fresh if Sniffer missed initial handshake
+            // FALLBACK: Create fresh with correct Stage 2/4 states
             const personRes = await client.query(
-                `INSERT INTO person (official_name, country, identity_state, declaration_of_intent) 
-                 VALUES ($1, $2, 'PROSPECT', $3) RETURNING id`,
+                `INSERT INTO person (official_name, country, registration_state, identity_state, declaration_of_intent) 
+                 VALUES ($1, $2, 'PENDING', 'UNVERIFIED', $3) RETURNING id`,
                 [name.trim(), country || 'Unknown', declaration_of_intent]
             );
             personId = personRes.rows[0].id;
@@ -290,23 +342,22 @@ app.post('/api/spacs/interest', async (req, res) => {
 
         // Insert Email
         await client.query(
-            `INSERT INTO contact_information (person_id, contact_type, contact_value, is_primary) 
-             VALUES ($1, 'email', $2, TRUE) 
-             ON CONFLICT (contact_value) DO UPDATE SET person_id = $1`,
-            [personId, cleanEmail]
-        );
+                `INSERT INTO contact_information (person_id, contact_type, contact_value, is_primary) 
+                VALUES ($1, 'email', $2, TRUE)`,
+                [personId, cleanEmail]
+            );
 
         // Insert Combined Phone
         await client.query(
-            `INSERT INTO contact_information (person_id, contact_type, contact_value, is_primary) 
-             VALUES ($1, 'phone', $2, FALSE) 
-             ON CONFLICT (contact_value) DO UPDATE SET person_id = $1`,
-            [personId, fullPhone]
-        );
+                `INSERT INTO contact_information (person_id, contact_type, contact_value, is_primary) 
+                VALUES ($1, 'phone', $2, FALSE)`,
+                [personId, fullPhone]
+            );
         // 3. INITIALIZE BIRTHRIGHT (Ensures Form B target exists)
         await client.query(
             `INSERT INTO member_birthright (person_id, provisioning_status) 
-             VALUES ($1, 'PENDING') ON CONFLICT DO NOTHING`,
+             VALUES ($1, 'UNPROVISIONED') 
+             ON CONFLICT (person_id) DO UPDATE SET provisioning_status = 'UNPROVISIONED'`,
             [personId]
         );
 
@@ -381,7 +432,7 @@ app.post('/api/spacs/verify-provision', async (req, res) => {
 
         // 4. STAGE 4: PROVISIONING FINALIZATION
         await client.query(
-            `UPDATE person SET identity_state = 'VERIFIED', registration_state = 'complete' WHERE id = $1`,
+            `UPDATE person SET identity_state = 'PREVERIFIED', registration_state = 'PRECOMPLETE' WHERE id = $1`,
             [personId]
         );
 
@@ -445,7 +496,7 @@ app.post('/api/spacs/complete-profile', async (req, res) => {
                 gender = $3, 
                 contact_meta = jsonb_set(COALESCE(contact_meta, '{}'), '{bio}', $4),
                 identity_state = 'VERIFIED',
-                registration_state = 'complete',
+                registration_state = 'COMPLETE',
                 updated_at = NOW()
             WHERE id = $5
         `;
@@ -568,7 +619,7 @@ app.get('/api/spacs/check-status', async (req, res) => {
         // Either they are fully ACTIVE, or Form B marked them as VERIFIED + PROVISIONED
         if (idState === 'ACTIVE' || 
            (idState === 'VERIFIED' && provStatus === 'PROVISIONED') ||
-           (regState === 'complete')) {
+           (regState === 'COMPLETE')) {
             
             return res.json({ 
                 status: 'APPROVED',

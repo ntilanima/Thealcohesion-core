@@ -71,14 +71,14 @@ export function startBootSequence(onComplete) {
                 }
 
                 setTimeout(() => {
-    if (splash) {
-        splash.style.display = 'none';
-        splash.style.pointerEvents = 'none';
-    }
-    if (loginGate) loginGate.style.opacity = '1';
-    if (typeof onComplete === 'function') onComplete();
-}, 800);
-            }, 600);
+                if (splash) {
+                    splash.style.display = 'none';
+                    splash.style.pointerEvents = 'none';
+                }
+                if (loginGate) loginGate.style.opacity = '1';
+                if (typeof onComplete === 'function') onComplete();
+            }, 800);
+                        }, 600);
         }
 
         // --- THE FIX: Force the update ---
