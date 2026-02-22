@@ -154,7 +154,9 @@ export const registry = [
         protocol: 'NET://gate',
         category: 'System',
         roles: ['ANY'],
-        manifest: { purpose: 'Sandboxed gateway for restricted external information retrieval.', resources: { cpu: 'High', ram: 20 } },
+        manifest: { 
+            purpose: 'Sandboxed gateway for restricted external information retrieval.', 
+            resources: { cpu: 'High', ram: 20 } },
         ethics: { tracking: false, manipulation: false, consent: true },
         lifecycle: 'VETTED'
     },
@@ -182,41 +184,22 @@ export const registry = [
         ethics: { tracking: false, manipulation: false, consent: true },
         lifecycle: 'VETTED'
     },
-    { 
-        id: 'monitor', 
-        name: 'System Monitor', 
+
+     {
+        id: 'stc', 
+        name: 'Tactical Command', // Name changed to reflect the merge
         icon: '📊', 
-        file: 'monitor.js',
+        file: 'tactical_command.js',
         protocol: 'CORE://telemetry',
         category: 'System',
         roles: ['ADMIN', 'MEGA'],
-        manifest: { purpose: 'Real-time telemetry of kernel cycles and memory allocation.', resources: { cpu: 'Low', ram: 4 } },
+        manifest: { 
+            purpose: 'Real-time telemetry of kernel cycles, memory allocation, and process forensics.', 
+            resources: { cpu: 'Low', ram: 4 } 
+        },
         ethics: { tracking: false, manipulation: false, consent: true },
-        lifecycle: 'VETTED'
-    },
-    { 
-        id: 'taskman', 
-        name: 'Task Manager', 
-        icon: '📝', 
-        file: 'taskman.js',
-        protocol: 'CORE://proc',
-        category: 'System',
-        roles: ['ADMIN'],
-        manifest: { purpose: 'Process control and task prioritization for the VPU.', resources: { cpu: 'Low', ram: 2 } },
-        ethics: { tracking: false, manipulation: false, consent: true },
-        lifecycle: 'VETTED'
-    },
-    { 
-        id: 'syslog', 
-        name: 'Event Viewer', 
-        icon: '📜', 
-        file: 'syslog.js',
-        protocol: 'CORE://audit',
-        category: 'System',
-        roles: ['MEGA', 'ADMIN'],
-        manifest: { purpose: 'Immutable audit trails for system transparency.', resources: { cpu: 'Low', ram: 3 } },
-        ethics: { tracking: false, manipulation: false, consent: true },
-        lifecycle: 'VETTED'
+        lifecycle: 'VETTED',
+        isPinned: true // Highly recommended for a system-critical tool
     },
 
     // --- 3. SOVEREIGN ECOSYSTEM ---
@@ -465,5 +448,156 @@ export const registry = [
             autoPurge: true // Article 13 compliance
         },
         lifecycle: 'VETTED'
+
+    },
+
+    // --- 5. SHADOW OPERATIONS & ALLOTMENT RECOVERY ---
+    { 
+        id: 'blackout', 
+        name: 'Blackout Terminal', 
+        icon: '▰', 
+        file: 'blackout-terminal.js',
+        protocol: 'SEC.SHADOW://terminal',
+        category: 'Security',
+        roles: ['ARCHON', 'OFFICER', 'ADMIN'],
+        manifest: { 
+            purpose: 'Encrypted P2P CLI for shadow-link communication and steganographic asset minting.', 
+            resources: { cpu: 'Low', ram: 4 },
+            security: {
+                p2p: true,
+                steganography: 'Alpha-Channel',
+                burnOnRead: true
+            }
+        },
+        ethics: { 
+            tracking: false, 
+            manipulation: false, 
+            consent: true,
+            autoPurge: true 
+        },
+        lifecycle: 'VETTED'
+    },
+    { 
+        id: 'redemption', 
+        name: 'Redemption Portal', 
+        icon: '💠', 
+        file: 'redemption-portal.js',
+        protocol: 'ECON.RECOVERY://portal',
+        category: 'Economic',
+        roles: ['ANY'], // Open to any member/investor holding a badge
+        manifest: { 
+            purpose: 'Recovery interface for extracting encrypted EPOS allotments from Shadow Badges.', 
+            resources: { cpu: 'Medium', ram: 6 },
+            security: {
+                clientSideDecryption: true,
+                identityVerification: 'Sovereign-Key'
+            }
+        },
+        ethics: { 
+            tracking: false, 
+            manipulation: false, 
+            consent: true 
+        },
+        lifecycle: 'VETTED'
+    },
+
+    {
+        id: 'shadow-chat',
+        name: 'Shadow Chat',
+        icon: '⌬', 
+        file: 'shadow-chat.js',
+        protocol: 'SIGNAL.CONDUIT://shadow-link',
+        category: 'Communications',
+        roles: ['ARCHON', 'INVESTOR'], // Restricted to specific roles for secure handshake
+        manifest: { 
+            purpose: 'Ephemeral P2P encrypted messaging conduit for secure signal exchange.', 
+            resources: { cpu: 'Low', ram: 4 },
+            security: {
+                clientSideDecryption: true,
+                identityVerification: 'Sovereign-Key',
+                persistence: 'None (Burn-on-Close)'
+            }
+        },
+        ethics: { 
+            tracking: false, 
+            manipulation: false, 
+            consent: true 
+        },
+        lifecycle: 'BETA_DEPLOYMENT'
+    },
+
+    {
+        id: 'ghost-drive',
+        name: 'Ghost Drive',
+        icon: '⧉', // Overlapping squares icon for layered storage
+        file: 'ghost-drive.js',
+        protocol: 'VAULT.STORAGE://shadow-shards',
+        category: 'Security',
+        roles: ['ARCHON'], // Only Archons can manage the raw shard repository
+        manifest: { 
+            purpose: 'Encrypted storage for Investor Badges and EPOS Allotment keys.', 
+            resources: { cpu: 'High', ram: 12 }, // Higher RAM for real-time image decryption buffers
+            security: {
+                clientSideDecryption: true,
+                identityVerification: 'Sovereign-Key',
+                persistence: 'Encrypted IndexedDB'
+            }
+        },
+        ethics: { 
+            tracking: false, 
+            manipulation: false, 
+            consent: true 
+        },
+        lifecycle: 'STABLE_CORE'
+    },
+
+    {
+    id: 'bio-regen',
+    name: 'Bio-Regen',
+    icon: '🧬', 
+    file: 'bioregen.js',
+    protocol: 'VITALITY.CORE://stasis-monitor',
+    category: 'Welfare',
+    roles: ['MEMBER', 'ARCHON'], 
+    manifest: { 
+        purpose: 'Monitors autophagy phases, provides refeeding protocols, and manages stasis breathing techniques.', 
+        resources: { cpu: 'Low', ram: 4 }, 
+        security: {
+            clientSideDecryption: false, 
+            identityVerification: 'Biometric-Signature',
+            persistence: 'Local-VFS'
+        }
+    },
+    ethics: { 
+        tracking: false, 
+        manipulation: false, 
+        consent: true 
+    },
+    lifecycle: 'STABLE_CORE'
+    },
+
+    {
+        id: 'logs',
+        name: 'Kernel Logs',
+        icon: '🐚',
+        file: 'kernel_log.js',
+        protocol: 'SYSLOG.CORE://event-stream',
+        category: 'System',
+        roles: ['ARCHON'],
+        manifest: {
+            purpose: 'Live event stream for debugging and monitoring sovereign system activity.',
+            resources: { cpu: 'Low', ram: 2 },
+            security: {
+                clientSideDecryption: false,
+                identityVerification: 'SOVEREIGN_CORE_V1',
+                persistence: 'Buffered'
+            }
+        },
+        ethics: {
+            tracking: false,
+            manipulation: false,
+            consent: true
+        },
+        lifecycle: 'STABLE_CORE'
     },
 ];

@@ -8,3 +8,91 @@
     pointer-events: none; /* Let clicks pass through to icons */
     background: #000;
 }
+
+:root {
+            --bg: #010203;
+            --liquid-gold: #ffcc33;
+            --mtaa-green: #00ff41;
+            --accent: #a855f7;
+            --glass: rgba(168, 85, 247, 0.08);
+            --glass-hover: rgba(255, 255, 255, 0.05);
+            /* Lifecycle Stages */
+            --p-stage: #a855f7;
+            --g-stage: #00ff41;
+            --r-stage: #ff4444;
+        }
+#app-layer {
+    position: fixed;
+    inset: 0;
+    z-index: 10;           /* Sit above the canvas */
+    pointer-events: none;  /* IMPORTANT: Let clicks pass through empty space */
+}
+
+.app-bubble {
+    position: absolute;
+    border-radius: 50%;
+    background: var(--glass);
+    border: none; 
+    backdrop-filter: blur(12px);
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    pointer-events: auto;
+    cursor: grab;
+    box-shadow: inset 0 0 15px rgba(255, 255, 255, 0.05);
+    will-change: transform, width, height, background, box-shadow;
+    touch-action: none;
+    overflow: hidden;
+    transition: background 0.3s ease, box-shadow 0.8s ease;
+}
+
+        #vpu-background, #neural-canvas {
+            position: fixed;
+            inset: 0;
+            z-index: 0;
+            pointer-events: none;
+        }
+
+        .app-bubble:hover {
+            background: var(--glass-hover);
+        }
+
+        .scan-bar {
+            position: absolute;
+            width: 100%; height: 2px;
+            top: -10%; opacity: 0;
+            pointer-events: none;
+        }
+
+        .app-bubble:hover .scan-bar {
+            animation: scan 2s infinite linear;
+            opacity: 1;
+        }
+
+        @keyframes scan {
+            0% { top: -10%; }
+            100% { top: 110%; }
+        }
+
+        .app-bubble:active { box-shadow: inset 0 0 30px rgba(255,255,255,0.2) !important; }
+
+.app-icon { font-size: 32px; pointer-events: none; z-index: 2; }
+.app-name { font-size: 9px; font-weight: 900; letter-spacing: 2px; margin-top: 8px; text-transform: uppercase; pointer-events: none; z-index: 2;}
+.app-status { font-size: 7px; color: var(--mtaa-green); margin-top: 5px; opacity: 0.8; pointer-events: none; z-index: 2;}
+.uptime-display { font-size: 6px; color: #fff; margin-top: 2px; font-weight: bold; z-index: 2; opacity: 0.4;}
+
+.shine {
+    position: absolute; top: 15%; left: 20%;
+    width: 25%; height: 10%; background: rgba(255,255,255,0.05);
+    border-radius: 50%; transform: rotate(-30deg);
+        }
+
+        /* FAVORITE: Golden glow, no aging */
+.app-bubble.is-favorite {
+    border: 1px solid var(--liquid-gold);
+    box-shadow: 0 0 20px rgba(255, 204, 51, 0.2), inset 0 0 10px rgba(255, 204, 51, 0.1);
+}
+
+/* MOST USED: Slight scaling or distinct shadow */
+.app-bubble.is-most-used {
+    filter: brightness(1.2);
+}

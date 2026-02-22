@@ -46,7 +46,7 @@ export class SystemTray {
         menu.id = 'system-tray-menu';
         menu.style.cssText = `
             position: fixed; top: 55px; right: 15px; width: 310px;
-            background: rgba(20, 20, 20, 0.98); backdrop-filter: blur(30px);
+            background: transparent; backdrop-filter: blur(30px);
             border: 1px solid rgba(255, 255, 255, 0.12); border-radius: 24px;
             color: white; display: none; flex-direction: column; padding: 22px;
             z-index: 9999; box-shadow: 0 25px 60px rgba(0,0,0,0.9);

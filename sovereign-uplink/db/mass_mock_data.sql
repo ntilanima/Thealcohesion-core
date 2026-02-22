@@ -3,6 +3,11 @@
 -- Logic: Matches schema.sql (password_hash in person table)
 -- =========================================
 
+-- =========================================
+-- Thealcohesion-core: GLOBAL SYSTEM SATURATION (FIXED)
+-- Logic: Aligned with schema.sql constraints
+-- =========================================
+
 DO $$ 
 DECLARE 
     c_name TEXT;
@@ -36,13 +41,14 @@ BEGIN
 
                 -- 4. MEMBERS
                 FOR m_idx IN 1..5 LOOP
-                    -- PERSON Table (Aligned with schema: password_hash is here)
+                    -- PERSON Table
+                    -- REMOVED: provisioning_status (belongs to member_birthright)
+                    -- UPDATED: registration_state must be 'INITIAL' (matches schema constraint)
                     INSERT INTO person (
                         official_name, 
                         country, 
                         password_hash,
                         identity_state, 
-                        provision_stage, 
                         registration_state
                     )
                     VALUES (
@@ -50,8 +56,7 @@ BEGIN
                         c_name,
                         v_mock_hash,
                         'PROSPECT',
-                        'INITIAL',
-                        'incomplete'
+                        'INITIAL'
                     ) RETURNING id INTO curr_person_id;
 
                     -- BIRTHRIGHT Table
@@ -62,7 +67,7 @@ BEGIN
                     )
                     VALUES (curr_person_id, 5000, 'PENDING');
 
-                    -- SECURITY Table (Metadata/Clearance)
+                    -- SECURITY Table
                     INSERT INTO person_security (
                         person_id, 
                         security_clearance, 
@@ -70,14 +75,14 @@ BEGIN
                     )
                     VALUES (curr_person_id, 1, 1);
 
-                    -- TLC Officials
-                    INSERT INTO tlc_officials (tlc_id, person_id, role)
-                    VALUES (curr_tlc_id, curr_person_id, 'Member');
+                    -- TLC Officials (role must be 'Member' as per your logic)
+                    INSERT INTO tlc_officials (tlc_id, person_id, role, start_date)
+                    VALUES (curr_tlc_id, curr_person_id, 'Member', CURRENT_DATE);
 
                 END LOOP;
             END LOOP;
         END LOOP;
     END LOOP;
 
-    RAISE NOTICE 'SUCCESS: Global Saturation Complete (11,700 Prospects Registered).';
+    RAISE NOTICE 'SUCCESS: Global Saturation Complete (Approx 11,700 Prospects Registered).';
 END $$;

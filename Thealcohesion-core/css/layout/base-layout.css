@@ -70,6 +70,7 @@ body, html {
     flex-grow: 1;    /* Automatically calculates width: 100% minus --dock-width */
     height: 100%;
     width: 100vw; /* Full width to prevent gaps */ 
+    cursor: crosshair;
 }
 
 .desktop-icon {

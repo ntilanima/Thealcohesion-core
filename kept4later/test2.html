@@ -1,0 +1,339 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Sovereign // HALO_LIFECYCLE_VPU</title>
+    <style>
+        :root {
+            --bg: #010203;
+            --liquid-gold: #ffcc33;
+            --mtaa-green: #00ff41;
+            --accent: #a855f7;
+            --glass: rgba(168, 85, 247, 0.08);
+            --glass-hover: rgba(255, 255, 255, 0.05);
+            /* Lifecycle Stages */
+            --p-stage: #a855f7;
+            --g-stage: #00ff41;
+            --r-stage: #ff4444;
+        }
+
+        body, html {
+            margin: 0; padding: 0;
+            background: var(--bg);
+            color: #fff;
+            font-family: 'JetBrains Mono', monospace;
+            overflow: hidden; height: 100vh;
+            cursor: crosshair;
+            user-select: none;
+        }
+
+        #vpu-background { position: fixed; inset: 0; z-index: 0; pointer-events: none; }
+
+        #top-hud {
+            position: fixed; top: 25px; width: 100%;
+            display: flex; flex-direction: column; align-items: center; 
+            z-index: 100; pointer-events: none;
+        }
+
+        .hud-banner {
+            background: rgba(10, 5, 25, 0.9);
+            border: 1px solid var(--accent);
+            padding: 8px 25px;
+            backdrop-filter: blur(10px);
+            font-size: 10px; letter-spacing: 3px;
+            color: var(--liquid-gold);
+            box-shadow: 0 0 20px rgba(168, 85, 247, 0.1);
+        }
+
+        .app-bubble {
+            position: absolute;
+            border-radius: 50%;
+            background: var(--glass);
+            border: none; 
+            backdrop-filter: blur(12px);
+            display: flex; flex-direction: column;
+            align-items: center; justify-content: center;
+            cursor: grab;
+            box-shadow: inset 0 0 15px rgba(255, 255, 255, 0.05);
+            will-change: transform, width, height, background, box-shadow;
+            touch-action: none;
+            overflow: hidden;
+            transition: background 0.3s ease, box-shadow 0.8s ease;
+        }
+
+        .app-bubble:hover {
+            background: var(--glass-hover);
+        }
+
+        .scan-bar {
+            position: absolute;
+            width: 100%; height: 2px;
+            top: -10%; opacity: 0;
+            pointer-events: none;
+        }
+
+        .app-bubble:hover .scan-bar {
+            animation: scan 2s infinite linear;
+            opacity: 1;
+        }
+
+        @keyframes scan {
+            0% { top: -10%; }
+            100% { top: 110%; }
+        }
+
+        .app-bubble:active { box-shadow: inset 0 0 30px rgba(255,255,255,0.2) !important; }
+
+        .app-icon { font-size: 32px; pointer-events: none; z-index: 2; }
+        .app-name { font-size: 9px; font-weight: 900; letter-spacing: 2px; margin-top: 8px; text-transform: uppercase; pointer-events: none; z-index: 2;}
+        .app-status { font-size: 7px; color: var(--mtaa-green); margin-top: 5px; opacity: 0.8; pointer-events: none; z-index: 2;}
+        .uptime-display { font-size: 6px; color: #fff; margin-top: 2px; font-weight: bold; z-index: 2; opacity: 0.4;}
+
+        .shine {
+            position: absolute; top: 15%; left: 20%;
+            width: 25%; height: 10%; background: rgba(255,255,255,0.05);
+            border-radius: 50%; transform: rotate(-30deg);
+        }
+    </style>
+</head>
+<body>
+
+    <div id="top-hud">
+        <div class="hud-banner">INVESTOR_VPU // HALO_LIFECYCLE</div>
+        <div style="font-size: 7px; color: var(--accent); margin-top: 5px; opacity: 0.5;">AURORA_PROTOCOL: ACTIVE // SCANNER_LOCK: ON</div>
+    </div>
+
+    <canvas id="vpu-background"></canvas>
+    <div id="app-layer"></div>
+
+    <script>
+        const appLayer = document.getElementById('app-layer');
+        const canvas = document.getElementById('vpu-background');
+        const ctx = canvas.getContext('2d');
+
+        const apps = [
+            { name: "Terminal", icon: "📟", status: "KERNEL_LIVE" },
+            { name: "Wallet", icon: "💰", status: "14,200_EPX" },
+            { name: "Archives", icon: "📜", status: "SECURE" },
+            { name: "Void", icon: "🌐", status: "CONNECTED" },
+            { name: "Security", icon: "🛡️", status: "LEVEL_7" },
+            { name: "VFS", icon: "🔒", status: "ENCRYPTED" }
+        ];
+
+        let bubbles = [];
+        let draggedBubble = null;
+        let mouse = { x: 0, y: 0, lastX: 0, lastY: 0, vx: 0, vy: 0 };
+        const MIN_SPEED = 0.8;
+        const MAX_UPTIME = 300; 
+
+        class Bubble {
+            constructor(app) {
+                this.app = app;
+                this.baseRadius = 75;
+                this.radius = this.baseRadius;
+                this.size = this.radius * 2;
+                this.x = Math.random() * (window.innerWidth - this.size);
+                this.y = Math.random() * (window.innerHeight - this.size);
+                this.vx = (Math.random() - 0.5) * 1.6;
+                this.vy = (Math.random() - 0.5) * 1.6;
+                this.mass = this.radius;
+                
+                this.isGrabbed = false;
+                this.isHovered = false;
+                this.spawnTime = Date.now();
+                this.pauseOffset = 0; 
+                this.uptimeSeconds = 0;
+                this.isDead = false;
+                this.currentColor = '#a855f7';
+
+                this.el = document.createElement('div');
+                this.el.className = `app-bubble`;
+                this.updateElementSize();
+                
+                this.el.innerHTML = `
+                    <div class="shine"></div>
+                    <div class="scan-bar"></div>
+                    <div class="app-icon">${app.icon}</div>
+                    <div class="app-name">${app.name}</div>
+                    <div class="app-status">${app.status}</div>
+                    <div class="uptime-display">UP: 0s</div>
+                `;
+                
+                appLayer.appendChild(this.el);
+                this.el.addEventListener('mousedown', (e) => this.startGrab(e));
+                this.el.addEventListener('mouseenter', () => this.isHovered = true);
+                this.el.addEventListener('mouseleave', () => this.isHovered = false);
+
+                this.statusEl = this.el.querySelector('.app-status');
+                this.uptimeEl = this.el.querySelector('.uptime-display');
+                this.scannerEl = this.el.querySelector('.scan-bar');
+            }
+
+            updateElementSize() {
+                this.el.style.width = this.size + 'px';
+                this.el.style.height = this.size + 'px';
+            }
+
+            startGrab(e) {
+                this.isGrabbed = true;
+                draggedBubble = this;
+                this.vx = 0; this.vy = 0;
+            }
+
+            update() {
+                if (this.isDead) return;
+
+                if (!this.isHovered) {
+                    this.uptimeSeconds = Math.floor((Date.now() - this.spawnTime - this.pauseOffset) / 1000);
+                    this.radius = this.baseRadius + (this.uptimeSeconds * 0.12);
+                    this.size = this.radius * 2;
+                    this.mass = this.radius;
+                    this.updateElementSize();
+                    this.uptimeEl.textContent = `UP: ${this.uptimeSeconds}s`;
+                    this.statusEl.textContent = this.app.status;
+                    this.statusEl.style.color = 'var(--mtaa-green)';
+
+                    if (this.uptimeSeconds <= 100) {
+                        this.currentColor = '#a855f7';
+                    } else if (this.uptimeSeconds <= 200) {
+                        this.currentColor = '#00ff41';
+                    } else {
+                        this.currentColor = '#ff4444';
+                    }
+                    this.el.style.boxShadow = `0 0 15px ${this.currentColor}33, inset 0 0 15px rgba(255,255,255,0.05)`;
+                    this.scannerEl.style.background = `linear-gradient(90deg, transparent, ${this.currentColor}, transparent)`;
+                } else {
+                    this.vx *= 0.7; 
+                    this.vy *= 0.7;
+                    this.pauseOffset += 16.6; 
+                    
+                    // Restored original hover content
+                    const health = Math.floor(95 + Math.random() * 5);
+                    this.statusEl.textContent = `HLTH: ${health}% // SCAN_ACTIVE`;
+                    this.statusEl.style.color = 'white';
+                    this.uptimeEl.textContent = `TTL: ${MAX_UPTIME - this.uptimeSeconds}s`;
+                    
+                    this.el.style.boxShadow = `0 0 25px ${this.currentColor}66, inset 0 0 15px rgba(255,255,255,0.1)`;
+                }
+
+                if (this.uptimeSeconds >= MAX_UPTIME) { this.terminate(); return; }
+
+                if (this.isGrabbed) {
+                    this.x = mouse.x - this.radius;
+                    this.y = mouse.y - this.radius;
+                } else {
+                    if (!this.isHovered) {
+                        const dx = (this.x + this.radius) - mouse.x;
+                        const dy = (this.y + this.radius) - mouse.y;
+                        const distToMouse = Math.sqrt(dx * dx + dy * dy);
+                        if (distToMouse < this.radius + 80) {
+                            this.vx += dx * 0.002;
+                            this.vy += dy * 0.002;
+                        }
+                    }
+
+                    if (this.x <= 0) { this.x = 0; this.vx *= -0.8; }
+                    if (this.x + this.size >= window.innerWidth) { this.x = window.innerWidth - this.size; this.vx *= -0.8; }
+                    if (this.y <= 0) { this.y = 0; this.vy *= -0.8; }
+                    if (this.y + this.size >= window.innerHeight) { this.y = window.innerHeight - this.size; this.vy *= -0.8; }
+
+                    let speed = Math.sqrt(this.vx * this.vx + this.vy * this.vy);
+                    if (speed < MIN_SPEED && !this.isHovered) { this.vx *= 1.05; this.vy *= 1.05; }
+                    if (speed > 3.5) { this.vx *= 0.95; this.vy *= 0.95; }
+
+                    this.x += this.vx;
+                    this.y += this.vy;
+                    this.vx *= 0.998;
+                    this.vy *= 0.998;
+                }
+                this.el.style.transform = `translate3d(${this.x}px, ${this.y}px, 0)`;
+
+                if (this.isHovered || this.isGrabbed) { this.drawTether(); }
+            }
+
+            drawTether() {
+                ctx.beginPath();
+                ctx.moveTo(mouse.x, mouse.y);
+                ctx.lineTo(this.x + this.radius, this.y + this.radius);
+                ctx.strokeStyle = this.currentColor;
+                ctx.globalAlpha = 0.3;
+                ctx.lineWidth = 1;
+                ctx.setLineDash([5, 5]);
+                ctx.stroke();
+                ctx.setLineDash([]);
+                ctx.globalAlpha = 1.0;
+            }
+
+            terminate() {
+                this.isDead = true;
+                this.el.style.transition = "opacity 0.6s, transform 0.6s, filter 0.6s";
+                this.el.style.opacity = "0";
+                this.el.style.filter = "blur(10px)";
+                this.el.style.transform += " scale(0.1)";
+                setTimeout(() => {
+                    this.el.remove();
+                    bubbles = bubbles.filter(b => b !== this);
+                }, 600);
+            }
+        }
+
+        function resolveCollision(b1, b2) {
+            const dx = (b2.x + b2.radius) - (b1.x + b1.radius);
+            const dy = (b2.y + b2.radius) - (b1.y + b1.radius);
+            const dist = Math.sqrt(dx * dx + dy * dy);
+            if (dist < b1.radius + b2.radius) {
+                const nx = dx / dist; const ny = dy / dist;
+                const overlap = (b1.radius + b2.radius) - dist;
+                if(!b1.isGrabbed) { b1.x -= nx * overlap / 2; b1.y -= ny * overlap / 2; }
+                if(!b2.isGrabbed) { b2.x += nx * overlap / 2; b2.y += ny * overlap / 2; }
+                const v1n = b1.vx * nx + b1.vy * ny;
+                const v2n = b2.vx * nx + b2.vy * ny;
+                const impulse = (2 * (v1n - v2n)) / (b1.mass + b2.mass);
+                if(!b1.isGrabbed) { b1.vx -= impulse * b2.mass * nx; b1.vy -= impulse * b2.mass * ny; }
+                if(!b2.isGrabbed) { b2.vx += impulse * b1.mass * nx; b2.vy += impulse * b1.mass * ny; }
+            }
+        }
+
+        window.addEventListener('mousemove', (e) => {
+            mouse.vx = e.clientX - mouse.lastX;
+            mouse.vy = e.clientY - mouse.lastY;
+            mouse.x = e.clientX; mouse.y = e.clientY;
+            mouse.lastX = e.clientX; mouse.lastY = e.clientY;
+        });
+
+        window.addEventListener('mouseup', () => {
+            if (draggedBubble) {
+                draggedBubble.isGrabbed = false;
+                draggedBubble.vx = mouse.vx * 0.4;
+                draggedBubble.vy = mouse.vy * 0.4;
+                draggedBubble = null;
+            }
+        });
+
+        function init() {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+            bubbles = apps.map(app => new Bubble(app));
+        }
+
+        function animate() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            for (let i = 0; i < bubbles.length; i++) {
+                bubbles[i].update();
+                for (let j = i + 1; j < bubbles.length; j++) {
+                    resolveCollision(bubbles[i], bubbles[j]);
+                }
+            }
+            requestAnimationFrame(animate);
+        }
+
+        window.addEventListener('resize', () => {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+        });
+
+        init();
+        animate();
+    </script>
+</body>
+</html>

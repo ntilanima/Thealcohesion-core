@@ -11,6 +11,8 @@ import { SovereignVFS } from '../apps/vfs.js'; // Ensure VFS is imported for sec
 import { startBootSequence } from './boot.js'; // Refined boot sequence
 class TLC_Kernel {
     constructor() {
+        this.ledgerLocked = true;
+        this.setupContextMenu();
         this.isTilingActive = false;
         this.isDraggingWindow = false;
         this.runningApps = new Set(); // Track active processes
@@ -29,6 +31,11 @@ class TLC_Kernel {
         this.tilingGridTimeout = null;
         this.tilingState = {};
 
+        //App display on desktop
+        this.runningApps = new Set(); // Currently open apps (Active)
+        this.favorites = new Set(['terminal', 'wallet']); // User can add to this (Max 5)
+        this.usageStats = {}; // Track launches for "Most Used" (Top 3)
+        this.MAX_ACTIVE_APPS = 5;
 
         // Ensure we listen for the "Escape" key to toggle overview
                 window.addEventListener('keydown', (e) => {
@@ -740,6 +747,16 @@ async shutdown() {
         
         resetTimer(); // Start the first countdown
     }
+
+    // It creates a central logging pipe for all the "Sovereign" apps.
+    broadcastToKernel(source, message, type = 'info') {
+        console.log(`[${source.toUpperCase()}] [${type.toUpperCase()}]: ${message}`);
+        
+        // If you have a logEvent system, pipe it there too:
+        if (typeof this.logEvent === 'function') {
+            this.logEvent(type.toUpperCase(), `${source}: ${message}`);
+        }
+    }
     
 
     /**
@@ -1013,6 +1030,394 @@ async shutdown() {
             return instance;
         },
 
+        'blackout': async (container) => {
+            const { BlackoutTerminal } = await import('./blackout-terminal.js');
+            
+            const apiBridge = {
+                signature: 'SOVEREIGN_CORE_V1',
+                // P2P and Steganography requires access to the current Archon's keys
+                session: this.sessionKey,
+                identity: this.userProfile?.sovereignName || 'ARCHON_ROOT',
+                // Bridge to the VPU for handshake coordination
+                vpu: {
+                    handshake: async (target) => {
+                        console.log(`[SHADOW_LINK]: Requesting tunnel to ${target}`);
+                        return { success: true, tunnelId: 'TX_' + Math.random().toString(36).substring(7) };
+                    }
+                },
+                notify: (msg, type) => this.showNotification ? this.showNotification(msg, type) : console.log(msg),
+                close: () => this.closeApp('blackout')
+            };
+
+            const instance = new BlackoutTerminal(container, apiBridge);
+            instance.init();
+
+            this.activeProcesses = this.activeProcesses || {};
+            this.activeProcesses['blackout'] = instance;
+            return instance;
+        },
+
+        'redemption': async (container) => {
+            const { RedemptionPortal } = await import('./redemption-portal.js');
+            
+            const apiBridge = {
+                signature: 'SOVEREIGN_CORE_V1',
+                // Required for Decryption of the Shadow Badge
+                session: this.sessionKey,
+                // Bridge to the VPU to update the person_birthright table (Art 13 compliance)
+                claimAllotment: async (code) => {
+                    const response = await fetch('http://localhost:3000/api/vpu/allotment/claim', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ allotmentCode: code, session: this.sessionKey })
+                    });
+                    return await response.json();
+                },
+                notify: (msg, type) => this.showNotification ? this.showNotification(msg, type) : console.log(msg),
+                close: () => this.closeApp('redemption')
+            }
+
+            const instance = new RedemptionPortal(container, apiBridge);
+            instance.render();
+
+            this.activeProcesses = this.activeProcesses || {};
+            this.activeProcesses['redemption'] = instance;
+            return instance;
+        },
+
+        'shadow-chat': async (container) => {
+            const { ShadowChat } = await import('./shadow-chat.js');
+            
+            const apiBridge = {
+                signature: 'SOVEREIGN_CORE_V1',
+                // Required for real-time AES-256 message encryption
+                session: this.sessionKey,
+                identity: this.userProfile?.sovereignName || 'ARCHON_ROOT',
+                
+                // P2P Specific Bridge Logic
+                conduit: {
+                    // Log ephemeral signal metadata to the VPU (No message content logged)
+                    logSignal: async (peerId, status) => {
+                        console.log(`[CONDUIT_STABILITY]: ${status} with Peer ${peerId}`);
+                        // Optional: Notify the EPOS registry of an active communication node
+                    },
+                    // Logic to verify if the peer is a registered INVESTOR or ARCHON
+                    verifyPeer: async (handshakeCode) => {
+                        // In a production VPU, this would check against the 'Registry of Sovereign Entities'
+                        return { verified: true, role: 'VETTED_PEER' };
+                    }
+                },
+
+                notify: (msg, type) => this.showNotification ? this.showNotification(msg, type) : console.log(msg),
+                
+                // Ensure memory is wiped on close for Ephemerality
+                close: () => {
+                    if (this.activeProcesses['shadow-chat']?.terminate) {
+                        this.activeProcesses['shadow-chat'].terminate();
+                    }
+                    this.closeApp('shadow-chat');
+                }
+            };
+
+            const instance = new ShadowChat(container, apiBridge);
+            instance.init();
+
+            this.activeProcesses = this.activeProcesses || {};
+            this.activeProcesses['shadow-chat'] = instance;
+            return instance;
+        },
+
+        'ghost-drive': async (container) => {
+            const { GhostDrive } = await import('./ghost-drive.js');
+            
+            const apiBridge = {
+                signature: 'SOVEREIGN_CORE_V1',
+                // Required for real-time decryption of the image buffers
+                session: this.sessionKey,
+                identity: this.userProfile?.sovereignName || 'ARCHON_ROOT',
+
+                // Vault-Specific Bridge Logic
+                vault: {
+                    // Check the VPU for the status of a specific Investor's Allotment
+                    getShardStatus: async (shardId) => {
+                        console.log(`[VPU_QUERY]: Checking Allotment Status for ${shardId}`);
+                        // Connects to the EPOS registry logic
+                        return { status: 'VETTED', recoveryLink: 'RECOVER_STRIKE_01' };
+                    },
+                    // Securely wipe the image buffer from the GPU/RAM
+                    purgeBuffer: () => {
+                        console.log("[GHOST_DRIVE]: Memory Purged. No persistence remains.");
+                    }
+                },
+
+                notify: (msg, type) => this.showNotification ? this.showNotification(msg, type) : console.log(msg),
+                
+                // Ensure the "Burn-on-Close" policy is enforced
+                close: () => {
+                    if (this.activeProcesses['ghost']?.purgeBuffer) {
+                        this.activeProcesses['ghost'].purgeBuffer();
+                    }
+                    this.closeApp('ghost');
+                }
+            };
+
+            const instance = new GhostDrive(container, apiBridge);
+            // Use await init() to ensure the Shards are loaded before the first render
+            await instance.init();
+
+            this.activeProcesses = this.activeProcesses || {};
+            this.activeProcesses['ghost'] = instance;
+            return instance;
+        },
+
+        'browser': async (container) => {
+                const { BrowserApp } = await import('../apps/browser.js');
+                
+                const apiBridge = {
+                    signature: 'SOVEREIGN_CORE_V1',
+                    session: this.sessionKey,
+                    // Bridge for the "Secure Handshake" and VPU protocols
+                    vpu: {
+                        // Allows the browser to request app launches (e.g., jumping to Ghost Drive)
+                        launch: (appId) => this.launchApp(appId),
+                        // Access to the Genesis manifests for verification
+                        getManifest: (id) => this.vfs.readFile(`home/documents/${id}`),
+                        isLocked: () => this.ledgerLocked,
+                    },
+                    // Visual feedback for handshake successes/failures
+                    notify: (msg, type) => this.showNotification ? this.showNotification(msg, type) : console.log(msg),
+                    // Standard close method
+                    close: () => this.closeApp('browser')
+                };
+
+                const instance = new BrowserApp(container, apiBridge);
+                // Initialize with the standard VPU landing page
+                if (instance.init) await instance.init();
+
+                // Track the browser process for memory management
+                this.activeProcesses = this.activeProcesses || {};
+                this.activeProcesses['browser'] = instance;
+
+                return instance;
+        },
+
+        'camera': async (container) => {
+            const { CameraApp } = await import('../apps/camera.js');
+            
+            // 1. Ensure activeProcesses exists so it doesn't crash
+            this.activeProcesses = this.activeProcesses || {};
+            
+            // 2. Safely check for browser
+            const browser = this.activeProcesses['browser'] || null;
+
+            const apiBridge = {
+                signature: 'ARCHON_EYE_V2',
+                session: this.sessionKey,
+                vpu: {
+                    unlockLedger: () => {
+                        this.ledgerLocked = false;
+                        if (this.activeProcesses['browser']) {
+                            this.activeProcesses['browser'].loadPage('vpu://genesis.core');
+                        }
+                    },
+                    saveSnapshot: (blob) => this.vfs.writeFile(`home/pictures/SNAP_${Date.now()}.png`, blob),
+                    notify: (msg, type) => this.showNotification ? this.showNotification(msg, type) : console.log(msg)
+                },
+                close: () => this.closeApp('camera')
+            };
+
+            const instance = new CameraApp(container, apiBridge);
+            if (instance.init) await instance.init();
+
+            // 3. Define the save logic only if browser exists
+            instance.saveToEnclave = (dataUrl) => {
+                if (this.activeProcesses['browser'] && this.activeProcesses['browser'].addSnapshot) {
+                    this.activeProcesses['browser'].addSnapshot(dataUrl);
+                    if (this.showNotification) this.showNotification("IMAGE_MANIFEST_SENT_TO_BROWSER", "success");
+                } else {
+                    console.warn("Kernel: Browser not active. Image saved to local buffer only.");
+                }
+            };
+
+            this.activeProcesses['camera'] = instance;
+            return instance;
+        },
+
+        'settings': async (container) => {
+            const { SettingsApp } = await import('../apps/settings.js');
+            
+            // 1. Initialize process tracking
+            this.activeProcesses = this.activeProcesses || {};
+
+            const apiBridge = {
+                signature: 'SOVEREIGN_SETTINGS_V1',
+                session: this.sessionKey,
+                vpu: {
+                    // Allows settings to signal a reboot or reload to the kernel
+                    reboot: () => window.location.reload(),
+                    // Integration with the VFS for audit logs
+                    logEvent: (action, details) => this.vfs.writeFile(`sys/logs/audit_${Date.now()}.json`, JSON.stringify({action, details})),
+                    // Access to visual state (CRT toggles etc)
+                    setUIPrefs: (prefs) => {
+                        if (prefs.crt) document.body.classList.add('crt-effect');
+                        else document.body.classList.remove('crt-effect');
+                    }
+                },
+                notify: (msg, type) => this.showNotification ? this.showNotification(msg, type) : console.log(msg),
+                close: () => this.closeApp('settings')
+            };
+
+            // 2. Instantiate with the sessionKey for VFS decryption
+            const instance = new SettingsApp(container, this.sessionKey);
+            
+            // 3. Initialize the app logic (triggers the Security Audit)
+            if (instance.init) await instance.init();
+
+            this.activeProcesses['settings'] = instance;
+            return instance;
+        },
+
+        'bio-regen': async (container) => {
+            const { BioRegenApp } = await import('../apps/bio-regen.js');
+            this.activeProcesses = this.activeProcesses || {};
+
+            const apiBridge = {
+                signature: 'VITALITY_MONITOR_V1',
+                session: this.sessionKey,
+                vpu: {
+                    // Saves fasting data and phase progress to the VFS
+                    saveStasisLog: (log) => this.vfs.writeFile(`home/health/stasis_${Date.now()}.json`, JSON.stringify(log)),
+                    // Links biological success to the Ledger (Reward mechanism)
+                    awardVitalityCredit: (amount) => {
+                        if (this.activeProcesses['ledger']) {
+                            this.activeProcesses['ledger'].addCredit(amount, "AUTOPHAGY_BONUS");
+                        }
+                    }
+                },
+                notify: (msg, type) => this.showNotification ? this.showNotification(msg, type) : console.log(msg),
+                close: () => this.closeApp('bio-regen')
+            };
+
+            const instance = new BioRegenApp(container, apiBridge);
+            if (instance.init) await instance.init();
+
+            this.activeProcesses['bio-regen'] = instance;
+            return instance;
+        },
+
+        'monitor': async (container) => {
+            const { MonitorApp } = await import('../apps/monitor.js');
+            
+            // 1. Initialize process tracking
+            this.activeProcesses = this.activeProcesses || {};
+
+            const apiBridge = {
+                // REQUIRED: Matches the internal Guard check in MonitorApp constructor
+                signature: 'SOVEREIGN_CORE_V1', 
+                session: this.sessionKey,
+                vfs: this.vfs, // Passing VFS for latency testing
+                vpu: {
+                    // Specific monitor methods for hardware interrogation
+                    getCoreCount: () => navigator.hardwareConcurrency,
+                    getMemoryStatus: () => performance.memory ? performance.memory.usedJSHeapSize : 0,
+                    // Integration with the VFS for audit logs
+                    logSystemEvent: (event) => this.vfs.writeFile(`sys/logs/mon_${Date.now()}.log`, event)
+                },
+                notify: (msg, type) => this.showNotification ? this.showNotification(msg, type) : console.log(msg),
+                close: () => this.closeApp('monitor')
+            };
+
+            // 2. Instantiate the App
+            const instance = new MonitorApp(container, apiBridge);
+            
+            // 3. Trigger initialization (starts the 1s tracking interval)
+            if (instance.init) await instance.init();
+
+            // 4. Store reference for the Kernel's management
+            this.activeProcesses['monitor'] = instance;
+            
+            // Note: Kernel should call instance.destruct() when closing
+            return instance;
+        },
+
+        'logs': async (container) => {
+            // FIX 1: Ensure activeProcesses exists in the OS scope
+            if (!this.activeProcesses) this.activeProcesses = {};
+
+            try {
+                // FIX 2: Correct path to the apps folder
+                const { KernelLogApp } = await import('../apps/kernel_log.js');
+
+                const apiBridge = {
+                    signature: 'SOVEREIGN_CORE_V1',
+                    vfs: this.vfs,
+                    close: () => this.closeApp('logs')
+                };
+
+                const instance = new KernelLogApp(container, apiBridge);
+                instance.init();
+                
+                // FIX 3: Store the process reference
+                this.activeProcesses['logs'] = instance;
+                return instance;
+
+            } catch (error) {
+                console.error("Kernel: Handshake failed for logs:", error);
+                container.innerHTML = `<div style="color:#ff4444; padding:20px;">[BOOT_ERROR]: MODULE_NOT_FOUND at /js/apps/kernel_log.js</div>`;
+            }
+        },
+
+        'taskman': async (container) => {
+            const { TaskManagerApp } = await import('../apps/taskman.js');
+            
+            const apiBridge = {
+                signature: 'SOVEREIGN_CORE_V1',
+                // FIX: Use arrow functions to ensure 'this' refers to the TLC_Kernel class
+                log: (msg, type) => {
+                    if (this.broadcastToKernel) this.broadcastToKernel('TASKMAN', msg, type);
+                },
+                notify: (msg, type) => {
+                    // Check if showNotification exists before calling to prevent crash
+                    if (typeof this.showNotification === 'function') {
+                        this.showNotification(msg, type);
+                    } else {
+                        console.warn("Kernel: showNotification not found, falling back to log:", msg);
+                    }
+                }
+            };
+
+            const instance = new TaskManagerApp(container, apiBridge);
+            await instance.init();
+            
+            this.activeProcesses = this.activeProcesses || {};
+            this.activeProcesses['taskman'] = instance;
+            return instance;
+        },
+        'stc': async (container) => {
+            const { TacticalCommandApp } = await import('./tactical_command.js');
+            
+            const api = {
+                signature: 'SOVEREIGN_CORE_V1',
+                identity: 'ARCHON_ROOT',
+                timestamp: new Date().toLocaleTimeString(),
+                log: (m, t) => this.broadcastToKernel('STC', m, t),
+                notify: (m, t) => {
+                    if (typeof this.showNotification === 'function') {
+                        this.showNotification(m, t);
+                    }
+                },
+                vfs: this.vfs 
+            };
+            
+            const instance = new TacticalCommandApp(container, api);
+            await instance.init();
+            
+            // Ensure activeProcesses exists before assignment
+            this.activeProcesses = this.activeProcesses || {};
+            this.activeProcesses['stc'] = instance;
+            
+            return instance;
+        }
         };
         
     }
@@ -1264,58 +1669,94 @@ async runRecoverySequence(errorCode) {
         // Allow "Enter" key to unlock
         document.getElementById('lock-pass-input')?.addEventListener('keypress', (e) => {
             if (e.key === 'Enter') this.unlockSystem();
-        });
-
-        
+        });        
 }
 
 async unlockSystem() {
     const lockPass = document.getElementById('lock-pass-input');
     const status = document.getElementById('lock-status');
     const lockScreen = document.getElementById('lock-screen');
+    const lockBox = lockScreen?.querySelector('.lock-box');
     const root = document.getElementById('os-root');
 
-    if (!lockPass || lockPass.value === "") return;
-
-    // 1. UI Feedback
-    status.innerText = "VERIFYING_SESSION...";
-    status.style.color = "#bcff00";
-
-    // 2. Verification Delay
-    await new Promise(r => setTimeout(r, 800));
-
-    // 3. FORCE REVEAL
-    if (lockScreen && root) {
-        // Fade out the lock screen
-        lockScreen.style.transition = "opacity 0.5s ease";
-        lockScreen.style.opacity = '0';
-        
-        // Remove the blur from the workspace
-        root.style.filter = "none"; 
-        root.style.display = "block"; // Force display
-
-        setTimeout(() => {
-            lockScreen.classList.add('hidden');
-            lockScreen.style.display = 'none'; // Double-kill the visibility
-            this.isLocked = false;
-            lockPass.value = ""; 
-            console.log("Kernel: Enclave Resumed.");
-        }, 500);
+    // 1. Safety Check
+    if (!lockPass || lockPass.value === "") {
+        this.triggerLockShake();
+        return;
     }
-    //Calls brightnes slider back
-    if (root) {
-        // Remove the security blur AND any stray brightness caps
-        root.style.filter = "none"; 
-        root.style.opacity = "1";
-        
-        // Re-sync the slider: If you have a brightness variable, 
-        // call your brightness update function here to restore the user's setting.
-        if (this.currentBrightness) {
-            this.setBrightness(this.currentBrightness);
-        }
-    }
+
+    // 2. UI Feedback
+    status.innerText = ">> INITIATING_DECRYPTION_HANDSHAKE...";
+    status.style.color = "#a445ff";
+    lockPass.disabled = true;
+
+    // 3. Simulated Kernel Processing
+    await new Promise(r => setTimeout(r, 1000));
+
+    // 4. AUTHENTICATION LOGIC
+    // Determine your correct key (Checking against 'admin' OR a stored system pass)
+    const correctKey = this.systemPassword || "admin"; 
     
-    if (lockScreen) lockScreen.classList.add('hidden');
+    if (lockPass.value === correctKey) {
+        // --- SUCCESS SEQUENCE ---
+        status.innerText = ">> SIGNATURE_VALID // ENCLAVE_RESUMING";
+        status.style.color = "#a445ff";
+        
+        // Update Internal State Immediately
+        this.isLocked = false; 
+
+        if (lockBox) lockBox.style.boxShadow = "0 0 100px rgba(164, 69, 255, 0.4)";
+
+        // 5. Force UI Reveal
+        if (lockScreen) {
+            lockScreen.style.transition = "opacity 0.8s cubic-bezier(0.4, 0, 0.2, 1), backdrop-filter 0.8s";
+            lockScreen.style.opacity = '0';
+            lockScreen.style.pointerEvents = 'none'; // Stop intercepting clicks
+        }
+
+        if (root) {
+            root.style.display = "block"; // Ensure it exists in DOM
+            root.style.filter = "none"; 
+            root.style.opacity = "1";
+        }
+
+        // Final Cleanup
+        setTimeout(() => {
+            if (lockScreen) {
+                lockScreen.classList.add('hidden');
+                lockScreen.style.display = 'none';
+            }
+            lockPass.value = ""; 
+            lockPass.disabled = false;
+            
+            // Restore EPOS/Investor Session Brightness
+            if (typeof this.setBrightness === 'function' && this.currentBrightness) {
+                this.setBrightness(this.currentBrightness);
+            }
+            
+            console.log("Kernel: Sovereign Enclave Resumed.");
+        }, 800);
+
+    } else {
+        // --- FAILURE SEQUENCE ---
+        status.innerText = ">> CRITICAL: KEY_SIGNATURE_REJECTED";
+        status.style.color = "#ff003c";
+        
+        this.triggerLockShake();
+
+        lockPass.value = "";
+        lockPass.disabled = false;
+        lockPass.focus();
+    }
+}
+
+// Helper for the Shake Effect
+triggerLockShake() {
+    const lockBox = document.querySelector('.lock-box');
+    if (lockBox) {
+        lockBox.classList.add('impact-shake');
+        setTimeout(() => lockBox.classList.remove('impact-shake'), 400);
+    }
 }
 
     async transitionToShell() {
@@ -1551,8 +1992,8 @@ async unlockSystem() {
     const menu = document.createElement('div');
     menu.id = 'global-context-menu';
     menu.style.cssText = `
-        position: fixed; z-index: 10000; background: #1a1a1a; 
-        border: 1px solid #333; border-radius: 8px; width: 180px;
+        position: fixed; z-index: 10000; background: #1a1a1a00; 
+        border: 1px solid #333; border-radius: 8px; width: 230px;
         display: none; padding: 5px 0; box-shadow: 0 10px 25px rgba(0,0,0,0.5);
         font-family: 'Inter', sans-serif; font-size: 13px; color: #eee;
     `;
@@ -1683,8 +2124,7 @@ renderMenuContent(menu, target) {
                         { label: 'Root Privileges', action: () => this.launchApp('terminal', {root:true}) }
                     ]
                 },
-                { label: '📊 System Monitor', action: () => this.launchApp('monitor') },
-                { label: '📝 Task Manager', action: () => this.launchApp('taskman') }
+                { label: '📊 Tactical CMD', action: () => this.launchApp('stc') },
             ]
         },
 
@@ -2643,7 +3083,17 @@ exitOverview(focusId = null) {
         }
         win.dataset.lastUsed = Date.now();
 
-
+        if (this.runningApps.size >= this.MAX_ACTIVE_APPS) {
+        this.notify("SYSTEM_DENIAL: Max active processes (5) reached.", "critical");
+        return;
+    }
+    
+    // Track usage
+    this.usageStats[appId] = (this.usageStats[appId] || 0) + 1;
+    this.runningApps.add(appId);
+    
+    // Signal the wallpaper to create/update the bubble
+    window.dispatchEvent(new CustomEvent('vpu:app_launched', { detail: { appId } }));
     }
 //For demo will be removed later
     executeLocalApp(appId, app) {

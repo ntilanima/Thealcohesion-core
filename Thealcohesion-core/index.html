@@ -10,6 +10,7 @@
     <link rel="stylesheet" href="./css/apps/dev-center.css">
     <link rel="stylesheet" href="./css/apps/vault.css">
     <link rel="stylesheet" href="./css/apps/vfs.css">
+    <link rel="stylesheet" href="./css/apps/bio-gen.css">
     <link rel="stylesheet" href="./css/apps/comms.css">
     <link rel="stylesheet" href="./css/apps/oracle.css">
     <link rel="stylesheet" href="./css/apps/biome.css">
@@ -88,15 +89,15 @@
         </div>
 
         <h1>Identity Access</h1>
-        <p class="subtitle">Sovereign Kioski</p>
+        <p class="subtitle">Sovereign VPU Kioski</p>
         
         <div class="input-group">
-            <div class="field">
-                <label>MEMBER_ID</label>
+            <div class="loginfield">
+                <label>NATIVE_ID</label>
                 <input type="text" id="username" placeholder="0x..." spellcheck="false" autocomplete="off">
             </div>
-            <div class="field">
-                <label>GENESIS_KEY</label>
+            <div class="loginfield">
+                <label>NATIVE PASSWORD_HASH</label>
                 <input type="password" id="pass-input" placeholder="••••••••">
             </div>
         </div>
@@ -112,33 +113,48 @@
 </section>
 
 <!--LOCK SCREEN-->
-    <div id="lock-screen" class="hidden">
-        <div class="scanlines"></div>
-        <div class="lock-box">
-            <div class="user-profile">
-                <div class="user-avatar">0x</div>
-                <h2 id="lock-user-display">MEMBER_SESSION_ACTIVE</h2>
-            </div>
-            
-            <div class="input-group">
-                <label>RE-AUTHENTICATE_GENESIS_KEY</label>
-                <input type="password" id="lock-pass-input" placeholder="••••••••">
-            </div>
+   <div id="lock-screen" class="hidden">
+    <div class="lock-box">
+        <div style="position: absolute; top: 12px; right: 12px; font-size: 8px; color: #a445ff44; letter-spacing: 1px;">
+            STLS_ENCLAVE // AUTH_LAYER_6
+        </div>
 
-            <button id="unlock-btn" onclick="kernel.unlockSystem()">RESUME_ENCLAVE</button>
-            <div id="lock-status" class="status-monitor">SESSION_PAUSED</div>
+        <div class="user-profile">
+            <div class="stls-hex-avatar">
+                <span style="font-size: 24px; z-index: 1; color: #a445ff; font-weight: 900;">0x</span>
+                <div class="avatar-scanner"></div> 
+            </div>
+            <h2 id="lock-user-display" style="color:#a445ff; text-transform:uppercase; letter-spacing:4px; font-size: 16px; margin-bottom: 30px;">
+                NATIVE_SESSION_ACTIVE
+            </h2>
+        </div>
         
-        <div style="margin-top: 20px;">
-            <a href="#" onclick="kernel.lockSystem()" style="color: #440000; font-size: 10px; text-decoration: none;">
-                TERMINATE_SESSION_AND_PURGE_MEMORY
+        <div class="input-group">
+            <label class="stls-void-label">DECRYPTION_KEY_REQUIRED</label>
+            <input type="password" id="lock-pass-input" class="stls-void-input" placeholder="••••••••">
+        </div>
+
+        <div style="margin-top: 25px;">
+            <button id="unlock-btn" class="stls-kinetic-trigger" onclick="kernel.unlockSystem()">
+                ESTABLISH_LINK
+            </button>
+        </div>
+
+        <div id="lock-status" class="status-monitor">
+            BIO_METRIC_SCAN: [ ACCESS_WAITING ]
+        </div>
+
+        <div style="margin-top: 45px; border-top: 1px solid #1a1a1a; padding-top: 20px;">
+            <a href="#" onclick="kernel.lockSystem()" class="purge-link">
+                [!] TERMINATE_SESSION_AND_PURGE_MEMORY
             </a>
         </div>
-        </div>
     </div>
+</div>
 
     <!-- TOP BAR -->
     <header id="top-bar" class="hidden">
-        <div class="left-section"><span class="activities">KIOSK</span></div>
+        <div class="left-section"><span class="activities">VPU KIOSK</span></div>
         <div class="center-section"><span id="top-bar-time">--:--:--</span></div>
         <div class="top-bar-right" id="status-area" style="cursor: pointer; display: flex; align-items: center; gap: 10px; padding: 0 15px;">
             <div id="vpu-resource-monitor">

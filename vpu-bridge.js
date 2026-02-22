@@ -635,4 +635,116 @@ app.get('/api/spacs/check-status', async (req, res) => {
         res.status(500).json({ error: "CORE_UPLINK_OFFLINE" });
     }
 });
+
+
+/**
+ * SOVEREIGN AUTH MIDDLEWARE
+ * Ensures the request is coming from a validated Enclave session.
+ */
+const verifySovereignKey = (req, res, next) => {
+    const authHeader = req.headers['authorization'];
+    const machineSig = req.headers['x-machine-id'];
+
+    // For the 2025-12-26 Allotment Protocol, we require both a Bearer token and a HW Signature
+    if (!authHeader || !machineSig) {
+        console.error(`[SEC_ALERT] Unauthorized access attempt from ${req.ip}`);
+        return res.status(403).json({ 
+            success: false, 
+            message: "SOVEREIGN_ERR: ENCLAVE_UPLINK_REQUIRED" 
+        });
+    }
+
+    // Optional: Add logic here to verify the token against your session store
+    // For now, we will allow the "Bearer temp_key" or your specific sessionKey
+    next();
+};
+
+//Identity registry connection
+// vpu-bridge.js
+app.get('/api/vpu/registry', verifySovereignKey, async (req, res) => {
+    try {
+        console.log("[UPLINK] Generating Sovereign Registry from Relational Schema...");
+
+        // This query joins your tables to build the "Member" object the frontend needs
+        const query = `
+            SELECT 
+                p.id, p.official_name, p.sovereign_name, p.membership_no,
+                r.name as rank_name, r.code as rank_code,
+                ac.name as action_center_name, ac.area_code as ac_id,
+                t.name as tlc_name, t.area_code as tlc_id,
+                ps.security_clearance,
+                p.identity_state
+            FROM person p
+            LEFT JOIN person_rank pr ON p.id = pr.person_id AND pr.end_date IS NULL
+            LEFT JOIN rank r ON pr.rank_id = r.id
+            LEFT JOIN person_security ps ON p.id = ps.person_id
+            LEFT JOIN action_center_officials aco ON p.id = aco.person_id
+            LEFT JOIN action_center ac ON aco.action_center_id = ac.id
+            LEFT JOIN tlc_officials tlco ON p.id = tlco.person_id
+            LEFT JOIN tlc t ON tlco.tlc_id = t.id
+            WHERE p.is_frozen = FALSE
+            ORDER BY r.rank_order DESC, p.official_name ASC;
+        `;
+
+        const result = await pool.query(query);
+
+        // Map the flat SQL rows into the nested JSON objects the frontend expects
+        const members = result.rows.map(row => ({
+            security: { 
+                uid: row.id, 
+                rank: row.rank_name || 'PROSPECT', 
+                abbr: row.rank_code || 'PRSP', 
+                clearance: row.security_clearance || 0 
+            },
+            personal: { 
+                official_name: row.official_name, 
+                sovereign_name: row.sovereign_name || row.official_name 
+            },
+            tactical: { 
+                ac_id: row.ac_id || 'UNASSIGNED', 
+                tlc_id: row.tlc_id || 'UNASSIGNED' 
+            },
+            status: { 
+                remarks: row.identity_state || 'ACTIVE' 
+            }
+        }));
+
+        // Fallback for Dec 26th Allotment if DB is currently empty
+        if (members.length === 0) {
+            return res.json([{
+                security: { uid: "0000", rank: "ARCHON", abbr: "ARCH", clearance: 10 },
+                personal: { officialName: "Michael Audi", sovereignName: "ARCHANTI" },
+                tactical: { ac_id: "AC_NAIROBI", tlc_id: "TLC_01" },
+                status: { remarks: "SEED_DATA_REQUIRED" }
+            }]);
+        }
+
+        res.json(members);
+    } catch (err) {
+        console.error("!!! PG_UPLINK_CRASH:", err);
+        res.status(500).json({ error: "DATABASE_QUERY_ERROR", details: err.message });
+    }
+});
+
+
+app.post('/api/vpu/allotment/claim', verifySovereignKey, async (req, res) => {
+    const { allotmentCode } = req.body;
+    const userId = req.user.id;
+
+    try {
+        // 1. Check if code is valid/unused (You can have a table for valid codes)
+        // 2. Update person_birthright
+        await pool.query(
+            `UPDATE person_birthright 
+             SET storage_quota_mb = storage_quota_mb + 100 
+             WHERE person_id = $1`, 
+            [userId]
+        );
+
+        res.json({ success: true, message: "BIRTHRIGHT_EXPANDED: 100MB_ADDED" });
+    } catch (err) {
+        res.status(500).json({ error: "DATABASE_SYNC_FAILED" });
+    }
+});
+
 app.listen(3000, () => console.log('Sovereign Link: Port 3000'));

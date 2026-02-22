@@ -1,42 +1,180 @@
-/* Lock Screen*/
+/* ============================================================
+   SOVEREIGN PURPLE TACTICAL LOCK SYSTEM (STLS)
+   v5.5 - RE-INSTATED TACTICAL MODS
+   ============================================================ */
 
 #lock-screen {
     position: fixed;
     top: 0; left: 0;
     width: 100vw; height: 100vh;
-    background: rgba(0, 0, 0, 0.9); /* Darker backdrop to hide workspace */
-    backdrop-filter: blur(20px);   /* High blur for security */
+    background: radial-gradient(circle at center, rgba(15, 0, 30, 0.98) 0%, #000 100%) !important;
+    backdrop-filter: blur(50px) saturate(150%) contrast(110%) !important; 
     display: flex;
     align-items: center;
     justify-content: center;
-    z-index: 20000;
-    font-family: 'Courier New', monospace;
-    color: #00ff41;
+    z-index: 9999999;
+    font-family: 'JetBrains Mono', monospace !important;
+    overflow: hidden;
+}
+
+/* Background HUD Scanline Pattern */
+#lock-screen::before {
+    content: " " !important;
+    position: absolute !important;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    background: linear-gradient(rgba(164, 69, 255, 0.05) 1px, transparent 1px) !important;
+    background-size: 100% 4px !important;
+    pointer-events: none;
+    z-index: 1;
 }
 
 .lock-box {
-    width: 350px;
-    padding: 2.5rem;
-    border: 1px solid #004411;
-    background: #000;
+    position: relative;
+    width: 400px;
+    padding: 3.5rem;
+    background: rgba(10, 2, 15, 0.95) !important;
+    border-top: 1px solid #a445ff44 !important;
+    border-bottom: 1px solid #a445ff44 !important;
+    box-shadow: 0 0 80px rgba(0,0,0,1), inset 0 0 30px rgba(164, 69, 255, 0.05) !important;
     text-align: center;
+    z-index: 2;
 }
 
-.user-avatar {
-    width: 60px; height: 60px;
-    border: 1px solid #00ff41;
-    border-radius: 50%;
-    margin: 0 auto 15px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 20px;
-    background: rgba(0, 255, 65, 0.05);
+/* Re-instated Tactical Corner Decals */
+.lock-box::after {
+    content: "" !important;
+    position: absolute !important;
+    top: -2px; left: -2px; right: -2px; bottom: -2px;
+    border: 1px solid #a445ff33 !important;
+    pointer-events: none;
+    clip-path: polygon(
+        0 0, 15% 0, 0 15%, 
+        100% 0, 85% 0, 100% 15%, 
+        100% 100%, 85% 100%, 100% 85%, 
+        0 100%, 15% 100%, 0 85%
+    ) !important;
 }
 
-#lock-screen .input-group label {
-    font-size: 10px;
-    display: block;
-    margin-bottom: 8px;
-    color: #008822;
+/* Hexagonal Avatar + Biometric Scan */
+.stls-hex-avatar {
+    width: 100px; height: 100px;
+    background: #000 !important;
+    border: 1px solid #a445ff !important;
+    position: relative;
+    margin: 0 auto 25px;
+    clip-path: polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%) !important;
+    display: flex; align-items: center; justify-content: center;
+    overflow: hidden;
 }
+
+.avatar-scanner {
+    position: absolute !important;
+    width: 100%; height: 3px;
+    background: #a445ff !important;
+    box-shadow: 0 0 15px #a445ff !important;
+    animation: stls_scan 4s infinite ease-in-out !important;
+    z-index: 2;
+}
+
+@keyframes stls_scan {
+    0%, 100% { top: -10%; opacity: 0; }
+    20%, 80% { opacity: 1; }
+    50% { top: 110%; }
+}
+
+/* Sovereign Input */
+.stls-void-input {
+    all: unset !important;
+    display: block !important;
+    width: 100% !important;
+    box-sizing: border-box !important;
+    background: rgba(0, 0, 0, 0.8) !important;
+    border: 1px solid #a445ff22 !important;
+    color: #a445ff !important;
+    padding: 18px !important;
+    margin-top: 10px !important;
+    font-family: 'JetBrains Mono', monospace !important;
+    text-align: center !important;
+    letter-spacing: 10px !important;
+    font-size: 16px !important;
+}
+
+/* The Provision Button Redux */
+.stls-kinetic-trigger {
+    all: unset !important;
+    display: block !important;
+    width: 100% !important;
+    height: 60px !important;
+    box-sizing: border-box !important;
+    position: relative !important;
+    cursor: pointer !important;
+    color: #a445ff !important;
+    font-weight: 900 !important;
+    letter-spacing: 5px !important;
+    text-transform: uppercase !important;
+    text-align: center !important;
+    border: 1px solid #a445ff44 !important;
+    overflow: hidden !important;
+    margin-top: 25px !important;
+    transition: all 0.4s cubic-bezier(0.19, 1, 0.22, 1) !important;
+}
+
+.stls-kinetic-trigger::before {
+    content: "" !important;
+    position: absolute !important;
+    top: 0; left: -100%;
+    width: 100%; height: 100%;
+    background: #a445ff !important;
+    transition: all 0.4s cubic-bezier(0.19, 1, 0.22, 1) !important;
+    z-index: -1 !important;
+}
+
+.stls-kinetic-trigger:hover {
+    color: #000 !important;
+    box-shadow: 0 0 30px rgba(164, 69, 255, 0.4) !important;
+}
+
+.stls-kinetic-trigger:hover::before {
+    left: 0 !important;
+}
+
+.stls-void-label {
+    color: #a445ff !important;
+    font-size: 13px !important; /* Larger for readability */
+    font-weight: 700 !important;
+    display: block !important;
+    margin-bottom: 12px !important;
+    text-align: left !important;
+    letter-spacing: 2px !important;
+    text-transform: uppercase !important;
+    opacity: 0.8;
+}
+
+/* Status Monitor (Now under button) */
+.status-monitor {
+    font-size: 10px !important;
+    color: #b18839 !important;
+    margin-top: 15px !important;
+    text-transform: uppercase !important;
+    letter-spacing: 3px !important;
+    min-height: 15px;
+}
+
+/* Purge Link - Clean Terminal Style */
+.purge-link {
+    color: #440000 !important;
+    font-size: 10px !important;
+    text-decoration: none !important; /* Removed underline */
+    letter-spacing: 1px !important;
+    transition: all 0.3s ease !important;
+    display: inline-block !important;
+    border-bottom: 1px solid transparent !important; /* Clean accent instead */
+}
+
+.purge-link:hover {
+    color: #ff003c !important;
+    background: rgba(255, 0, 60, 0.05) !important;
+    text-decoration: none !important;
+}
+
